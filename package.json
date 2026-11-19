@@ -14,8 +14,8 @@
         "build": "vite build",
         "test": "vitest run",
         "test:watch": "vitest",
-        "demo": "vite --config vite.demo.config.js",
-        "build:demo": "vite build --config vite.demo.config.js",
+        "web": "vite --config vite.web.config.js",
+        "build:web": "vite build --config vite.web.config.js",
         "build:docs": "node scripts/build-docs.mjs"
     },
     "devDependencies": {

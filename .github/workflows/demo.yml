@@ -1,6 +1,7 @@
 name: Demo
 
-# Builds the web demo and the docs and publishes them to getstarchat.net/demo/ and
+# Builds the web demo (the hostable page from web/ with demo/config.json) and the docs
+# and publishes them to getstarchat.net/demo/ and
 # getstarchat.net/docs/ (repository starchat-irc/getstarchat.net, served with GitHub
 # Pages). The Bootstrap stylesheet of the site comes from our dependency, so the site
 # and the chat use the same version.
@@ -19,7 +20,8 @@ on:
       - 'servers/**'
       - 'package.json'
       - 'package-lock.json'
-      - 'vite.demo.config.js'
+      - 'web/**'
+      - 'vite.web.config.js'
       - '.github/workflows/demo.yml'
   workflow_dispatch:
 
@@ -42,7 +44,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build:demo
+      - run: npm run build:web
+      - run: cp demo/config.json dist-web/config.json
       - run: npm run build:docs
 
       - name: Publish to getstarchat.net
@@ -57,7 +60,7 @@ jobs:
 
           git clone --depth 1 git@github.com:starchat-irc/getstarchat.net.git site
           rm -rf site/demo site/docs
-          cp -r dist-demo site/demo
+          cp -r dist-web site/demo
           cp -r dist-docs site/docs
           mkdir -p site/vendor
           cp node_modules/bootstrap/dist/css/bootstrap.min.css site/vendor/

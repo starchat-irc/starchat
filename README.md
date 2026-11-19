@@ -1,15 +1,53 @@
 # StarChat
 
-An IRCv3 client for the web and the desktop.
+An IRCv3 client for the web and the desktop. [Website](https://getstarchat.net) · [Web demo](https://getstarchat.net/demo/) · [Documentation](https://getstarchat.net/docs/)
 
-StarChat is being extracted from the chat client of [ST-City](https://st-city.net) and is not usable yet. This repository fills up step by step until the first release.
+StarChat connects directly to the IRC network the user picks. There is no central StarChat server. It works on any network that offers IRC over WebSocket, and uses IRCv3 where the server supports it: history, reactions, replies, typing indicators, read markers, multiline messages, avatars and push notifications.
 
-## Planned
+A network can offer more through a small [discovery file](docs/discovery.md) on its own domain: profiles, friends, uploads, GIF search, communities, events, voice chat and more. Each of these is an optional module and stays hidden on networks that do not offer it. See [Features](docs/features.md) for what works where.
 
-- Web build that runs as a static page and can be embedded with `mountChat()`
-- Desktop client (Electron) that can also connect over plain TCP
-- Public list of IRC networks to pick from (`servers/servers.json`)
-- Optional extra services per network (profiles, friends, uploads, voice and more), announced by the network itself through a discovery file at `https://<domain>/.well-known/starchat.json`. Networks without that file work as regular IRC servers. The format is described in [`docs/discovery.md`](docs/discovery.md).
+StarChat started as the chat client of [ST-City](https://st-city.net) and was moved into its own project.
+
+## Status
+
+There is no release yet. The web client is available as a development build ([latest-dev](https://github.com/starchat-irc/starchat/releases/tag/latest-dev)), rebuilt from `main` on every change. The desktop client is being moved into this repository. The npm package `starchat` and desktop downloads come with the first release.
+
+Voice chat and calls are experimental.
+
+## Using it
+
+The web client itself is a static page. Download the .zip from the [release](https://github.com/starchat-irc/starchat/releases/) page,, set your network in `config.json` and upload the folder to any web host. All settings are in [Hosting the web client](docs/hosting.md).
+
+To build it yourself: `npm install`, then `npm run build:web` (output in `dist-web/`) or `npm run web` to try it locally.
+
+To put the chat into your own page, use it as a library (`npm run build`, output in `dist/`):
+
+```js
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-icons/font/bootstrap-icons.min.css';
+import 'starchat/theme.css';
+import { mountChat } from 'starchat';
+
+mountChat('#chat', {
+    primaryServer: 'irc.example.org',
+    defaultChannel: '#lobby',
+});
+```
+
+All options are in [`docs/options.md`](docs/options.md). Users of your site can be logged in without the login dialog, see [Embedding with login](docs/embedding.md).
+
+## Documentation
+
+The pages in [`docs/`](docs/) are published at [getstarchat.net/docs](https://getstarchat.net/docs/):
+
+- [Features](docs/features.md): what works on every network and what a network can add
+- [Hosting the web client](docs/hosting.md)
+- [mountChat() options](docs/options.md)
+- [Embedding with login](docs/embedding.md)
+- [Server list](docs/servers.md)
+- [Discovery file](docs/discovery.md), including the API of each feature
+- [Commands and shortcuts](docs/commands.md)
+- [IRCv3 support](docs/ircv3.md)
 
 ## Development
 
@@ -17,29 +55,24 @@ Node.js 22.12 or newer.
 
 ```
 npm install
-npm test          # unit tests (Vitest)
-npm run build     # library build to dist/
+npm test             # unit tests (Vitest)
+npm run build        # library build to dist/
+npm run build:docs   # docs to dist-docs/
 ```
 
-`src/core/` holds the IRC core without any UI: line parser, CAP/SASL negotiation, WebSocket transport, mIRC formatting, slash commands and the state for messages, nick lists and topics. The state is written through a small store adapter, so the UI can plug in its own reactive store.
-
-It also loads the server list (cached, with the shipped copy as fallback), reads the discovery file of each server and keeps features, API access and token per connection, so a token is never sent to another network.
-
-## Documentation
-
-The docs are in [`docs/`](docs/) and published at [getstarchat.net/docs](https://getstarchat.net/docs/): `mountChat()` options, [embedding with login](docs/embedding.md), server list, [discovery file](docs/discovery.md), commands and IRCv3 support. Build them locally with `npm run build:docs` (output in `dist-docs/`, styled only inside the website).
+`src/core/` is the IRC core without any UI: parser, CAP and SASL, WebSocket transport, formatting, commands, server list, discovery and the state of messages, nick lists and topics. `src/ui/` is the interface (Alpine.js and Bootstrap 5, templates in `src/ui/templates/`, texts in `src/i18n/`). `src/modules/` holds the optional features, one file per feature. The [overview](docs/index.md) explains how the parts fit together.
 
 ## Adding a network
 
-Open a pull request that adds an entry to [`servers/servers.json`](servers/servers.json). The format is described in [`servers/servers.schema.json`](servers/servers.schema.json). Check it locally with:
+Open a pull request that adds an entry to [`servers/servers.json`](servers/servers.json). The format is described in [Server list](docs/servers.md) and checked against [`servers/servers.schema.json`](servers/servers.schema.json):
 
 ```
 npm install
 npm run validate:servers
 ```
 
-The web build needs a WebSocket endpoint (`websocket`). Networks that only offer TCP (`irc`) are shown in the desktop client only.
+The web client needs a WebSocket endpoint (`websocket`). Networks that only offer TCP (`irc`) are shown in the desktop client only.
 
 ## License
 
-[AGPL-3.0](LICENSE)
+[AGPL-3.0](LICENSE). If you run a modified version for others, you have to offer them its source code.

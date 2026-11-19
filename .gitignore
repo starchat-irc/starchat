@@ -8,4 +8,5 @@ Thumbs.db
 .idea/
 .vscode/
 dist-demo
+dist-web
 dist-docs

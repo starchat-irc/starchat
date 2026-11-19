@@ -1,0 +1,9 @@
+{
+    "primaryServer": "",
+    "defaultChannel": "#lobby",
+    "serverList": "default",
+    "theme": "auto",
+    "appName": "StarChat",
+    "notice": "",
+    "links": []
+}

@@ -19,6 +19,7 @@ const SITE_URL = 'https://getstarchat.net';
 export const PAGES = [
     { file: 'index.md', title: 'Overview' },
     { file: 'features.md', title: 'Features' },
+    { file: 'hosting.md', title: 'Hosting the web client' },
     { file: 'options.md', title: 'mountChat() options' },
     { file: 'embedding.md', title: 'Embedding with login' },
     { file: 'servers.md', title: 'Server list' },

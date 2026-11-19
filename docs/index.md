@@ -2,11 +2,12 @@
 
 StarChat is an IRCv3 client for the web and the desktop. These pages describe how to put it into a page, how to configure it and what a network can do to work well with it.
 
-StarChat is not released yet. Until the first release it is built from source, see [Install](https://getstarchat.net/install.html).
+StarChat is not released yet. The web client is available as a [development build](hosting.md), the npm package and desktop downloads come with the first release.
 
 ## Pages
 
 - [Features](features.md): what works on every network and what a network can add
+- [Hosting the web client](hosting.md): the ready-made page, configured with `config.json`
 - [mountChat() options](options.md): starting the chat in a page and configuring it
 - [Embedding with login](embedding.md): logging in users of your site with a token
 - [Server list](servers.md): the public list of networks and how to use your own

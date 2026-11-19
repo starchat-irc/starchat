@@ -1,0 +1,14 @@
+{
+    "primaryServer": "st-city.net",
+    "defaultChannel": "#starchat",
+    "serverList": "default",
+    "theme": "auto",
+    "title": "StarChat Demo",
+    "ctcpVersion": "StarChat (demo) https://getstarchat.net",
+    "notice": "StarChat demo. ST-City is preselected, more servers under \"Advanced settings\". Connecting shares your IP address with the chosen server.",
+    "links": [
+        { "label": "Source", "url": "https://github.com/starchat-irc/starchat" },
+        { "label": "Privacy (ST-City)", "url": "https://st-city.net/datenschutz" },
+        { "label": "Imprint", "url": "https://st-city.net/impressum" }
+    ]
+}
