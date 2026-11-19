@@ -1,0 +1,262 @@
+<div class="chat-header">
+    <div class="chat-header-row">
+        <!-- Small screens: opens the channel/community drawer -->
+        <button type="button" class="chat-header-btn chat-header-menu-btn position-relative"
+                title="{{ t('open_navigation') }}"
+                aria-label="{{ t('open_navigation') }}"
+                :aria-expanded="mobileSidebarOpen"
+                @click="toggleMobileSidebar()">
+            <i class="bi bi-list"></i>
+            <span class="chat-header-menu-dot" x-show="hasUnreadOutsideCurrentView()" x-cloak></span>
+        </button>
+        <h1 class="chat-header-title">
+            <i class="bi" :class="isServerWindow() ? 'bi-terminal' : (currentChannel && currentChannel.startsWith('#') ? 'bi-hash' : 'bi-at')"></i>
+            <span x-text="isServerWindow() ? t('server_window') : (currentChannel ? currentChannel.replace(/^#/, '') : t('no_channel_selected'))"></span>
+        </h1>
+
+        <template x-if="currentChannel && currentChannel.startsWith('#')">
+            <button type="button"
+                    class="chat-header-topic"
+                    :class="{ 'is-editable': canManageCurrentChannel() }"
+                    :title="canManageCurrentChannel() ? 'Topic bearbeiten' : ''"
+                    @click="openTopicEditor()"
+                    x-html="$store.channelTopics?.[currentChannel] ? channelTopic : escapeHtml(t('no_topic'))">
+            </button>
+        </template>
+
+        <div class="chat-header-actions">
+            <!-- Voice chat of the channel (experimental, Settings → Voice chat) -->
+            <button class="chat-header-btn"
+                    :class="{ 'is-active': isInVoice(currentChannel), 'chat-header-btn--voice-live': isInVoice(currentChannel) }"
+                    x-show="currentChannel?.startsWith('#') && (canJoinVoice(currentChannel) || isInVoice(currentChannel))"
+                    x-cloak
+                    :disabled="voice.state === 'connecting'"
+                    :title="isInVoice(currentChannel) ? t('voice_leave') : t('voice_join')"
+                    :aria-label="isInVoice(currentChannel) ? t('voice_leave') : t('voice_join')"
+                    @click="toggleVoice(currentChannel)">
+                <i class="bi" :class="isInVoice(currentChannel) ? 'bi-telephone-x' : 'bi-mic'"></i>
+            </button>
+            <!-- Voice call with a friend (DM window, experimental) -->
+            <button class="chat-header-btn"
+                    :class="{ 'is-active': isInCallWith(currentChannel), 'chat-header-btn--voice-live': isInCallWith(currentChannel) }"
+                    x-show="canCallUser(currentChannel) || isInCallWith(currentChannel)"
+                    x-cloak
+                    :disabled="voice.state === 'connecting' && !isInCallWith(currentChannel)"
+                    :title="isInCallWith(currentChannel) ? t('voice_call_hangup') : t('voice_call_start')"
+                    :aria-label="isInCallWith(currentChannel) ? t('voice_call_hangup') : t('voice_call_start')"
+                    @click="isInCallWith(currentChannel) ? hangUpCall() : startCall(currentChannel)">
+                <i class="bi" :class="isInCallWith(currentChannel) ? 'bi-telephone-x' : 'bi-telephone'"></i>
+            </button>
+            <button class="chat-header-btn"
+                    :class="{ 'is-active': messageSearch.open }"
+                    x-show="currentChannel && !isServerWindow()"
+                    title="{{ t('search_messages') }} (Ctrl+F)"
+                    @click="messageSearch.open ? closeMessageSearch() : openMessageSearch()">
+                <i class="bi bi-search"></i>
+            </button>
+            <button class="chat-header-btn"
+                    x-show="isServerWindow()"
+                    @click="clearServerWindow()"
+                    title="{{ t('server_window_clear') }}">
+                <i class="bi bi-eraser"></i>
+            </button>
+            <button class="chat-header-btn"
+                    x-show="canManageCurrentChannel()"
+                    @click="openChannelManagement()"
+                    title="{{ t('channel_management') }}">
+                <i class="bi bi-sliders"></i>
+            </button>
+            <button class="chat-header-btn chat-header-btn--desktop"
+                    :class="{ 'is-active': highlightWords.length > 0 }"
+                    title="{{ t('highlight_words') }}"
+                    @click="openSettings('notifications')">
+                <i class="bi" :class="highlightWords.length > 0 ? 'bi-bell-fill' : 'bi-bell'"></i>
+            </button>
+            <button class="chat-header-btn chat-header-btn--desktop"
+                    :class="{ 'is-active': !hideJoinPart }"
+                    x-show="currentChannel && currentChannel.startsWith('#')"
+                    title="{{ t('toggle_join_part') }}"
+                    @click="toggleJoinPart()">
+                <i class="bi" :class="hideJoinPart ? 'bi-door-closed' : 'bi-door-open'"></i>
+            </button>
+            <button class="chat-header-btn"
+                    :class="{ 'is-active': userListOpen }"
+                    x-show="currentChannel && currentChannel.startsWith('#') && sidebarMode === 'channels'"
+                    title="{{ t('toggle_userlist') }}"
+                    @click="toggleUserList()">
+                <i class="bi bi-people-fill"></i>
+            </button>
+        </div>
+    </div>
+    {{> voice-bar }}
+    <!-- Message search (Ctrl+F) -->
+    <div class="message-search" x-show="messageSearch.open" x-cloak role="search">
+        <i class="bi bi-search"></i>
+        <input type="search"
+               x-ref="messageSearchInput"
+               x-model="messageSearch.query"
+               @input.debounce.150ms="messageSearchInput()"
+               @keydown.enter.prevent="messageSearchStep($event.shiftKey ? -1 : 1)"
+               @keydown.escape.prevent.stop="closeMessageSearch()"
+               placeholder="{{ t('search_placeholder') }}"
+               aria-label="{{ t('search_messages') }}">
+        <span class="message-search-counter" x-text="messageSearchCounter()"></span>
+        <button type="button" class="chat-header-btn" title="{{ t('search_newer') }}"
+                :disabled="messageSearchResults().length < 2" @click="messageSearchStep(-1)">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        <button type="button" class="chat-header-btn" title="{{ t('search_older') }}"
+                :disabled="messageSearchResults().length < 2" @click="messageSearchStep(1)">
+            <i class="bi bi-chevron-up"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary message-search-more"
+                x-show="canLoadOlderForSearch()"
+                :disabled="historyLoadingByTarget[currentChannel]"
+                @click="loadOlderForSearch()">
+            {{ t('search_load_older') }}
+        </button>
+        <button type="button" class="chat-header-btn" title="{{ t('close') }}" @click="closeMessageSearch()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <!-- Reconnect Banner -->
+    <div x-show="connectionState !== 'connected'"
+         x-cloak
+         class="reconnect-banner"
+         :class="{
+         'reconnect-banner--reconnecting': connectionState === 'reconnecting',
+         'reconnect-banner--connecting':   connectionState === 'connecting'
+     }">
+        <template x-if="connectionState === 'reconnecting'">
+        <span>
+            <span class="reconnect-spinner"></span>
+            {{ t('reconnecting') }}
+            <strong x-text="reconnectDelay + 's'"></strong>
+            ({{ t('attempt') }} <span x-text="reconnectAttempt"></span>)
+        </span>
+        </template>
+        <template x-if="connectionState === 'connecting'">
+        <span>
+            <span class="reconnect-spinner"></span>
+            {{ t('connecting') }}
+        </span>
+        </template>
+    </div>
+</div>
+
+<div x-show="$store.channelManagement.showTopicEditor"
+     x-cloak
+     class="position-fixed top-50 start-50 translate-middle bg-dark text-light border border-secondary-subtle rounded shadow p-3"
+     style="z-index: 1080; min-width: 420px; max-width: 90vw;"
+     @click.outside="$store.channelManagement.showTopicEditor = false">
+    <h6 class="mb-2">{{ t('cm_topic_edit') }}</h6>
+    <div class="small text-muted mb-2">{{ t('cm_topic_hint') }}</div>
+    <textarea class="form-control form-control-sm bg-black text-light border-secondary"
+              rows="4"
+              x-model="$store.channelManagement.topicDraft"
+              @keydown="insertTopicColorCode($event)"></textarea>
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <button class="btn btn-sm btn-outline-secondary" @click="$store.channelManagement.showTopicEditor = false">{{ t('cancel') }}</button>
+        <button class="btn btn-sm btn-primary" @click="applyChannelTopic()">{{ t('cm_topic_set') }}</button>
+    </div>
+</div>
+
+<div x-show="$store.channelManagement.showPanel"
+     x-cloak
+     class="position-fixed top-50 start-50 translate-middle bg-dark text-light border border-secondary-subtle rounded shadow p-3"
+     style="z-index: 1080; min-width: 640px;  max-width: 400px;"
+     @click.outside="$store.channelManagement.showPanel = false">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">{{ t('cm_title') }} · <span x-text="currentChannel"></span></h6>
+        <button class="btn btn-sm btn-outline-secondary" @click="$store.channelManagement.showPanel = false">×</button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-12">
+            <label class="form-label small">{{ t('cm_standard_modes') }}</label>
+            <div class="input-group input-group-sm mb-2">
+                <input class="form-control bg-black text-light border-secondary" x-model="$store.channelManagement.channelModesDraft" placeholder="+nt">
+                <button class="btn btn-outline-primary" @click="applyChannelModes()">{{ t('apply') }}</button>
+            </div>
+            <div class="d-flex flex-wrap gap-3 small">
+                <template x-for="mode in $store.channelManagement.commonChannelModes" :key="mode">
+                    <label class="form-check form-switch mb-0 d-flex align-items-center gap-1">
+                        <input class="form-check-input" type="checkbox"
+                               :checked="$store.channelManagement.standardModeState?.[mode]"
+                               @change="setStandardMode(mode, $event.target.checked)">
+                        <span x-text="'+' + mode"></span>
+                    </label>
+                </template>
+            </div>
+            <div class="small text-muted mt-2">
+                {{ t('cm_mode_e_hint') }}
+            </div>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-12">
+            <label class="form-label small">{{ t('cm_custom_modes') }}</label>
+            <div class="input-group input-group-sm mb-2">
+                <input class="form-control bg-black text-light border-secondary" x-model="$store.channelManagement.customModesDraft" placeholder="+f 5:30">
+                <button class="btn btn-outline-primary" @click="applyCustomModes()">{{ t('apply') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div x-show="$store.channelManagement.showListManager"
+     x-cloak
+     class="position-fixed top-50 start-50 translate-middle bg-dark text-light border border-secondary-subtle rounded shadow p-3"
+     style="z-index: 1090; min-width: 720px; max-width: 95vw;"
+     @click.outside="$store.channelManagement.showListManager = false">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">{{ t('cm_lists_title') }} · <span x-text="currentChannel"></span></h6>
+        <button class="btn btn-sm btn-outline-secondary" @click="$store.channelManagement.showListManager = false">×</button>
+    </div>
+
+    <div class="btn-group btn-group-sm mb-3" role="group">
+        <button class="btn" :class="$store.channelManagement.listManagerTab === 'ban' ? 'btn-secondary' : 'btn-outline-secondary'" @click="$store.channelManagement.listManagerTab = 'ban'">{{ t('cm_ban_list') }}</button>
+        <button class="btn" :class="$store.channelManagement.listManagerTab === 'exception' ? 'btn-secondary' : 'btn-outline-secondary'" @click="$store.channelManagement.listManagerTab = 'exception'">{{ t('cm_exception_list') }}</button>
+        <button class="btn" :class="$store.channelManagement.listManagerTab === 'invex' ? 'btn-secondary' : 'btn-outline-secondary'" @click="$store.channelManagement.listManagerTab = 'invex'">{{ t('cm_invex_list') }}</button>
+    </div>
+
+    <div x-show="$store.channelManagement.listManagerTab === 'ban'">
+        <div class="small text-muted mb-2" x-show="$store.channelManagement.banList.length === 0">{{ t('cm_ban_empty') }}</div>
+        <template x-for="entry in $store.channelManagement.banList" :key="entry.mask">
+            <div class="d-flex justify-content-between align-items-center border border-secondary-subtle rounded p-2 mb-2">
+                <div class="small">
+                    <div class="fw-semibold" x-text="entry.mask"></div>
+                    <div class="text-muted" x-text="entry.by ? t('cm_set_by', { nick: entry.by }) : ''"></div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" @click="removeBan(entry.mask)">{{ t('remove') }} (-b)</button>
+            </div>
+        </template>
+    </div>
+
+    <div x-show="$store.channelManagement.listManagerTab === 'exception'">
+        <div class="small text-muted mb-2" x-show="$store.channelManagement.exceptionList.length === 0">{{ t('cm_exception_empty') }}</div>
+        <template x-for="entry in $store.channelManagement.exceptionList" :key="entry.mask">
+            <div class="d-flex justify-content-between align-items-center border border-secondary-subtle rounded p-2 mb-2">
+                <div class="small">
+                    <div class="fw-semibold" x-text="entry.mask"></div>
+                    <div class="text-muted" x-text="entry.by ? t('cm_set_by', { nick: entry.by }) : ''"></div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" @click="removeException(entry.mask)">{{ t('remove') }} (-e)</button>
+            </div>
+        </template>
+    </div>
+
+    <div x-show="$store.channelManagement.listManagerTab === 'invex'">
+        <div class="small text-muted mb-2" x-show="$store.channelManagement.invexList.length === 0">{{ t('cm_invex_empty') }}</div>
+        <template x-for="entry in $store.channelManagement.invexList" :key="entry.mask">
+            <div class="d-flex justify-content-between align-items-center border border-secondary-subtle rounded p-2 mb-2">
+                <div class="small">
+                    <div class="fw-semibold" x-text="entry.mask"></div>
+                    <div class="text-muted" x-text="entry.by ? t('cm_set_by', { nick: entry.by }) : ''"></div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" @click="removeInvex(entry.mask)">{{ t('remove') }} (-I)</button>
+            </div>
+        </template>
+    </div>
+</div>

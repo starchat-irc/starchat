@@ -1,0 +1,21 @@
+<!-- One open DM in the sidebar; expects the Alpine variable "user" (the nick). -->
+<div class="channel-item channel-item--dm"
+     role="button"
+     tabindex="0"
+     :class="{ 'is-active': user === currentChannel, 'is-unread': user !== currentChannel && hasUnread(user) }"
+     @click="openFriendChat(user)"
+     @keydown.enter="openFriendChat(user)">
+    <span class="channel-item-avatar nick-bg position-relative" :style="nickStyle(user)">
+        <template x-if="avatarUrl(user)">
+            <img class="nick-avatar-img" :src="avatarUrl(user)" alt="" loading="lazy" x-on:error="clearUserAvatar(user)">
+        </template>
+        <span x-show="!avatarUrl(user)" x-text="nickInitial(user)"></span>
+        <span class="presence-dot" x-show="isFriendNick(user)" :class="isFriendOnline(user) ? 'is-online' : 'is-offline'"></span>
+    </span>
+    <span class="channel-item-name" x-text="user"></span>
+    <span class="bot-badge" x-show="isBotNick(user)" x-cloak :title="botBadgeTitle(user)">{{ t('bot_badge') }}</span>
+    <span class="mention-badge" x-show="user !== currentChannel && unreadMessages[user] > 0" x-text="unreadMessages[user]"></span>
+    <button type="button" class="channel-item-close" title="{{ t('close_dm') }}" @click.stop="closeDM(user)">
+        <i class="bi bi-x-lg"></i>
+    </button>
+</div>

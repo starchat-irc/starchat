@@ -1,0 +1,70 @@
+<!--
+    Report a user or a message to the moderators of the server (see the reports feature).
+-->
+<div x-show="reportDialog.show"
+     x-cloak
+     class="quick-switcher-backdrop report-dialog-backdrop"
+     @click.self="closeReportDialog()"
+     @keydown.escape.window="reportDialog.show && closeReportDialog()">
+    <div class="quick-switcher report-dialog" role="dialog" aria-modal="true" aria-labelledby="reportDialogTitle">
+        <div class="report-dialog-header">
+            <i class="bi bi-flag-fill text-danger"></i>
+            <h2 id="reportDialogTitle" class="report-dialog-title">
+                {{ t('report_title') }} <span x-text="reportDialog.nick"></span>
+            </h2>
+            <button type="button" class="btn-close btn-close-white ms-auto" aria-label="{{ t('close') }}" @click="closeReportDialog()"></button>
+        </div>
+
+        <template x-if="!reportDialog.done">
+            <form class="report-dialog-body" @submit.prevent="submitReport()">
+                <template x-if="reportDialog.message">
+                    <blockquote class="report-dialog-quote" x-text="reportDialog.message.text"></blockquote>
+                </template>
+
+                <fieldset class="report-dialog-reasons">
+                    <legend class="report-dialog-label">{{ t('report_reason') }}</legend>
+                    <!-- Reasons come from the server that receives the report -->
+                    <template x-for="reason in reportReasons" :key="reason.value">
+                        <label class="report-dialog-reason">
+                            <input type="radio" name="report_reason" :value="reason.value" x-model="reportDialog.reason">
+                            <span x-text="reason.label"></span>
+                        </label>
+                    </template>
+                </fieldset>
+
+                <label class="report-dialog-label" for="reportDetails">{{ t('report_details') }}</label>
+                <textarea id="reportDetails" class="form-control report-dialog-details" rows="3" maxlength="2000"
+                          x-model="reportDialog.details" placeholder="{{ t('report_details_placeholder') }}"></textarea>
+
+                <p class="report-dialog-hint" x-show="reportDialog.reason === 'child_safety'">
+                    {{ t('report_child_safety_hint') }}
+                </p>
+
+                <div class="report-dialog-error" x-show="reportDialog.error" x-text="reportDialog.error" role="alert"></div>
+
+                <div class="report-dialog-actions">
+                    <a :href="reportPolicyUrl" x-show="reportPolicyUrl" target="_blank" rel="noopener" class="report-dialog-policy">{{ t('report_policy_link') }}</a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="closeReportDialog()">{{ t('report_cancel') }}</button>
+                    <button type="submit" class="btn btn-sm btn-danger" :disabled="reportDialog.sending">
+                        <span x-show="reportDialog.sending" class="spinner-border spinner-border-sm me-1"></span>
+                        {{ t('report_submit') }}
+                    </button>
+                </div>
+            </form>
+        </template>
+
+        <template x-if="reportDialog.done">
+            <div class="report-dialog-body">
+                <p class="mb-3"><i class="bi bi-check-circle-fill text-success me-1"></i>{{ t('report_received') }}</p>
+                <div class="report-dialog-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            x-show="!isIgnored(reportDialog.nick)"
+                            @click="toggleIgnoreUser(reportDialog.nick)">
+                        <i class="bi bi-ban me-1"></i>{{ t('ignore') }}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" @click="closeReportDialog()">{{ t('close') }}</button>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>

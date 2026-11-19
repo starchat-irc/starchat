@@ -1,0 +1,47 @@
+<div x-data="chatComponent()" class="chat-container">
+
+    {{> login-overlay }}
+
+    <template x-if="isAuthenticated">
+        <div class="d-flex flex-column flex-grow-1">
+            {{> chat-header }}
+
+            <div class="d-flex flex-grow-1 chat-main-content" :class="{ 'chat-main-content--no-input': !(sidebarMode === 'channels' || isDirectMessageChannel(currentChannel) || isServerWindow()) }">
+                {{> chat-channelbar }}
+
+                <!-- Small screens: dims the chat while the channel or user drawer is open -->
+                <div class="mobile-drawer-backdrop" x-show="isMobileLayout && (mobileSidebarOpen || showUserList)" x-cloak
+                     @click="closeMobileDrawers()"></div>
+
+                <div class="flex-grow-1 d-flex flex-column">
+                    <template x-if="sidebarMode === 'channels' || (sidebarMode === 'friends' && selectedFriendName && (isDirectMessageChannel(currentChannel) || currentChannel === 'Server'))">
+                        <div class="flex-grow-1 d-flex flex-column">
+                            {{> chat-messages }}
+                        </div>
+                    </template>
+
+                    <template x-if="sidebarMode === 'friends' && (!selectedFriendName || (!isDirectMessageChannel(currentChannel) && currentChannel !== 'Server'))">
+                        {{> friends-hub }}
+                    </template>
+
+                    <template x-if="sidebarMode === 'uploads'">
+                        {{> upload-manager }}
+                    </template>
+                </div>
+
+                {{> chat-userlist }}
+            </div>
+
+            <div class="chat-input-wrapper" x-show="sidebarMode === 'channels' || isDirectMessageChannel(currentChannel) || isServerWindow()" x-cloak>
+                {{> chat-input }}
+            </div>
+
+            {{> modal-explore }}
+            {{> settings-window }}
+            {{> quick-switcher }}
+            {{> report-dialog }}
+            {{> always-on-dialog }}
+        </div>
+    </template>
+
+</div>

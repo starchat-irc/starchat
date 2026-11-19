@@ -1,0 +1,63 @@
+<!-- Settings → Voice chat: devices, microphone test and voice activation threshold -->
+<div class="voice-settings" x-init="refreshVoiceDevices(); loadVoiceFilters()">
+    <div class="settings-item-label">{{ t('settings_voice_devices') }}</div>
+
+    <div class="voice-settings-grid">
+        <label class="voice-settings-field">
+            <span>{{ t('settings_voice_input') }}</span>
+            <select class="form-select form-select-sm" @change="setVoiceInput($event.target.value)">
+                <option value="" :selected="!voiceSettings.inputDeviceId">{{ t('settings_voice_default_device') }}</option>
+                <template x-for="device in voiceDevices.inputs" :key="device.id">
+                    <option :value="device.id" :selected="voiceSettings.inputDeviceId === device.id" x-text="device.label"></option>
+                </template>
+            </select>
+        </label>
+
+        <label class="voice-settings-field">
+            <span>{{ t('settings_voice_output') }}</span>
+            <select class="form-select form-select-sm" :disabled="!voiceDevices.canSelectOutput" @change="setVoiceOutput($event.target.value)">
+                <option value="" :selected="!voiceSettings.outputDeviceId">{{ t('settings_voice_default_device') }}</option>
+                <template x-for="device in voiceDevices.outputs" :key="device.id">
+                    <option :value="device.id" :selected="voiceSettings.outputDeviceId === device.id" x-text="device.label"></option>
+                </template>
+            </select>
+            <small class="settings-item-hint" x-show="!voiceDevices.canSelectOutput">{{ t('settings_voice_output_unsupported') }}</small>
+        </label>
+    </div>
+
+    <!-- Only when the server offers a filter this chat can run -->
+    <label class="voice-settings-field voice-settings-filter" x-show="voiceFilters.length" x-cloak>
+        <span>{{ t('settings_voice_filter') }}</span>
+        <select class="form-select form-select-sm" @change="setVoiceFilter($event.target.value)">
+            <option value="" :selected="!selectedVoiceFilter()">{{ t('settings_voice_filter_browser') }}</option>
+            <template x-for="filter in voiceFilters" :key="filter.id">
+                <option :value="filter.id" :selected="voiceSettings.noiseFilter === filter.id" x-text="filter.name"></option>
+            </template>
+        </select>
+        <small class="settings-item-hint">{{ t('settings_voice_filter_hint') }}</small>
+    </label>
+
+    <div class="voice-settings-threshold" :class="{ 'is-disabled': voiceSettings.mode !== 'vad' }">
+        <div class="voice-settings-threshold-head">
+            <span>{{ t('settings_voice_threshold') }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    x-show="voice.state === 'idle'"
+                    @click="voiceTest.running ? stopVoiceTest() : startVoiceTest()"
+                    x-text="voiceTest.running ? t('settings_voice_test_stop') : t('settings_voice_test_start')"></button>
+        </div>
+        <div class="voice-meter" aria-hidden="true">
+            <span class="voice-meter-fill"
+                  :class="{ 'is-open': voice.state !== 'idle' ? voice.open : voiceTest.open }"
+                  :style="'width:' + voiceLevelPercent(voice.state !== 'idle' ? voice.level : voiceTest.level) + '%'"></span>
+            <span class="voice-meter-threshold" :style="'left:' + voiceThresholdPercent() + '%'"></span>
+        </div>
+        <input type="range" class="form-range" min="0" max="100" step="1"
+               :value="voiceThresholdPercent()"
+               :disabled="voiceSettings.mode !== 'vad'"
+               aria-label="{{ t('settings_voice_threshold') }}"
+               @input="setVoiceThresholdPercent($event.target.value)">
+        <div class="settings-item-hint">{{ t('settings_voice_threshold_hint') }}</div>
+    </div>
+
+    <div class="voice-settings-error" x-show="voiceError" x-text="voiceError"></div>
+</div>

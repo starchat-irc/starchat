@@ -8,3 +8,5 @@ export * from './core/users.js';
 export * from './core/channels.js';
 export * from './core/services.js';
 export { commands, registerCommand } from './core/commands.js';
+export { createTranslator, messages, resolveLanguage } from './i18n/index.js';
+export { renderTemplate, templates } from './ui/templates.js';

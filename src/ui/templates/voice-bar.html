@@ -1,0 +1,98 @@
+<!-- Voice chat bar (experimental): stays visible in every window while connected -->
+<div class="voice-notice" x-show="voiceError && voice.state === 'idle' && !settingsWindow.show" x-cloak role="alert">
+    <i class="bi bi-mic-mute"></i>
+    <span class="voice-notice-text" x-text="voiceError"></span>
+    <button type="button" class="voice-notice-action" @click="openSettings('voice')">{{ t('voice_settings') }}</button>
+    <button type="button" class="chat-header-btn" title="{{ t('voice_dismiss') }}" aria-label="{{ t('voice_dismiss') }}" @click="dismissVoiceError()">
+        <i class="bi bi-x-lg"></i>
+    </button>
+</div>
+<!-- Incoming call from a friend -->
+<div class="voice-call-incoming" x-show="incomingCall" x-cloak role="alertdialog" aria-live="assertive">
+    <i class="bi bi-telephone-inbound-fill"></i>
+    <span class="voice-notice-text">
+        <span x-text="incomingCall ? t('voice_call_incoming', { nick: incomingCall.nick }) : ''"></span>
+        <small class="voice-call-incoming-hint" x-show="isInVoice() && voice.kind === 'channel'"
+               x-text="t('voice_call_leaves_channel', { channel: voice.channel })"></small>
+    </span>
+    <button type="button" class="voice-call-btn voice-call-btn--accept" @click="acceptCall()">
+        <i class="bi bi-telephone-fill"></i> {{ t('voice_call_accept') }}
+    </button>
+    <button type="button" class="voice-call-btn voice-call-btn--decline" @click="declineCall()">
+        <i class="bi bi-telephone-x-fill"></i> {{ t('voice_call_decline') }}
+    </button>
+</div>
+<div class="voice-bar" x-show="voice.state !== 'idle'" x-cloak role="region" aria-label="{{ t('settings_section_voice') }}">
+    <div class="voice-bar-status">
+        <span class="voice-bar-dot" :class="'is-' + voice.state"></span>
+        <button type="button" class="voice-bar-channel"
+                @click="switchChannel(voiceCall ? resolveTargetKey(voiceCall.nick) : voice.channel)"
+                x-text="voiceCall ? voiceCall.nick : voice.channel"></button>
+        <span class="voice-bar-state" x-text="voiceCall?.state === 'ringing' ? voiceCallLabel() : voiceStateLabel()"></span>
+        <span class="voice-bar-badge">{{ t('voice_experimental') }}</span>
+    </div>
+
+    <div class="voice-bar-participants">
+        <template x-for="participant in voice.participants" :key="participant.identity">
+            <div class="voice-participant"
+                 :class="{ 'is-speaking': participant.isSpeaking, 'is-muted': participant.isMuted }">
+                <button type="button"
+                        class="voice-participant-chip"
+                        :title="participant.isLocal ? participant.name : participant.name + ' – ' + t('voice_volume')"
+                        :disabled="participant.isLocal"
+                        @click="toggleVoiceVolumeMenu(participant.identity)">
+                    <span class="channel-item-avatar voice-participant-avatar nick-bg" :style="nickStyle(participant.name)">
+                        <template x-if="avatarUrl(participant.name)">
+                            <img class="nick-avatar-img" :src="avatarUrl(participant.name)" alt="" loading="lazy" x-on:error="clearUserAvatar(participant.name)">
+                        </template>
+                        <span x-show="!avatarUrl(participant.name)" x-text="nickInitial(participant.name)"></span>
+                    </span>
+                    <span class="voice-participant-name" x-text="participant.name"></span>
+                    <span class="voice-participant-you" x-show="participant.isLocal">({{ t('voice_you') }})</span>
+                    <i class="bi bi-mic-mute-fill voice-participant-muted" x-show="participant.isMuted"></i>
+                </button>
+                <div class="voice-volume-popover" x-show="voice.volumeFor === participant.identity" x-cloak
+                     @click.outside="voice.volumeFor = null">
+                    <label class="voice-volume-label">
+                        <span>{{ t('voice_volume') }}</span>
+                        <span x-text="voiceParticipantVolume(participant.identity) + ' %'"></span>
+                    </label>
+                    <input type="range" min="0" max="100" step="5" class="form-range"
+                           :value="voiceParticipantVolume(participant.identity)"
+                           @input="setVoiceParticipantVolume(participant.identity, $event.target.value)">
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <div class="voice-bar-controls">
+        <span class="voice-bar-ptt" x-show="voicePttHint()" x-text="voicePttHint()"></span>
+        <button type="button" class="voice-bar-btn voice-bar-btn--warning" x-show="voice.audioBlocked" @click="enableVoiceAudio()"
+                title="{{ t('voice_audio_blocked') }}">
+            <i class="bi bi-volume-mute"></i> <span>{{ t('voice_audio_blocked') }}</span>
+        </button>
+        <span class="voice-bar-meter" :title="Math.round(voice.level) + ' dB'" aria-hidden="true">
+            <span class="voice-bar-meter-fill" :class="{ 'is-open': voice.open }" :style="'width:' + voiceLevelPercent(voice.level) + '%'"></span>
+        </span>
+        <button type="button" class="voice-bar-btn" :class="{ 'is-off': voice.micMuted }"
+                :title="voice.micMuted ? t('voice_unmute') : t('voice_mute')"
+                :aria-pressed="voice.micMuted"
+                @click="toggleVoiceMute()">
+            <i class="bi" :class="voice.micMuted ? 'bi-mic-mute-fill' : 'bi-mic-fill'"></i>
+        </button>
+        <button type="button" class="voice-bar-btn" :class="{ 'is-off': voice.deafened }"
+                :title="voice.deafened ? t('voice_undeafen') : t('voice_deafen')"
+                :aria-pressed="voice.deafened"
+                @click="toggleVoiceDeafen()">
+            <i class="bi" :class="voice.deafened ? 'bi-volume-mute-fill' : 'bi-headphones'"></i>
+        </button>
+        <button type="button" class="voice-bar-btn" title="{{ t('voice_settings') }}" @click="openSettings('voice')">
+            <i class="bi bi-gear"></i>
+        </button>
+        <button type="button" class="voice-bar-btn voice-bar-btn--leave"
+                :title="voiceCall ? t('voice_call_hangup') : t('voice_leave')"
+                @click="voiceCall ? hangUpCall() : leaveVoice()">
+            <i class="bi bi-telephone-x-fill"></i>
+        </button>
+    </div>
+</div>

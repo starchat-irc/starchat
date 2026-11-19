@@ -1,0 +1,46 @@
+<!-- Upload manager, shown when sidebarMode === 'uploads' -->
+<div class="flex-grow-1 p-4 overflow-auto upload-manager-view" x-cloak>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-collection-play"></i> {{ t('uploads_title') }}
+        </h4>
+        <button class="btn btn-outline-primary" @click="fetchMyUploads()" :disabled="myUploadsLoading">
+            <i class="bi bi-arrow-clockwise"></i> {{ t('refresh') }}
+        </button>
+    </div>
+
+    <p class="text-muted mb-3">
+        {{ t('uploads_intro') }}
+    </p>
+
+    <div class="alert alert-secondary" x-show="myUploadsLoading">{{ t('loading') }}</div>
+    <div class="alert alert-secondary" x-show="!myUploadsLoading && myUploads.length === 0">{{ t('uploads_empty') }}</div>
+
+    <div class="row g-3" x-show="!myUploadsLoading && myUploads.length > 0">
+        <template x-for="upload in myUploads" :key="upload.id">
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card bg-dark border-secondary-subtle h-100">
+                    <div class="card-body">
+                        <template x-if="isUploadImage(upload)">
+                            <img :src="upload.url" alt="{{ t('preview') }}" class="rounded mb-2"
+                                 style="width:100%; height:160px; object-fit:cover;">
+                        </template>
+                        <template x-if="isUploadVideo(upload)">
+                            <video :src="upload.url" class="rounded mb-2 w-100"
+                                   style="height:160px; object-fit:cover;" muted preload="metadata"></video>
+                        </template>
+                        <h6 class="card-title text-truncate" x-text="upload.original_name"></h6>
+                        <p class="card-text text-muted small mb-1" x-text="upload.caption || t('uploads_no_caption')"></p>
+                        <p class="card-text text-muted small mb-3" x-text="upload.mime_type"></p>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info"   @click="copyUploadLink(upload)">{{ t('copy_link') }}</button>
+                            <button class="btn btn-sm btn-outline-danger" @click="deleteUpload(upload)">{{ t('delete') }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+</div>

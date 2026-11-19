@@ -1,0 +1,86 @@
+<!--
+    Quick switcher (Ctrl+P) and the shortcut overview (?), see mixins/shortcuts.js.
+-->
+<div x-show="quickSwitcher.show"
+     x-cloak
+     class="quick-switcher-backdrop"
+     @click.self="closeQuickSwitcher()">
+    <div class="quick-switcher" role="dialog" aria-modal="true" aria-label="{{ t('shortcut_quick_switcher') }}">
+        <!-- Share mode (Android app): what was shared and where it should go -->
+        <template x-if="quickSwitcher.mode === 'share' && pendingShare">
+            <div class="quick-switcher-share">
+                <div class="quick-switcher-share-title">
+                    <i class="bi bi-share"></i>
+                    <span>{{ t('share_title') }}</span>
+                    <button type="button" class="btn-close btn-close-white ms-auto" aria-label="{{ t('close') }}" @click="closeQuickSwitcher()"></button>
+                </div>
+                <div class="quick-switcher-share-content">
+                    <i class="bi" :class="pendingShare.file ? 'bi-paperclip' : 'bi-link-45deg'"></i>
+                    <span x-text="pendingShareSummary()"></span>
+                </div>
+                <div class="quick-switcher-share-warning" x-show="pendingShareWarning()" x-text="pendingShareWarning()"></div>
+            </div>
+        </template>
+        <label class="quick-switcher-search">
+            <i class="bi bi-search"></i>
+            <input type="text"
+                   x-model="quickSwitcher.query"
+                   x-effect="quickSwitcher.show && !isMobileLayout && $nextTick(() => $el.focus())"
+                   @input="quickSwitcherInput()"
+                   @keydown.arrow-down.prevent="quickSwitcherMove(1)"
+                   @keydown.arrow-up.prevent="quickSwitcherMove(-1)"
+                   @keydown.enter.prevent="quickSwitcherConfirm()"
+                   @keydown.escape.prevent.stop="closeQuickSwitcher()"
+:placeholder="quickSwitcher.mode === 'share' ? t('share_placeholder') : t('quick_switcher_placeholder')"
+                   autocomplete="off"
+                   spellcheck="false">
+        </label>
+
+        <div class="quick-switcher-list" role="listbox">
+            <template x-for="(item, index) in quickSwitcherItems()" :key="item.kind + item.name">
+                <button type="button"
+                        class="quick-switcher-item"
+                        role="option"
+                        :aria-selected="index === quickSwitcher.index"
+                        :class="{ 'is-selected': index === quickSwitcher.index, 'is-unread': item.unread > 0 }"
+                        @mouseenter="quickSwitcher.index = index"
+                        @click="quickSwitcherConfirm(item)">
+                    <i class="bi" :class="item.kind === 'channel' ? 'bi-hash' : (item.kind === 'dm' ? 'bi-chat-dots' : 'bi-person')"></i>
+                    <span class="quick-switcher-name" x-text="item.kind === 'channel' ? item.name.replace(/^#/, '') : item.name"></span>
+                    <span class="mention-badge" x-show="item.mentions > 0" x-text="item.mentions"></span>
+                </button>
+            </template>
+            <div class="quick-switcher-empty" x-show="quickSwitcherItems().length === 0">{{ t('quick_switcher_empty') }}</div>
+        </div>
+
+        <div class="quick-switcher-hint" x-show="!isMobileLayout">
+            <span><kbd>↑</kbd><kbd>↓</kbd> {{ t('quick_switcher_hint_move') }}</span>
+            <span><kbd>Enter</kbd> {{ t('quick_switcher_hint_open') }}</span>
+            <span><kbd>Esc</kbd> {{ t('quick_switcher_hint_close') }}</span>
+        </div>
+    </div>
+</div>
+
+<div x-show="showShortcutHelp"
+     x-cloak
+     class="quick-switcher-backdrop"
+     @click.self="showShortcutHelp = false">
+    <div class="quick-switcher shortcut-help" role="dialog" aria-modal="true" aria-labelledby="shortcutHelpTitle">
+        <div class="shortcut-help-header">
+            <span id="shortcutHelpTitle">{{ t('shortcut_help_title') }}</span>
+            <button type="button" class="btn-close btn-close-white" aria-label="{{ t('close') }}" @click="showShortcutHelp = false"></button>
+        </div>
+        <dl class="shortcut-help-list">
+            <template x-for="shortcut in shortcuts" :key="shortcut.label">
+                <div class="shortcut-help-row">
+                    <dt x-text="t(shortcut.label)"></dt>
+                    <dd>
+                        <template x-for="key in shortcut.keys" :key="key">
+                            <kbd x-text="key"></kbd>
+                        </template>
+                    </dd>
+                </div>
+            </template>
+        </dl>
+    </div>
+</div>

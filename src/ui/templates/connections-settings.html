@@ -1,0 +1,224 @@
+<!--
+    Settings → Connections (desktop): the connection profiles of the app, in place of the
+    old manager window. Data and changes go through the shell (see mixins/connections.js):
+    passwords can be set here but are never shown again.
+-->
+<div class="connections-page">
+    <div class="connections-notice is-error" x-show="connectionsPage.error" x-text="t(connectionsPage.error)"></div>
+    <div class="connections-loading" x-show="connectionsPage.loading && !connectionsPage.available">
+        <span class="reconnect-spinner"></span> {{ t('connections_loading') }}
+    </div>
+
+    <!-- ── List ─────────────────────────────────────────────────────── -->
+    <template x-if="connectionsPage.available && connectionsPage.view === 'list'">
+        <div class="connections-list">
+            <template x-for="profile in connectionsPage.profiles" :key="profile.hash">
+                <button type="button" class="connections-item" @click="editConnection(profile.hash)">
+                    <i class="bi" :class="profile.serverType === 'external' ? 'bi-globe2' : 'bi-house-door'"></i>
+                    <span class="connections-item-text">
+                        <span class="connections-item-title">
+                            <span x-text="connectionTitle(profile)"></span>
+                            <span class="connections-badge" x-show="profile.hash === currentConnectionHash()">{{ t('connections_current') }}</span>
+                        </span>
+                        <span class="connections-item-sub" x-text="profile.summary"></span>
+                    </span>
+                    <i class="bi bi-chevron-right connections-item-arrow"></i>
+                </button>
+            </template>
+
+            <div class="connections-add">
+                <div class="settings-item-label">{{ t('connections_add') }}</div>
+                <div class="connections-choices">
+                    <button type="button" class="connections-choice" @click="startNewConnection('home')">
+                        <i class="bi bi-house-door"></i>
+                        <span class="connections-choice-title">{{ t('connections_new_home') }}</span>
+                        <span class="connections-choice-sub">{{ t('connections_new_home_hint') }}</span>
+                    </button>
+                    <button type="button" class="connections-choice" @click="showConnectionDirectory()">
+                        <i class="bi bi-collection"></i>
+                        <span class="connections-choice-title">{{ t('connections_new_directory') }}</span>
+                        <span class="connections-choice-sub">{{ t('connections_new_directory_hint') }}</span>
+                    </button>
+                    <button type="button" class="connections-choice" @click="startNewConnection('external')">
+                        <i class="bi bi-globe2"></i>
+                        <span class="connections-choice-title">{{ t('connections_new_custom') }}</span>
+                        <span class="connections-choice-sub">{{ t('connections_new_custom_hint') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ── Server directory ─────────────────────────────────────────── -->
+    <template x-if="connectionsPage.available && connectionsPage.view === 'directory'">
+        <div class="connections-directory">
+            <div class="connections-toolbar">
+                <button type="button" class="btn btn-sm btn-link connections-back" @click="showConnectionList()">
+                    <i class="bi bi-arrow-left"></i> {{ t('connections_back') }}
+                </button>
+                <span class="flex-grow-1"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="connectionsPage.syncing" @click="syncConnectionDirectory()">
+                    <i class="bi bi-arrow-clockwise" :class="{ 'connections-spin': connectionsPage.syncing }"></i> {{ t('connections_directory_sync') }}
+                </button>
+            </div>
+            <div class="connections-notice is-error" x-show="connectionsPage.syncError">{{ t('connections_directory_sync_failed') }}</div>
+            <div class="settings-chips-empty" x-show="!connectionsPage.servers.length && !connectionsPage.syncing">{{ t('connections_directory_empty') }}</div>
+            <template x-for="server in connectionsPage.servers" :key="server.id">
+                <div class="connections-server">
+                    <img :src="server.logo_url || ''" alt="" x-show="server.logo_url">
+                    <i class="bi bi-hdd-network" x-show="!server.logo_url"></i>
+                    <div class="connections-item-text">
+                        <span class="connections-item-title" x-text="server.name"></span>
+                        <span class="connections-item-sub" x-text="server.description || describeConnectionServer({ connectionType: server.host ? 'socket' : 'websocket', host: server.host, port: server.port, ssl: server.ssl, websocketUrl: server.websocket_url })"></span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="startConnectionFromServer(server)">
+                        <i class="bi bi-plus-lg"></i> {{ t('connections_directory_use') }}
+                    </button>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <!-- ── Edit / new ───────────────────────────────────────────────── -->
+    <template x-if="connectionsPage.available && connectionsPage.draft && (connectionsPage.view === 'edit' || connectionsPage.view === 'new')">
+        <form class="connections-form" @submit.prevent="saveConnection()">
+            <div class="connections-toolbar">
+                <button type="button" class="btn btn-sm btn-link connections-back" @click="showConnectionList()">
+                    <i class="bi bi-arrow-left"></i> {{ t('connections_back') }}
+                </button>
+                <span class="flex-grow-1"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        x-show="connectionsPage.view === 'edit' && connectionsPage.draft.hash !== currentConnectionHash()"
+                        @click="openConnectionTab(connectionsPage.draft.hash)">
+                    <i class="bi bi-box-arrow-up-right"></i> {{ t('connections_open_tab') }}
+                </button>
+            </div>
+
+            <div class="settings-item-label" x-text="connectionsPage.view === 'new' ? t('connections_new_title') : connectionTitle(connectionsPage.draft)"></div>
+
+            <!-- Identity -->
+            <div class="connections-grid">
+                <label class="connections-field">
+                    <span>{{ t('connections_field_name') }}</span>
+                    <input type="text" class="form-control form-control-sm" maxlength="60" x-model="connectionsPage.draft.name"
+                           :placeholder="connectionsPage.draft.serverType === 'external' ? t('connections_type_external') : t('connections_new_home')">
+                </label>
+                <label class="connections-field">
+                    <span>{{ t('connections_field_nickname') }}</span>
+                    <template x-if="connectionsPage.draft.serverType === 'external'">
+                        <input type="text" class="form-control form-control-sm" maxlength="30" x-model="connectionsPage.draft.externalServer.nickname"
+                               :class="{ 'is-invalid': connectionError('nickname') }">
+                    </template>
+                    <template x-if="connectionsPage.draft.serverType !== 'external'">
+                        <input type="text" class="form-control form-control-sm" maxlength="30" x-model="connectionsPage.draft.nickname"
+                               :class="{ 'is-invalid': connectionError('nickname') }">
+                    </template>
+                    <small class="connections-field-error" x-show="connectionError('nickname')" x-text="connectionError('nickname')"></small>
+                </label>
+            </div>
+
+            <!-- Server (external) -->
+            <template x-if="connectionsPage.draft.serverType === 'external'">
+                <div class="connections-section">
+                    <div class="connections-section-title"><i class="bi bi-hdd-network"></i> {{ t('connections_section_server') }}</div>
+                    <div class="btn-group btn-group-sm connections-segmented" role="radiogroup">
+                        <button type="button" class="btn btn-outline-secondary"
+                                :class="{ active: connectionsPage.draft.externalServer.connectionType !== 'websocket' }"
+                                @click="connectionsPage.draft.externalServer.connectionType = 'socket'">{{ t('connections_type_socket') }}</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                :class="{ active: connectionsPage.draft.externalServer.connectionType === 'websocket' }"
+                                @click="connectionsPage.draft.externalServer.connectionType = 'websocket'">{{ t('connections_type_websocket') }}</button>
+                    </div>
+
+                    <template x-if="connectionsPage.draft.externalServer.connectionType !== 'websocket'">
+                        <div class="connections-grid connections-grid--host">
+                            <label class="connections-field">
+                                <span>{{ t('connections_field_host') }}</span>
+                                <input type="text" class="form-control form-control-sm" placeholder="irc.libera.chat"
+                                       x-model="connectionsPage.draft.externalServer.host" :class="{ 'is-invalid': connectionError('host') }">
+                                <small class="connections-field-error" x-show="connectionError('host')" x-text="connectionError('host')"></small>
+                            </label>
+                            <label class="connections-field">
+                                <span>{{ t('connections_field_port') }}</span>
+                                <input type="number" min="1" max="65535" class="form-control form-control-sm"
+                                       x-model.number="connectionsPage.draft.externalServer.port" :class="{ 'is-invalid': connectionError('port') }">
+                                <small class="connections-field-error" x-show="connectionError('port')" x-text="connectionError('port')"></small>
+                            </label>
+                            <label class="connections-check">
+                                <input type="checkbox" class="form-check-input" x-model="connectionsPage.draft.externalServer.ssl">
+                                <span>{{ t('connections_field_tls') }}</span>
+                            </label>
+                        </div>
+                    </template>
+
+                    <template x-if="connectionsPage.draft.externalServer.connectionType === 'websocket'">
+                        <label class="connections-field">
+                            <span>{{ t('connections_field_websocket_url') }}</span>
+                            <input type="text" class="form-control form-control-sm" placeholder="wss://web.libera.chat/webirc/websocket/"
+                                   x-model="connectionsPage.draft.externalServer.websocketUrl" :class="{ 'is-invalid': connectionError('websocketUrl') }">
+                            <small class="connections-field-error" x-show="connectionError('websocketUrl')" x-text="connectionError('websocketUrl')"></small>
+                        </label>
+                    </template>
+
+                    <label class="connections-field">
+                        <span>{{ t('connections_field_channel') }}</span>
+                        <input type="text" class="form-control form-control-sm" placeholder="#channel"
+                               x-model="connectionsPage.draft.externalServer.defaultChannel" :class="{ 'is-invalid': connectionError('defaultChannel') }">
+                        <small class="connections-field-error" x-show="connectionError('defaultChannel')" x-text="connectionError('defaultChannel')"></small>
+                    </label>
+
+                    <div class="connections-test">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="connectionsPage.test.state === 'running'" @click="testConnectionDraft()">
+                            <i class="bi" :class="connectionsPage.test.state === 'running' ? 'bi-arrow-repeat connections-spin' : 'bi-broadcast'"></i>
+                            {{ t('connections_test') }}
+                        </button>
+                        <span :class="connectionsPage.test.state === 'ok' ? 'text-success' : 'text-danger'" x-text="connectionTestMessage()"></span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Login -->
+            <div class="connections-section">
+                <div class="connections-section-title"><i class="bi bi-key"></i> {{ t('connections_section_login') }}</div>
+                <small class="settings-item-hint" x-text="connectionsPage.draft.serverType === 'external' ? t('connections_login_hint_external') : t('connections_login_hint_home')"></small>
+                <div class="connections-grid">
+                    <label class="connections-field">
+                        <span>{{ t('connections_field_sasl_user') }}</span>
+                        <template x-if="connectionsPage.draft.serverType === 'external'">
+                            <input type="text" class="form-control form-control-sm" autocomplete="off" x-model="connectionsPage.draft.externalServer.saslUsername">
+                        </template>
+                        <template x-if="connectionsPage.draft.serverType !== 'external'">
+                            <input type="text" class="form-control form-control-sm" autocomplete="off" x-model="connectionsPage.draft.saslUsername">
+                        </template>
+                    </label>
+                    <label class="connections-field">
+                        <span>{{ t('connections_field_sasl_password') }}</span>
+                        <input type="password" class="form-control form-control-sm" autocomplete="new-password" x-model="connectionsPage.password"
+                               :placeholder="connectionsPage.draft.hasSaslPassword ? '••••••••' : ''" :class="{ 'is-invalid': connectionError('saslPassword') }">
+                        <small class="connections-field-error" x-show="connectionError('saslPassword')" x-text="connectionError('saslPassword')"></small>
+                        <small class="text-success" x-show="connectionsPage.draft.hasSaslPassword && !connectionsPage.password && !connectionError('saslPassword')">
+                            <i class="bi bi-shield-check"></i> {{ t('connections_password_saved') }}
+                        </small>
+                    </label>
+                </div>
+            </div>
+
+            <div class="connections-notice is-error" x-show="connectionError('form') || connectionError('hash')" x-text="connectionError('form') || connectionError('hash')"></div>
+
+            <div class="connections-footer">
+                <button type="submit" class="btn btn-sm btn-primary" :disabled="!isConnectionDirty() || connectionsPage.saving">
+                    <i class="bi bi-check2"></i>
+                    <span x-text="connectionsPage.view === 'new' ? t('connections_create') : t('connections_save')"></span>
+                </button>
+                <span class="text-success" x-show="connectionsPage.saved"><i class="bi bi-check-circle"></i> {{ t('connections_saved') }}</span>
+                <span class="flex-grow-1"></span>
+                <button type="button" class="btn btn-sm"
+                        :class="connectionsPage.deleteConfirm ? 'btn-danger' : 'btn-outline-danger'"
+                        x-show="connectionsPage.view === 'edit' && connectionsPage.profiles.length > 1"
+                        @click="deleteConnection()"
+                        x-text="connectionsPage.deleteConfirm ? t('connections_delete_confirm') : t('connections_delete')"></button>
+            </div>
+            <small class="settings-item-hint" x-show="connectionsPage.view === 'edit'">{{ t('connections_reconnect_hint') }}</small>
+        </form>
+    </template>
+</div>

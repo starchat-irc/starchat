@@ -1,0 +1,182 @@
+<!--
+    Settings window, rendered from the settings registry.
+    Every setting shows where it applies: all tabs, this connection or the account on the server.
+-->
+<div x-show="settingsWindow.show"
+     x-cloak
+     class="settings-window-backdrop"
+     @click.self="closeSettings()"
+     @keydown.escape.window="settingsWindow.show && closeSettings()">
+    <div class="settings-window" role="dialog" aria-modal="true" aria-labelledby="settingsWindowTitle">
+
+        <nav class="settings-nav">
+            <div class="settings-nav-title" id="settingsWindowTitle">{{ t('settings_title') }}</div>
+
+            <label class="settings-search">
+                <i class="bi bi-search"></i>
+                <input type="search"
+                       x-model="settingsWindow.query"
+                       x-effect="settingsWindow.show && $nextTick(() => $el.focus())"
+                       placeholder="{{ t('settings_search') }}">
+            </label>
+
+            <div class="settings-nav-list">
+                <template x-for="section in settingsSections()" :key="section.id">
+                    <button type="button"
+                            class="settings-nav-item"
+                            :class="{ 'is-active': !settingsWindow.query && settingsWindow.section === section.id }"
+                            @click="selectSettingsSection(section.id)">
+                        <i class="bi" :class="section.icon"></i>
+                        <span x-text="t(section.label)"></span>
+                    </button>
+                </template>
+            </div>
+
+            <div class="settings-nav-connection">
+                <i class="bi" :class="syncsWithAccount() ? 'bi-cloud-check' : 'bi-plug'"></i>
+                <span x-text="syncsWithAccount() ? t('settings_connection_account') : t('settings_connection_local')"></span>
+            </div>
+        </nav>
+
+        <section class="settings-content">
+            <header class="settings-content-header">
+                <h2 x-text="settingsWindow.query.trim() ? t('settings_search_results') : t(activeSettingsSection()?.label || 'settings_title')"></h2>
+                <button type="button" class="chat-header-btn" title="{{ t('highlight_close') }}" @click="closeSettings()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </header>
+
+            <div class="settings-content-body">
+                <template x-for="(setting, index) in visibleSettings()" :key="setting.id">
+                    <div>
+                        <div class="settings-group-title"
+                             x-show="settingStartsGroup(visibleSettings(), index)"
+                             x-text="setting.group ? t(setting.group) : ''"></div>
+
+                        <!-- Custom views -->
+                        <template x-if="setting.type === 'custom' && setting.view === 'profile'">
+                            <div class="settings-item settings-item--stacked">
+                                {{> profile-editor }}
+                            </div>
+                        </template>
+
+                        <template x-if="setting.type === 'custom' && setting.view === 'connections'">
+                            <div class="settings-item settings-item--stacked">
+                                {{> connections-settings }}
+                            </div>
+                        </template>
+
+                        <template x-if="setting.type === 'custom' && setting.view === 'voice'">
+                            <div class="settings-item settings-item--stacked">
+                                {{> voice-settings }}
+                            </div>
+                        </template>
+
+                        <template x-if="setting.type !== 'custom'">
+                            <div class="settings-item" :class="{ 'settings-item--stacked': setting.type === 'list' || setting.type === 'text' }">
+                                <div class="settings-item-text">
+                                    <div class="settings-item-label">
+                                        <span x-text="t(setting.label)"></span>
+                                        <span class="settings-item-section" x-show="settingsWindow.query.trim()" x-text="settingSectionLabel(setting)"></span>
+                                    </div>
+                                    <div class="settings-item-hint" x-show="setting.hint" x-text="setting.hint ? t(setting.hint) : ''"></div>
+                                    <div class="settings-item-scope">
+                                        <i class="bi" :class="settingScope(setting).icon"></i>
+                                        <span x-text="settingScope(setting).label"></span>
+                                    </div>
+                                </div>
+
+                                <div class="settings-item-control">
+                                    <!-- Toggle -->
+                                    <template x-if="setting.type === 'toggle'">
+                                        <label class="settings-switch">
+                                            <input type="checkbox"
+                                                   :checked="settingValue(setting)"
+                                                   :aria-label="t(setting.label)"
+                                                   @change="updateSetting(setting, $event.target.checked)">
+                                            <span class="settings-switch-slider"></span>
+                                        </label>
+                                    </template>
+
+                                    <!-- Select -->
+                                    <template x-if="setting.type === 'select'">
+                                        <select class="form-select form-select-sm settings-select"
+                                                :aria-label="t(setting.label)"
+                                                @change="updateSetting(setting, $event.target.value)">
+                                            <template x-for="option in setting.options" :key="option.value">
+                                                <option :value="option.value" :selected="settingValue(setting) === option.value" x-text="t(option.label)"></option>
+                                            </template>
+                                        </select>
+                                    </template>
+
+                                    <!-- Text (saved when the field is left or Enter is pressed) -->
+                                    <template x-if="setting.type === 'text'">
+                                        <input type="text"
+                                               class="form-control form-control-sm settings-text"
+                                               :value="settingValue(setting)"
+                                               :maxlength="setting.maxLength || null"
+                                               :placeholder="setting.placeholder ? t(setting.placeholder) : ''"
+                                               :aria-label="t(setting.label)"
+                                               @change="updateSetting(setting, $event.target.value)"
+                                               @keydown.enter.prevent="$event.target.blur()">
+                                    </template>
+
+                                    <!-- Action -->
+                                    <template x-if="setting.type === 'action'">
+                                        <div class="settings-action">
+                                            <span class="settings-action-status" x-show="settingStatus(setting)" x-text="settingStatus(setting)"></span>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" x-show="settingActionLabel(setting)" @click="runSetting(setting)" x-text="settingActionLabel(setting)"></button>
+                                        </div>
+                                    </template>
+
+                                    <!-- Path -->
+                                    <template x-if="setting.type === 'path'">
+                                        <div class="settings-path">
+                                            <code class="settings-path-value" :title="settingValue(setting)" x-text="settingValue(setting) || t('settings_path_none')"></code>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" @click="runSetting(setting)" x-text="settingActionLabel(setting)"></button>
+                                        </div>
+                                    </template>
+
+                                    <!-- List (chips) -->
+                                    <template x-if="setting.type === 'list'">
+                                        <div class="settings-list">
+                                            <form class="settings-list-form" @submit.prevent="addListEntry(setting)">
+                                                <input type="text"
+                                                       class="form-control form-control-sm"
+                                                       maxlength="200"
+                                                       :value="listInput(setting)"
+                                                       @input="setListInput(setting, $event.target.value)"
+                                                       :disabled="isListFull(setting)"
+                                                       :placeholder="setting.placeholder ? t(setting.placeholder) : ''">
+                                                <button type="submit" class="btn btn-sm btn-primary" :disabled="!listInput(setting).trim() || isListFull(setting)">
+                                                    {{ t('highlight_add') }}
+                                                </button>
+                                            </form>
+                                            <div class="settings-chips">
+                                                <template x-for="entry in settingValue(setting) || []" :key="entry">
+                                                    <span class="settings-chip">
+                                                        <span x-text="entry"></span>
+                                                        <button type="button" title="{{ t('highlight_remove') }}" @click="removeListEntry(setting, entry)">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </span>
+                                                </template>
+                                                <span class="settings-chips-empty" x-show="!(settingValue(setting) || []).length">{{ t('settings_list_empty') }}</span>
+                                                <span class="settings-chips-count" x-show="setting.limit && (settingValue(setting) || []).length"
+                                                      x-text="(settingValue(setting) || []).length + ' / ' + setting.limit"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="settings-empty" x-show="settingsWindow.query.trim() && visibleSettings().length === 0">
+                    <i class="bi bi-search"></i> {{ t('settings_search_empty') }}
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

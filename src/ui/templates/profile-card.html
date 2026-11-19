@@ -1,0 +1,152 @@
+<!-- Profile card: opens on a click on a nick (user list, avatar or author of a message) -->
+<div x-show="showingUserOptions"
+     class="chat-context-menu chat-user-menu profile-card"
+     x-cloak
+     x-ref="userMenu"
+     @click.outside="showingUserOptions = false"
+     @keydown.escape.window="showingUserOptions = false">
+    <div class="profile-card-banner nick-bg" :style="nickStyle(selectedUser)"></div>
+
+    <div class="profile-card-head">
+        <span class="profile-card-avatar nick-bg" :style="nickStyle(selectedUser)">
+            <template x-if="profileCardAvatar()">
+                <img class="nick-avatar-img" :src="profileCardAvatar()" alt="">
+            </template>
+            <span x-show="!profileCardAvatar()" x-text="nickInitial(selectedUser)"></span>
+            <span class="profile-card-status"
+                  :class="'is-' + profileCardStatus()"
+                  :title="profileCardStatus() === 'offline' ? t('profile_offline') : (profileCardStatus() === 'away' ? t('profile_away') : '')"></span>
+        </span>
+        <button type="button"
+                class="btn btn-sm profile-card-edit"
+                x-show="isOwnProfileCard() && canUseProfiles()"
+                @click="openProfileEditor()">
+            <i class="bi bi-pencil"></i> {{ t('profile_edit') }}
+        </button>
+    </div>
+
+    <div class="profile-card-body">
+        <div class="profile-card-name nick-color" :style="nickStyle(selectedUser)" x-text="selectedUser"></div>
+        <div class="profile-card-sub">
+            <template x-if="profileCard.account">
+                <span><i class="bi bi-person-check"></i> <span x-text="profileCard.account"></span></span>
+            </template>
+            <template x-if="profileCard.whoisDone && !profileCard.account && profileCard.isOnline">
+                <span>{{ t('profile_no_account') }}</span>
+            </template>
+            <template x-if="!profileCard.isOnline">
+                <span>{{ t('profile_offline') }}</span>
+            </template>
+        </div>
+
+        <div class="profile-card-custom-status" x-show="profileCardStatusText()" x-text="profileCardStatusText()"></div>
+
+        <div class="profile-card-badges" x-show="profileCardRole() || profileCard.isOperator">
+            <span class="profile-card-badge" x-show="profileCardRole()" x-text="profileCardRole()"></span>
+            <span class="profile-card-badge" x-show="profileCard.isOperator"><i class="bi bi-shield-fill"></i> {{ t('profile_irc_operator') }}</span>
+        </div>
+
+        <div class="profile-card-note" x-show="profileCard.awayMessage">
+            <i class="bi bi-moon"></i> <span x-text="profileCard.awayMessage"></span>
+        </div>
+        <div class="profile-card-note user-playing" x-show="profileCardUser()?.playing">
+            <i class="bi bi-music-note-beamed"></i> <span x-text="profileCardUser()?.playing"></span>
+        </div>
+
+        <div class="profile-card-loading" x-show="!profileCard.whoisDone || profileCard.loading">
+            <span class="spinner-border spinner-border-sm"></span> {{ t('profile_loading') }}
+        </div>
+
+        <template x-if="profileCard.profile">
+            <div class="profile-card-sections">
+                <div class="profile-card-section" x-show="profileCard.profile.member_since">
+                    <div class="profile-card-label">{{ t('profile_member_since') }}</div>
+                    <div x-text="formatProfileDate(profileCard.profile.member_since)"></div>
+                </div>
+                <div class="profile-card-section" x-show="profileCard.profile.mutual_communities.length">
+                    <div class="profile-card-label">{{ t('profile_mutual_communities') }}</div>
+                    <div class="profile-card-chips">
+                        <template x-for="community in profileCard.profile.mutual_communities" :key="community.slug">
+                            <span class="profile-card-chip" x-text="community.name"></span>
+                        </template>
+                    </div>
+                </div>
+                <div class="profile-card-section" x-show="profileCard.profile.characters.length">
+                    <div class="profile-card-label">{{ t('profile_characters') }}</div>
+                    <div class="d-flex flex-column gap-1">
+                        <template x-for="character in profileCard.profile.characters" :key="character.url">
+                            <a class="profile-card-character" :href="character.url" target="_blank" rel="noopener">
+                                <span class="fw-semibold" x-text="character.name"></span>
+                                <span class="profile-card-character-meta" x-text="[character.race, character.character_class].filter(Boolean).join(' · ')"></span>
+                            </a>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Own colour for this nick (like mIRC/KVIrc), only this user sees it -->
+        <div class="profile-card-section profile-card-colors">
+            <div class="profile-card-label">
+                <span x-text="isOwnProfileCard() ? t('nick_color_own') : t('nick_color')"></span>
+                <span class="profile-card-colors-hint">{{ t('nick_color_hint') }}</span>
+            </div>
+            <div class="nick-color-swatches" role="group" :aria-label="t('nick_color')">
+                <template x-for="hue in nickColorHues" :key="hue">
+                    <button type="button"
+                            class="nick-color-swatch nick-bg"
+                            :class="{ 'is-selected': customNickHue(selectedUser) === hue }"
+                            :style="`--nick-hue: ${hue}`"
+                            :aria-pressed="customNickHue(selectedUser) === hue"
+                            :aria-label="`${hue}°`"
+                            @click="setNickColor(selectedUser, hue)"></button>
+                </template>
+                <button type="button"
+                        class="nick-color-reset"
+                        x-show="customNickHue(selectedUser) !== null"
+                        title="{{ t('nick_color_reset') }}"
+                        aria-label="{{ t('nick_color_reset') }}"
+                        @click="setNickColor(selectedUser, null)">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="profile-card-actions">
+            <button type="button" class="context-action" x-show="!isOwnProfileCard()" @click="sendPrivateMessage(selectedUser)">
+                <i class="bi bi-chat-dots"></i> {{ t('send_message') }}
+            </button>
+            <button type="button" class="context-action" x-show="canAddProfileFriend()" @click="addFriendFromProfileCard()">
+                <i class="bi bi-person-plus"></i> {{ t('profile_add_friend') }}
+            </button>
+            <div class="context-action is-static" x-show="!isOwnProfileCard() && profileFriendStatus() === 'friend'">
+                <i class="bi bi-people-fill"></i> {{ t('profile_is_friend') }}
+            </div>
+            <div class="context-action is-static" x-show="!isOwnProfileCard() && profileFriendStatus() === 'pending'">
+                <i class="bi bi-hourglass-split"></i> {{ t('profile_friend_pending') }}
+            </div>
+            <button type="button" class="context-action" x-show="!isOwnProfileCard()" @click="toggleIgnoreUser(selectedUser)">
+                <i class="bi bi-ban"></i> <span x-text="isIgnored(selectedUser) ? t('unignore') : t('ignore')"></span>
+            </button>
+            <button type="button" class="context-action text-danger" x-show="canReportUser(selectedUser)" @click="openReportDialog(selectedUser)">
+                <i class="bi bi-flag"></i> {{ t('report') }}
+            </button>
+        </div>
+
+        <template x-if="canManageCurrentChannel() && selectedUser !== nickname">
+            <details class="profile-card-moderation" @toggle="$nextTick(() => positionUserMenu())">
+                <summary class="small text-uppercase text-muted">Moderation</summary>
+                <div class="d-grid gap-1 mt-2">
+                    <button class="btn btn-sm btn-outline-info" @click="applyUserMode(selectedUser, '+v')">+v (Voice)</button>
+                    <button class="btn btn-sm btn-outline-info" @click="applyUserMode(selectedUser, '-v')">-v (Devoice)</button>
+                    <button class="btn btn-sm btn-outline-warning" @click="applyUserMode(selectedUser, '+h')">+h (Hop)</button>
+                    <button class="btn btn-sm btn-outline-warning" @click="applyUserMode(selectedUser, '-h')">-h (Dehop)</button>
+                    <button class="btn btn-sm btn-outline-primary" @click="applyUserMode(selectedUser, '+o')">+o (AOP / OP)</button>
+                    <button class="btn btn-sm btn-outline-primary" @click="applyUserMode(selectedUser, '-o')">-o (Deop)</button>
+                    <button class="btn btn-sm btn-outline-danger" @click="kickUser(selectedUser)">Kick</button>
+                    <button class="btn btn-sm btn-danger" @click="banAndKickUser(selectedUser)">Ban + Kick</button>
+                </div>
+            </details>
+        </template>
+    </div>
+</div>

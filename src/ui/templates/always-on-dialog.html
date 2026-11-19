@@ -1,0 +1,32 @@
+<!--
+    Onboarding: asked once per account after the login: should the nick stay online (Ergo always-on)?
+    See mixins/always-on.js; the switch lives in the settings ("Account").
+-->
+<div x-show="alwaysOn.showPrompt"
+     x-cloak
+     class="quick-switcher-backdrop report-dialog-backdrop"
+     @keydown.escape.window="alwaysOn.showPrompt && closeAlwaysOnPrompt()">
+    <div class="quick-switcher report-dialog" role="dialog" aria-modal="true" aria-labelledby="alwaysOnDialogTitle">
+        <div class="report-dialog-header">
+            <i class="bi bi-broadcast text-primary"></i>
+            <h2 id="alwaysOnDialogTitle" class="report-dialog-title">{{ t('always_on_title') }}</h2>
+            <button type="button" class="btn-close btn-close-white ms-auto" aria-label="{{ t('close') }}" @click="closeAlwaysOnPrompt()"></button>
+        </div>
+        <div class="report-dialog-body">
+            <p class="mb-0">{{ t('always_on_text') }}</p>
+            <p class="mb-0 always-on-dialog-hint">{{ t('always_on_change_later') }}</p>
+
+            <div class="report-dialog-error" x-show="alwaysOn.error" x-text="alwaysOn.error" role="alert"></div>
+
+            <div class="report-dialog-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" @click="declineAlwaysOnPrompt()" :disabled="alwaysOn.saving">
+                    {{ t('always_on_decline') }}
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" @click="acceptAlwaysOnPrompt()" :disabled="alwaysOn.saving">
+                    <span x-show="alwaysOn.saving" class="spinner-border spinner-border-sm me-1"></span>
+                    {{ t('always_on_enable') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

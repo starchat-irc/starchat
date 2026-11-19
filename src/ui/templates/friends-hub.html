@@ -1,0 +1,125 @@
+<!-- Friends hub: shown in friends mode while no DM is open. Requests live in one place (the "Requests" tab). -->
+<div class="friends-empty-state friends-hub flex-grow-1 p-4 overflow-auto" x-cloak>
+    <div class="friends-page">
+
+        <div class="friends-page-header">
+            <h4 class="friends-page-title"><i class="bi bi-people-fill"></i> {{ t('friends_title') }}</h4>
+            <form class="friends-add" x-show="isAuthenticated" @submit.prevent="sendFriendRequest()">
+                <input type="text" class="form-control form-control-sm"
+                       placeholder="{{ t('friends_add_placeholder') }}"
+                       x-model="friendRequestInput">
+                <button type="submit" class="btn btn-sm btn-primary text-nowrap" :disabled="!friendRequestInput.trim()">
+                    <i class="bi bi-person-plus"></i> {{ t('friends_add') }}
+                </button>
+            </form>
+        </div>
+
+        <div class="alert alert-info py-2 px-3 mb-0" role="alert" x-show="friendNotice" x-text="friendNotice"></div>
+
+        <div class="friends-tabs" role="tablist">
+            <button type="button" class="friends-tab" role="tab" :class="{ 'is-active': friendFilter === 'online' }" @click="friendFilter = 'online'">
+                {{ t('friends_tab_online') }}<span class="friends-tab-count" x-text="friendTabCounts().online"></span>
+            </button>
+            <button type="button" class="friends-tab" role="tab" :class="{ 'is-active': friendFilter === 'all' }" @click="friendFilter = 'all'">
+                {{ t('friends_tab_all') }}<span class="friends-tab-count" x-text="friendTabCounts().all"></span>
+            </button>
+            <button type="button" class="friends-tab" role="tab" :class="{ 'is-active': friendFilter === 'pending' }" @click="friendFilter = 'pending'">
+                {{ t('friends_tab_pending') }}<span class="friends-tab-count"
+                      :class="{ 'is-alert': incomingFriendRequests.length > 0 }"
+                      x-text="incomingFriendRequests.length > 0 ? incomingFriendRequests.length : friendTabCounts().pending"></span>
+            </button>
+        </div>
+
+        <!-- Online / all friends -->
+        <template x-if="friendFilter !== 'pending'">
+            <div class="d-flex flex-column gap-2">
+                <input type="search" class="form-control form-control-sm friends-search"
+                       placeholder="{{ t('friends_search') }}"
+                       x-model="friendSearch"
+                       x-show="friends.length > 5">
+
+                <div class="friends-rows">
+                    <template x-for="friend in filteredFriendList()" :key="friend.friendship_id">
+                        <div class="friends-row"
+                             role="button" tabindex="0"
+                             @click="openFriendChat(friend.user.display)"
+                             @keydown.enter="openFriendChat(friend.user.display)"
+                             @contextmenu.prevent="openFriendContextMenu(friend, $event)">
+                            <span class="channel-item-avatar nick-bg position-relative" :style="nickStyle(friend.user.display)">
+                                <template x-if="avatarUrl(friend.user.display)">
+                                    <img class="nick-avatar-img" :src="avatarUrl(friend.user.display)" alt="" loading="lazy" x-on:error="clearUserAvatar(friend.user.display)">
+                                </template>
+                                <span x-show="!avatarUrl(friend.user.display)" x-text="nickInitial(friend.user.display)"></span>
+                                <span class="presence-dot" :class="isFriendOnline(friend.user.display) ? 'is-online' : 'is-offline'"></span>
+                            </span>
+                            <span class="friends-row-text">
+                                <span class="friends-row-name" x-text="friend.user.display"></span>
+                                <span class="friends-row-sub"
+                                      x-text="friendState(friend.user.display) === 'online' ? t('friends_state_online') : (friendState(friend.user.display) === 'away' ? t('friends_state_away') : t('friends_state_offline'))"></span>
+                            </span>
+                            <span class="mention-badge" x-show="unreadMessages[friend.user.display] > 0" x-text="unreadMessages[friend.user.display]"></span>
+                            <span class="friends-row-actions">
+                                <button type="button" class="friends-icon-btn" title="{{ t('friends_message') }}" @click.stop="openFriendChat(friend.user.display)">
+                                    <i class="bi bi-chat-fill"></i>
+                                </button>
+                                <button type="button" class="friends-icon-btn" title="{{ t('friends_more') }}" @click.stop="openFriendContextMenu(friend, $event)">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="friends-empty" x-show="filteredFriendList().length === 0"
+                     x-text="friendSearch.trim() ? t('friends_none_found') : (friends.length === 0 ? t('friends_none') : t('friends_none_online'))"></div>
+            </div>
+        </template>
+
+        <!-- Requests: incoming and outgoing -->
+        <template x-if="friendFilter === 'pending'">
+            <div>
+                <div x-show="incomingFriendRequests.length">
+                    <div class="friends-group-title">{{ t('friends_incoming') }} <span x-text="'(' + incomingFriendRequests.length + ')'"></span></div>
+                    <div class="friends-rows">
+                        <template x-for="req in incomingFriendRequests" :key="req.friendship_id">
+                            <div class="friends-row">
+                                <span class="channel-item-avatar nick-bg" :style="nickStyle(req.user.display)">
+                                    <template x-if="avatarUrl(req.user.display)">
+                                        <img class="nick-avatar-img" :src="avatarUrl(req.user.display)" alt="" loading="lazy" x-on:error="clearUserAvatar(req.user.display)">
+                                    </template>
+                                    <span x-show="!avatarUrl(req.user.display)" x-text="nickInitial(req.user.display)"></span>
+                                </span>
+                                <span class="friends-row-text"><span class="friends-row-name" x-text="req.user.display"></span></span>
+                                <span class="friends-row-actions">
+                                    <button type="button" class="friends-icon-btn is-success" title="{{ t('friends_accept') }}" @click="friendAction(req.friendship_id, 'accept')"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="friends-icon-btn" title="{{ t('friends_decline') }}" @click="friendAction(req.friendship_id, 'decline')"><i class="bi bi-x-lg"></i></button>
+                                    <button type="button" class="friends-icon-btn is-danger" title="{{ t('friends_block') }}" @click="friendAction(req.friendship_id, 'block')"><i class="bi bi-slash-circle"></i></button>
+                                </span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="outgoingFriendRequests.length">
+                    <div class="friends-group-title">{{ t('friends_outgoing') }} <span x-text="'(' + outgoingFriendRequests.length + ')'"></span></div>
+                    <div class="friends-rows">
+                        <template x-for="req in outgoingFriendRequests" :key="req.friendship_id">
+                            <div class="friends-row">
+                                <span class="channel-item-avatar nick-bg" :style="nickStyle(req.user.display)">
+                                    <template x-if="avatarUrl(req.user.display)">
+                                        <img class="nick-avatar-img" :src="avatarUrl(req.user.display)" alt="" loading="lazy" x-on:error="clearUserAvatar(req.user.display)">
+                                    </template>
+                                    <span x-show="!avatarUrl(req.user.display)" x-text="nickInitial(req.user.display)"></span>
+                                </span>
+                                <span class="friends-row-text"><span class="friends-row-name" x-text="req.user.display"></span></span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @click="friendAction(req.friendship_id, 'unfriend')">{{ t('friends_cancel_request') }}</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="friends-empty" x-show="!incomingFriendRequests.length && !outgoingFriendRequests.length">{{ t('friends_no_requests') }}</div>
+            </div>
+        </template>
+    </div>
+</div>

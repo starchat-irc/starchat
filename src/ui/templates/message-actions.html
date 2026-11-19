@@ -1,0 +1,61 @@
+<!-- Hover toolbar of a message: quick reactions, reaction picker, reply, delete (IRCv3, only when the server supports it), report -->
+<template x-if="hasMessageActions(row.message)">
+    <div class="msg-actions" role="toolbar" :class="{ 'is-visible': pendingDeleteId === row.message.id || touchActionsMessageId === row.message.id }">
+        <template x-if="canReactTo(row.message)">
+            <span class="msg-actions-group">
+                <template x-for="emoji in quickReactions.slice(0, 3)" :key="emoji">
+                    <button type="button" class="msg-action-btn msg-action-btn--emoji"
+                            :title="t('react_with').replace(':emoji', emoji)"
+                            @click="toggleReaction(row.message, emoji)"
+                            x-text="emoji"></button>
+                </template>
+                <button type="button" class="msg-action-btn" title="{{ t('add_reaction') }}"
+                        @click.stop="openReactionPicker(row.message, $event)">
+                    <i class="bi bi-emoji-smile"></i>
+                </button>
+            </span>
+        </template>
+        <template x-if="canReplyTo(row.message)">
+            <button type="button" class="msg-action-btn" title="{{ t('reply') }}" @click="startReply(row.message)">
+                <i class="bi bi-reply-fill"></i>
+            </button>
+        </template>
+        <template x-if="canReportMessage(row.message)">
+            <button type="button" class="msg-action-btn" title="{{ t('report_message') }}" aria-label="{{ t('report_message') }}"
+                    @click="openReportDialog(row.message.user, row.message)">
+                <i class="bi bi-flag"></i>
+            </button>
+        </template>
+        <template x-if="canDelete(row.message)">
+            <button type="button" class="msg-action-btn msg-action-btn--danger"
+                    :class="{ 'is-confirming': pendingDeleteId === row.message.id }"
+                    :title="pendingDeleteId === row.message.id ? t('delete_message_confirm') : t('delete_message')"
+                    @click="deleteMessage(row.message, $event)">
+                <i class="bi bi-trash3"></i>
+                <span class="msg-action-confirm" x-show="pendingDeleteId === row.message.id">{{ t('delete_message_confirm') }}</span>
+            </button>
+        </template>
+    </div>
+</template>
+
+<!-- Reactions below the message -->
+<template x-if="row.message.reactions?.length">
+    <div class="msg-reactions">
+        <template x-for="reaction in row.message.reactions" :key="reaction.emoji">
+            <button type="button" class="msg-reaction"
+                    :class="{ 'is-mine': hasReacted(reaction) }"
+                    :title="reactionTitle(reaction)"
+                    :disabled="!canReactTo(row.message)"
+                    @click="toggleReaction(row.message, reaction.emoji)">
+                <span class="msg-reaction-emoji" x-text="reaction.emoji"></span>
+                <span class="msg-reaction-count" x-text="reaction.nicks.length"></span>
+            </button>
+        </template>
+        <button type="button" class="msg-reaction msg-reaction--add"
+                x-show="canReactTo(row.message)"
+                title="{{ t('add_reaction') }}"
+                @click.stop="openReactionPicker(row.message, $event)">
+            <i class="bi bi-emoji-smile"></i>
+        </button>
+    </div>
+</template>

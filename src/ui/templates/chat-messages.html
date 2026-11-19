@@ -1,0 +1,217 @@
+<div class="position-relative flex-grow-1 d-flex flex-column" style="min-height: 0;">
+    <div class="chat-messages flex-grow-1 overflow-auto" x-ref="chatMessages" @scroll.passive="handleChatScroll($event)" @click="hideTouchActions($event)">
+        <div class="chat-messages-spacer" aria-hidden="true"></div>
+
+        <div class="chat-history-loading" x-show="historyLoadingByTarget[currentChannel] && historyRequestTypeByTarget[currentChannel] === 'before'" x-cloak>
+            <span class="reconnect-spinner"></span> {{ t('loading_history') }}
+        </div>
+
+        <template x-for="row in messageRows" :key="row.key">
+            <div :data-message-id="row.message.id"
+                 :class="{ 'search-hit': isSearchHit(row.message), 'search-hit--current': isCurrentSearchHit(row.message) }">
+                <template x-if="row.dayLabel">
+                    <div class="chat-divider chat-divider--day" role="separator"><span x-text="row.dayLabel"></span></div>
+                </template>
+                <template x-if="row.showUnreadSeparator">
+                    <div class="chat-divider unread-separator" role="separator"><span>{{ t('new_messages') }}</span></div>
+                </template>
+
+                <!-- Server window -->
+                <template x-if="row.kind === 'server'">
+                    <div class="msg-server" :class="'msg-server--' + row.message.serverKind">
+                        <time class="msg-server-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                        <span class="msg-server-prefix" x-text="serverLinePrefix(row.message)"></span>
+                        <span class="msg-server-text" x-html="parseMircFormatting(row.message.text)"></span>
+                    </div>
+                </template>
+
+                <!-- Scene narration (UMGEBUNG command) -->
+                <template x-if="row.kind === 'umgebung'">
+                    <div class="msg msg--umgebung">
+                        <div class="msg-umgebung-title">{{ t('narration_title') }}</div>
+                        <div class="msg-body" x-effect="renderMessageInto($el, row.message)"></div>
+                    </div>
+                </template>
+
+                <!-- Join / Part / Kick / Nick / System -->
+                <template x-if="row.kind === 'joinpart' || row.kind === 'system'">
+                    <div class="msg msg--system">
+                        <div class="msg-gutter"><i class="bi" :class="systemIcon(row.message)"></i></div>
+                        <div class="msg-main">
+                            <span x-text="row.message.text"></span>
+                            <time class="msg-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Zusammengefasste Beitritte/Austritte -->
+                <template x-if="row.kind === 'events'">
+                    <div class="msg msg--system msg--events">
+                        <div class="msg-gutter"><i class="bi bi-arrow-left-right"></i></div>
+                        <div class="msg-main">
+                            <button type="button" class="msg-events-toggle"
+                                    :aria-expanded="row.expanded"
+                                    @click="toggleEventGroup(row.groupId)">
+                                <span class="msg-events-counts" x-text="row.summary.counts"></span>
+                                <span class="msg-events-names" x-text="row.summary.names"></span>
+                                <i class="bi" :class="row.expanded ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                            <time class="msg-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                            <template x-if="row.expanded">
+                                <ul class="msg-events-list">
+                                    <template x-for="event in row.events" :key="event.id">
+                                        <li>
+                                            <i class="bi" :class="systemIcon(event)"></i>
+                                            <span x-text="event.text"></span>
+                                            <time class="msg-time" x-text="formatClock(event._ts)" :title="formatFullTimestamp(event._ts)"></time>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- /me -->
+                <template x-if="row.kind === 'action'">
+                    <div class="msg msg--action" :class="{ 'msg--mention': row.isMention }" :data-msgid="row.message.msgid"
+                         @touchstart.passive="startLongPress($event, () => hasMessageActions(row.message) && showTouchActions(row.message))"
+                         @touchmove.passive="moveLongPress($event)"
+                         @touchend="endLongPress($event)"
+                         @touchcancel="cancelLongPress()">
+                        <!-- Own small avatar: without it the line looks like a continuation of the previous author -->
+                        <div class="msg-gutter">
+                            <button type="button" class="msg-avatar msg-avatar--action nick-bg" :style="nickStyle(row.message.user)"
+                                    @click="showUserOptions(row.message.user, $event)">
+                                <template x-if="avatarUrl(row.message.user)">
+                                    <img class="nick-avatar-img" :src="avatarUrl(row.message.user)" alt="" loading="lazy" x-on:error="clearUserAvatar(row.message.user)">
+                                </template>
+                                <span x-show="!avatarUrl(row.message.user)" x-text="nickInitial(row.message.user)"></span>
+                            </button>
+                        </div>
+                        <div class="msg-main">
+                            <span class="msg-author nick-color" :style="nickStyle(row.message.user)" x-text="row.message.user"
+                                  @click="showUserOptions(row.message.user, $event)"></span>
+                            <span class="bot-badge" x-show="isBotNick(row.message.user)" x-cloak :title="botBadgeTitle(row.message.user)">{{ t('bot_badge') }}</span>
+                            <template x-if="row.message.redacted">
+                                <span class="msg-body msg-body--deleted"><i class="bi bi-trash3"></i> {{ t('message_deleted') }}</span>
+                            </template>
+                            <template x-if="!row.message.redacted">
+                                <span class="msg-body" :class="{ 'is-deleting': row.message.deleting }" x-effect="renderMessageInto($el, row.message)"></span>
+                            </template>
+                            <time class="msg-time msg-action-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                            {{> message-actions }}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Regular message -->
+                <template x-if="row.kind === 'text'">
+                    <div class="msg"
+                         :class="{
+                             'msg--grouped': row.grouped,
+                             'msg--mention': row.isMention,
+                             'msg--notice': row.message.isNotice,
+                             'msg--pending': row.message.pending,
+                             'msg--reply': row.message.replyTo
+                         }"
+                         :data-msgid="row.message.msgid"
+                         @touchstart.passive="startLongPress($event, () => hasMessageActions(row.message) && showTouchActions(row.message))"
+                         @touchmove.passive="moveLongPress($event)"
+                         @touchend="endLongPress($event)"
+                         @touchcancel="cancelLongPress()">
+                        <div class="msg-gutter">
+                            <template x-if="!row.grouped">
+                                <button type="button" class="msg-avatar nick-bg" :style="nickStyle(row.message.user)"
+                                        @click="showUserOptions(row.message.user, $event)">
+                                    <template x-if="avatarUrl(row.message.user)">
+                                        <img class="nick-avatar-img" :src="avatarUrl(row.message.user)" alt="" loading="lazy" x-on:error="clearUserAvatar(row.message.user)">
+                                    </template>
+                                    <span x-show="!avatarUrl(row.message.user)" x-text="nickInitial(row.message.user)"></span>
+                                </button>
+                            </template>
+                            <template x-if="row.grouped">
+                                <time class="msg-hover-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                            </template>
+                        </div>
+                        <div class="msg-main">
+                            <template x-if="row.message.replyTo">
+                                <button type="button" class="msg-reply-ref"
+                                        :class="{ 'is-unknown': !replyPreview(row.message)?.found }"
+                                        @click="jumpToMessage(row.message.replyTo)">
+                                    <i class="bi bi-reply-fill msg-reply-icon"></i>
+                                    <span class="msg-reply-author nick-color"
+                                          x-show="replyPreview(row.message)?.user"
+                                          :style="nickStyle(replyPreview(row.message)?.user)"
+                                          x-text="replyPreview(row.message)?.user"></span>
+                                    <span class="msg-reply-text" x-text="replyPreview(row.message)?.text"></span>
+                                </button>
+                            </template>
+                            <template x-if="!row.grouped">
+                                <div class="msg-header">
+                                    <span class="msg-author nick-color" :style="nickStyle(row.message.user)"
+                                          x-text="row.message.user"
+                                          @click="showUserOptions(row.message.user, $event)"></span>
+                                    <span class="bot-badge" x-show="isBotNick(row.message.user)" x-cloak :title="botBadgeTitle(row.message.user)">{{ t('bot_badge') }}</span>
+                                    <span class="msg-badge" x-show="row.message.isNotice">{{ t('notice_badge') }}</span>
+                                    <time class="msg-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>
+                                </div>
+                            </template>
+                            <template x-if="row.message.redacted">
+                                <div class="msg-body msg-body--deleted"><i class="bi bi-trash3"></i> {{ t('message_deleted') }}</div>
+                            </template>
+                            <template x-if="!row.message.redacted">
+                                <div class="msg-body" :class="{ 'is-deleting': row.message.deleting }" x-effect="renderMessageInto($el, row.message)"></div>
+                            </template>
+                            <div class="msg-pending-hint" x-show="row.message.pending">
+                                <i class="bi bi-clock"></i> {{ t('sending') }}
+                            </div>
+                            {{> message-actions }}
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+
+    <!-- Reaction picker (fixed position next to the clicked button) -->
+    <div class="emoji-picker-popup reaction-picker"
+         x-show="reactionPicker.show"
+         x-cloak
+         :style="{ left: reactionPicker.x + 'px', top: reactionPicker.y + 'px' }"
+         @click.outside="closeReactionPicker()"
+         @keydown.escape.window="reactionPicker.show && closeReactionPicker()"
+         x-data="emojiPicker()">
+        <div class="reaction-quick-row">
+            <template x-for="emoji in quickReactions" :key="emoji">
+                <button type="button" class="ep-emoji-btn" @click="reactFromPicker(emoji)" x-text="emoji"></button>
+            </template>
+        </div>
+        <div class="ep-search-row">
+            <i class="bi bi-search ep-search-icon"></i>
+            <input type="text" class="ep-search-input" x-model="emojiSearch" placeholder="{{ t('search_emoji') }}">
+            <button type="button" class="ep-close-btn" @click="closeReactionPicker()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="ep-tabs" x-show="!emojiSearch">
+            <template x-for="(cat, key) in categories" :key="key">
+                <button type="button" class="ep-tab-btn" :class="{ 'ep-tab-active': activeCategory === key }"
+                        :title="cat.title" @click="activeCategory = key" x-text="cat.label"></button>
+            </template>
+        </div>
+        <div class="ep-grid">
+            <template x-for="(emoji, idx) in filteredEmojis()" :key="idx">
+                <button type="button" class="ep-emoji-btn" @click="reactFromPicker(emoji)" x-text="emoji"></button>
+            </template>
+        </div>
+    </div>
+
+    <button type="button"
+            class="jump-to-latest"
+            x-show="isScrolledUp"
+            x-cloak
+            x-transition.opacity.duration.200ms
+            @click="jumpToLatest()">
+        <span x-text="newWhileScrolledUp > 0 ? t('new_messages_count', { count: newWhileScrolledUp }) : t('jump_to_latest')"></span>
+        <i class="bi bi-arrow-down"></i>
+    </button>
+</div>

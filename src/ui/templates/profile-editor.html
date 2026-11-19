@@ -1,0 +1,128 @@
+<!-- Own profile: the "Account" section of the settings window (avatar, status) -->
+<div class="profile-editor-body">
+
+        <div class="profile-editor-loading" x-show="profileEditor.loading">
+            <span class="spinner-border spinner-border-sm"></span> {{ t('profile_loading') }}
+        </div>
+
+        <div x-show="!profileEditor.loading">
+            <div class="profile-editor-label">{{ t('profile_avatar') }}</div>
+            <div class="profile-editor-avatar-row">
+                <span class="profile-editor-avatar nick-bg" :style="nickStyle(nickname)">
+                    <template x-if="profileEditorAvatar()">
+                        <img class="nick-avatar-img" :src="profileEditorAvatar()" alt="">
+                    </template>
+                    <span x-show="!profileEditorAvatar()" x-text="nickInitial(nickname)"></span>
+                </span>
+
+                <div class="d-flex flex-column gap-2 flex-grow-1">
+                    <input type="file"
+                           class="d-none"
+                           accept="image/jpeg,image/png,image/gif"
+                           x-ref="profileAvatarInput"
+                           @change="selectProfileAvatar($event)">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="$refs.profileAvatarInput.click()" :disabled="profileEditor.saving">
+                            <i class="bi bi-image"></i> {{ t('profile_avatar_choose') }}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" x-show="profileEditor.file" @click="uploadProfileAvatar()" :disabled="profileEditor.saving">
+                            <span class="spinner-border spinner-border-sm" x-show="profileEditor.saving"></span>
+                            <i class="bi bi-upload" x-show="!profileEditor.saving"></i> {{ t('profile_avatar_upload') }}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" x-show="!profileEditor.file && (ownAvatarUrl || profileEditor.profile?.avatar_url)" @click="removeProfileAvatar()" :disabled="profileEditor.saving">
+                            <i class="bi bi-trash"></i> {{ t('profile_avatar_remove') }}
+                        </button>
+                    </div>
+                    <div class="profile-editor-hint">{{ t('profile_avatar_hint') }}</div>
+                </div>
+            </div>
+
+            <div class="profile-editor-message is-success" x-show="profileEditor.notice" x-text="profileEditor.notice"></div>
+            <div class="profile-editor-message is-error" x-show="profileEditor.error" x-text="profileEditor.error"></div>
+
+            <div class="profile-editor-section">
+                <label class="profile-editor-label" for="profileStatusInput">{{ t('profile_status') }}</label>
+                <div class="profile-status-field">
+                    <button type="button"
+                            class="profile-status-emoji-btn"
+                            title="{{ t('profile_status_emoji') }}"
+                            @click="profileEditor.statusEmojiOpen = !profileEditor.statusEmojiOpen">
+                        <i class="bi bi-emoji-smile"></i>
+                    </button>
+                    <input type="text"
+                           id="profileStatusInput"
+                           class="profile-status-input"
+                           maxlength="128"
+                           placeholder="{{ t('profile_status_placeholder') }}"
+                           x-ref="profileStatusInput"
+                           x-model="profileEditor.statusDraft"
+                           @keydown.enter.prevent="saveProfileStatus()">
+                    <span class="profile-status-counter" x-text="statusDraftLength() + '/128'"></span>
+
+                    <div class="emoji-picker-popup profile-status-emoji-picker"
+                         x-show="profileEditor.statusEmojiOpen"
+                         x-cloak
+                         @click.outside="profileEditor.statusEmojiOpen = false"
+                         @keydown.escape.stop="profileEditor.statusEmojiOpen = false"
+                         x-data="emojiPicker()">
+                        <div class="ep-category-title">{{ t('profile_status_recent_emojis') }}</div>
+                        <div class="reaction-quick-row">
+                            <template x-for="emoji in statusQuickEmojis()" :key="emoji">
+                                <button type="button" class="ep-emoji-btn" @click="insertStatusEmoji(emoji)" x-text="emoji"></button>
+                            </template>
+                        </div>
+                        <div class="ep-search-row">
+                            <i class="bi bi-search ep-search-icon"></i>
+                            <input type="text" class="ep-search-input" x-model="emojiSearch" placeholder="{{ t('search_emoji') }}">
+                            <button type="button" class="ep-close-btn" @click="profileEditor.statusEmojiOpen = false"><i class="bi bi-x"></i></button>
+                        </div>
+                        <div class="ep-tabs" x-show="!emojiSearch">
+                            <template x-for="(cat, key) in categories" :key="key">
+                                <button type="button" class="ep-tab-btn" :class="{ 'ep-tab-active': activeCategory === key }"
+                                        :title="cat.title" @click="activeCategory = key" x-text="cat.label"></button>
+                            </template>
+                        </div>
+                        <div class="ep-category-title" x-text="emojiSearch ? t('search_emoji') : (categories[activeCategory]?.title || '')"></div>
+                        <div class="ep-grid">
+                            <template x-for="(emoji, idx) in filteredEmojis()" :key="idx">
+                                <button type="button" class="ep-emoji-btn" @click="insertStatusEmoji(emoji)" x-text="emoji"></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-primary" @click="saveProfileStatus()" :disabled="profileEditor.statusSaving || !isStatusDraftChanged()">
+                        <span class="spinner-border spinner-border-sm" x-show="profileEditor.statusSaving"></span>
+                        {{ t('profile_status_save') }}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" x-show="ownStatus" @click="saveProfileStatus(true)" :disabled="profileEditor.statusSaving">
+                        <i class="bi bi-x-circle"></i> {{ t('profile_status_clear') }}
+                    </button>
+                </div>
+                <div class="profile-editor-message is-success" x-show="profileEditor.statusNotice" x-text="profileEditor.statusNotice"></div>
+                <div class="profile-editor-message is-error" x-show="profileEditor.statusError" x-text="profileEditor.statusError"></div>
+            </div>
+
+            <div class="profile-editor-section" x-show="alwaysOn.loaded || alwaysOn.loadFailed">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="alwaysOnSwitch"
+                           :checked="alwaysOn.enabled" :disabled="alwaysOn.saving || !alwaysOn.loaded" @change="toggleAlwaysOn($event)">
+                    <label class="form-check-label" for="alwaysOnSwitch">{{ t('always_on_setting') }}</label>
+                </div>
+                <div class="profile-editor-hint">{{ t('always_on_setting_hint') }}</div>
+                <div class="profile-editor-message is-error" x-show="alwaysOn.loadFailed && !alwaysOn.loaded">{{ t('always_on_unavailable') }}</div>
+                <div class="profile-editor-message is-success" x-show="alwaysOn.notice" x-text="alwaysOn.notice"></div>
+                <div class="profile-editor-message is-error" x-show="alwaysOn.error && !alwaysOn.showPrompt" x-text="alwaysOn.error"></div>
+            </div>
+
+            <div class="profile-editor-footer" x-show="profileEditor.profile?.settings_url">
+                <a :href="profileEditor.profile?.settings_url" target="_blank" rel="noopener" class="profile-editor-link">
+                    {{ t('profile_more_settings') }} <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+                <a :href="profileEditor.profile?.delete_account_url" x-show="profileEditor.profile?.delete_account_url"
+                   target="_blank" rel="noopener" class="profile-editor-link text-danger">
+                    {{ t('profile_delete_account') }} <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
