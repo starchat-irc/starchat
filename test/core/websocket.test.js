@@ -212,7 +212,7 @@ test('without a user quit message the app default and then "Avoid staring into t
     const plain = connect();
     plain.open();
     ctx.socket.quit();
-    assert.equal(plain.sent.at(-1), 'QUIT :Avoid staring into the cosmic void. It might stare back at you\r\n');
+    assert.equal(plain.sent.at(-1), 'QUIT :Avoid staring into the cosmic void. It might stare back at you.\r\n');
 });
 
 test('a socket closed by logout does not reconnect after the next login', () => {
