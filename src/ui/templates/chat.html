@@ -20,11 +20,11 @@
                         </div>
                     </template>
 
-                    <template x-if="sidebarMode === 'friends' && (!selectedFriendName || (!isDirectMessageChannel(currentChannel) && currentChannel !== 'Server'))">
+                    <template x-if="hasFeature('friends') && sidebarMode === 'friends' && (!selectedFriendName || (!isDirectMessageChannel(currentChannel) && currentChannel !== 'Server'))">
                         {{> friends-hub }}
                     </template>
 
-                    <template x-if="sidebarMode === 'uploads'">
+                    <template x-if="hasFeature('uploads') && sidebarMode === 'uploads'">
                         {{> upload-manager }}
                     </template>
                 </div>
@@ -36,11 +36,19 @@
                 {{> chat-input }}
             </div>
 
-            {{> modal-explore }}
-            {{> settings-window }}
+            <template x-if="hasFeature('explore')">
+                <div>{{> modal-explore }}</div>
+            </template>
+            <template x-if="hasModule('settings')">
+                <div>{{> settings-window }}</div>
+            </template>
             {{> quick-switcher }}
-            {{> report-dialog }}
-            {{> always-on-dialog }}
+            <template x-if="hasFeature('reports')">
+                <div>{{> report-dialog }}</div>
+            </template>
+            <template x-if="hasFeature('alwaysOn')">
+                <div>{{> always-on-dialog }}</div>
+            </template>
         </div>
     </template>
 

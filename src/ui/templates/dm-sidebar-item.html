@@ -3,8 +3,8 @@
      role="button"
      tabindex="0"
      :class="{ 'is-active': user === currentChannel, 'is-unread': user !== currentChannel && hasUnread(user) }"
-     @click="openFriendChat(user)"
-     @keydown.enter="openFriendChat(user)">
+     @click="openDirectMessage(user)"
+     @keydown.enter="openDirectMessage(user)">
     <span class="channel-item-avatar nick-bg position-relative" :style="nickStyle(user)">
         <template x-if="avatarUrl(user)">
             <img class="nick-avatar-img" :src="avatarUrl(user)" alt="" loading="lazy" x-on:error="clearUserAvatar(user)">

@@ -6,6 +6,22 @@ import { isServiceNick } from './services.js';
  * their own commands with registerCommand().
  */
 
+/**
+ * /scene <channel> <text> or /npc <channel> <name> <text>. Without a channel the
+ * current one is used.
+ */
+function sendRoleplayLine(ctx, command, args, withName) {
+    const rest = [...args];
+    const channel = rest[0]?.startsWith('#') ? rest.shift() : ctx.currentChannel;
+    const name = withName ? rest.shift() : null;
+    const text = rest.join(' ').trim();
+    if (!channel?.startsWith('#') || (withName && !name) || !text) {
+        ctx.updateStatus(`Usage: /${command.toLowerCase()} [#channel] ${withName ? '<name> ' : ''}<text>`);
+        return;
+    }
+    ctx.sendRaw(`${command} ${channel} ${name ? `${name} ` : ''}:${text}`);
+}
+
 /** Chat commands need a channel or DM, not the server window. */
 function requireChatTarget(ctx) {
     if (ctx.isChatTarget()) return true;
@@ -127,6 +143,12 @@ const commands = {
     hs: (args, ctx) => ctx.sendServiceCommand('HostServ', args.join(' ')),
     ms: (args, ctx) => ctx.sendServiceCommand('MemoServ', args.join(' ')),
     os: (args, ctx) => ctx.sendServiceCommand('OperServ', args.join(' ')),
+    // Roleplay (Ergo): narration and lines of non-player characters in a channel.
+    // UMGEBUNG is the narration command of ST-City's Ergo, SCENE the standard one.
+    scene: (args, ctx) => sendRoleplayLine(ctx, 'SCENE', args, false),
+    umgebung: (args, ctx) => sendRoleplayLine(ctx, 'UMGEBUNG', args, false),
+    npc: (args, ctx) => sendRoleplayLine(ctx, 'NPC', args, true),
+    npca: (args, ctx) => sendRoleplayLine(ctx, 'NPCA', args, true),
     server: (args, ctx) => {
         ctx.openServerWindow();
     },

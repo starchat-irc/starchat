@@ -17,12 +17,14 @@
                   :class="'is-' + profileCardStatus()"
                   :title="profileCardStatus() === 'offline' ? t('profile_offline') : (profileCardStatus() === 'away' ? t('profile_away') : '')"></span>
         </span>
+        <template x-if="hasFeature('profiles')">
         <button type="button"
                 class="btn btn-sm profile-card-edit"
                 x-show="isOwnProfileCard() && canUseProfiles()"
                 @click="openProfileEditor()">
             <i class="bi bi-pencil"></i> {{ t('profile_edit') }}
         </button>
+        </template>
     </div>
 
     <div class="profile-card-body">
@@ -57,7 +59,7 @@
             <span class="spinner-border spinner-border-sm"></span> {{ t('profile_loading') }}
         </div>
 
-        <template x-if="profileCard.profile">
+        <template x-if="hasFeature('profiles') && profileCard.profile">
             <div class="profile-card-sections">
                 <div class="profile-card-section" x-show="profileCard.profile.member_since">
                     <div class="profile-card-label">{{ t('profile_member_since') }}</div>
@@ -116,6 +118,8 @@
             <button type="button" class="context-action" x-show="!isOwnProfileCard()" @click="sendPrivateMessage(selectedUser)">
                 <i class="bi bi-chat-dots"></i> {{ t('send_message') }}
             </button>
+            <template x-if="hasFeature('friends')">
+                <div style="display: contents">
             <button type="button" class="context-action" x-show="canAddProfileFriend()" @click="addFriendFromProfileCard()">
                 <i class="bi bi-person-plus"></i> {{ t('profile_add_friend') }}
             </button>
@@ -125,12 +129,16 @@
             <div class="context-action is-static" x-show="!isOwnProfileCard() && profileFriendStatus() === 'pending'">
                 <i class="bi bi-hourglass-split"></i> {{ t('profile_friend_pending') }}
             </div>
+                </div>
+            </template>
             <button type="button" class="context-action" x-show="!isOwnProfileCard()" @click="toggleIgnoreUser(selectedUser)">
                 <i class="bi bi-ban"></i> <span x-text="isIgnored(selectedUser) ? t('unignore') : t('ignore')"></span>
             </button>
+            <template x-if="hasFeature('reports')">
             <button type="button" class="context-action text-danger" x-show="canReportUser(selectedUser)" @click="openReportDialog(selectedUser)">
                 <i class="bi bi-flag"></i> {{ t('report') }}
             </button>
+            </template>
         </div>
 
         <template x-if="canManageCurrentChannel() && selectedUser !== nickname">

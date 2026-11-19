@@ -1,0 +1,14 @@
+import { defineConfig } from 'vite';
+
+/**
+ * Static demo page (getstarchat.net/demo). Unlike the library build it bundles its
+ * dependencies, the output runs on any static host.
+ */
+export default defineConfig({
+    root: 'demo',
+    base: './',
+    build: {
+        outDir: '../dist-demo',
+        emptyOutDir: true,
+    },
+});

@@ -6,7 +6,7 @@
 const TAG_ESCAPES = { ':': ';', 's': ' ', '\\': '\\', 'r': '\r', 'n': '\n' };
 
 /**
- * Unescape an IRCv3 tag value (`\:` → `;`, `\s` → space, ...).
+ * Unescape an IRCv3 tag value (`\:` -> `;`, `\s` -> space, ...).
  *
  * @param {string|undefined} value
  * @return {string|undefined}

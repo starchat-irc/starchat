@@ -1,0 +1,66 @@
+name: Demo
+
+# Builds the web demo and publishes it to getstarchat.net/demo/ (repository
+# starchat-irc/getstarchat.net, served with GitHub Pages).
+#
+# Needs the secret SITE_DEPLOY_KEY: the private half of an SSH deploy key that has
+# write access to starchat-irc/getstarchat.net and nothing else.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'demo/**'
+      - 'servers/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.demo.config.js'
+      - '.github/workflows/demo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publish at a time; a newer push replaces a waiting one.
+concurrency:
+  group: demo
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:demo
+
+      - name: Publish to getstarchat.net
+        env:
+          SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SITE_DEPLOY_KEY" > ~/.ssh/site_deploy_key
+          chmod 600 ~/.ssh/site_deploy_key
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/site_deploy_key -o IdentitiesOnly=yes"
+
+          git clone --depth 1 git@github.com:starchat-irc/getstarchat.net.git site
+          rm -rf site/demo
+          cp -r dist-demo site/demo
+
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add demo
+          if git diff --cached --quiet; then
+            echo "Demo unchanged"
+            exit 0
+          fi
+          git commit -m "Update demo from starchat@${GITHUB_SHA::7}"
+          git push

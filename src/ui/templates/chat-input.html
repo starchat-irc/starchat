@@ -33,14 +33,20 @@
             <button class="btn chat-tool-btn chat-emoji-btn" x-show="!isServerWindow()" @click="toggleEmojiPicker" title="{{ t('emoji_picker') }}" aria-label="{{ t('emoji_picker_open') }}">
                 <i class="bi bi-emoji-smile"></i>
             </button>
+            <template x-if="hasFeature('gifs')">
             <button class="btn chat-tool-btn chat-input-desktop-only" x-show="!isServerWindow()" @click="toggleGifPicker" title="{{ t('gif_search') }}" aria-label="{{ t('gif_picker_open') }}">
                 <i class="bi bi-filetype-gif"></i>
             </button>
+            </template>
+            <template x-if="hasFeature('uploads')">
             <button class="btn chat-tool-btn chat-input-desktop-only" x-show="canUploadMedia() && !isServerWindow()" @click="triggerMediaUpload" :disabled="mediaUploadInProgress" title="{{ t('upload_file') }}" aria-label="{{ t('upload_file') }}">
                 <i class="bi bi-paperclip"></i>
             </button>
+            </template>
+            <template x-if="hasFeature('uploads')">
             <input type="file" x-show="canUploadMedia()" x-ref="mediaInput" class="d-none" accept="image/*,video/mp4,video/webm" @change="uploadMediaFile">
-            <template x-if="pendingMediaFile">
+            </template>
+            <template x-if="hasFeature('uploads') && pendingMediaFile">
                 <span class="input-group-text chat-attachment-badge" title="{{ t('attachment_hint') }}">
                     <template x-if="pendingMediaPreviewUrl && isPendingMediaImage()">
                         <img :src="pendingMediaPreviewUrl" alt="{{ t('preview') }}" class="rounded chat-media-preview">
@@ -54,7 +60,7 @@
                    @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }" @keydown.escape="cancelReply()" @keydown.tab="handleTabCompletion($event)" @keydown.up="navigateInputHistory($event, -1)" @keydown.down="navigateInputHistory($event, 1)" @keydown.ctrl.k.prevent="openColorPicker" @keydown.ctrl.b.prevent="applyFormat('b')"
                    @keydown.ctrl.i.prevent="applyFormat('i')" @keydown.ctrl.u.prevent="applyFormat('u')" @keydown.ctrl.s.prevent="applyFormat('s')"
                    x-on:input="autoGrowInput($el)" @input.debounce.500ms="handleInput" @paste="handlePasteUpload" @dragover.prevent @drop.prevent="handleInputDrop" @keydown.backspace="handleInputBackspace"
-                   :placeholder="isServerWindow() ? t('server_input_placeholder') : t('input_placeholder')" x-init="focusMessageInput()"></textarea>
+                   :placeholder="isServerWindow() ? t('server_input_placeholder') : (hasFeature('uploads') ? t('input_placeholder') : t('input_placeholder_text'))" x-init="focusMessageInput()"></textarea>
             <button class="btn chat-send-btn" @click="sendMessage">
                 <i class="bi bi-send-fill"></i>
             </button>
@@ -72,15 +78,19 @@
     <!-- "+" menu (small screens) -->
     <div x-show="showInputMoreMenu" x-cloak class="chat-popup chat-popup-more" role="menu"
          @click.outside="if (!$refs.inputMoreButton?.contains($event.target)) showInputMoreMenu = false">
+        <template x-if="hasFeature('uploads')">
         <button type="button" class="context-action" role="menuitem"
                 x-show="canUploadMedia() && !isServerWindow()" :disabled="mediaUploadInProgress"
                 @click="runInputMoreAction(() => triggerMediaUpload())">
             <i class="bi bi-paperclip"></i> {{ t('input_upload') }}
         </button>
+        </template>
+        <template x-if="hasFeature('gifs')">
         <button type="button" class="context-action" role="menuitem" x-show="!isServerWindow()"
                 @click="runInputMoreAction(() => toggleGifPicker())">
             <i class="bi bi-filetype-gif"></i> {{ t('input_gif') }}
         </button>
+        </template>
         <button type="button" class="context-action" role="menuitem" x-show="!isServerWindow()"
                 @click="runInputMoreAction(() => toggleColorPicker())">
             <i class="bi bi-palette"></i> {{ t('input_colors') }}
@@ -127,7 +137,9 @@
     {{> emoji-picker }}
 
     <!-- GIF picker -->
-    {{> gif-picker }}
+    <template x-if="hasFeature('gifs')">
+        <div>{{> gif-picker }}</div>
+    </template>
 </div>
 
 <style>

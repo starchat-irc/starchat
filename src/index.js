@@ -13,3 +13,6 @@ export * from './core/connection.js';
 export { commands, registerCommand } from './core/commands.js';
 export { createTranslator, messages, resolveLanguage } from './i18n/index.js';
 export { renderTemplate, templates } from './ui/templates.js';
+export { mountChat } from './ui/mount.js';
+export { createChatComponent, guestNick } from './ui/component.js';
+export { registerNotificationSound } from './ui/notification-sound.js';

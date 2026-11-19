@@ -7,7 +7,7 @@
      @click.self="closeQuickSwitcher()">
     <div class="quick-switcher" role="dialog" aria-modal="true" aria-label="{{ t('shortcut_quick_switcher') }}">
         <!-- Share mode (Android app): what was shared and where it should go -->
-        <template x-if="quickSwitcher.mode === 'share' && pendingShare">
+        <template x-if="hasModule('share') && quickSwitcher.mode === 'share' && pendingShare">
             <div class="quick-switcher-share">
                 <div class="quick-switcher-share-title">
                     <i class="bi bi-share"></i>

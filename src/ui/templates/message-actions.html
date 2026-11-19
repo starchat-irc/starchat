@@ -20,7 +20,7 @@
                 <i class="bi bi-reply-fill"></i>
             </button>
         </template>
-        <template x-if="canReportMessage(row.message)">
+        <template x-if="hasFeature('reports') && canReportMessage(row.message)">
             <button type="button" class="msg-action-btn" title="{{ t('report_message') }}" aria-label="{{ t('report_message') }}"
                     @click="openReportDialog(row.message.user, row.message)">
                 <i class="bi bi-flag"></i>

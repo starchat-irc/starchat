@@ -25,7 +25,8 @@
         </template>
 
         <div class="chat-header-actions">
-            <!-- Voice chat of the channel (experimental, Settings → Voice chat) -->
+            <!-- Voice chat of the channel (experimental, Settings -> Voice chat) -->
+            <template x-if="hasFeature('voice')">
             <button class="chat-header-btn"
                     :class="{ 'is-active': isInVoice(currentChannel), 'chat-header-btn--voice-live': isInVoice(currentChannel) }"
                     x-show="currentChannel?.startsWith('#') && (canJoinVoice(currentChannel) || isInVoice(currentChannel))"
@@ -36,7 +37,9 @@
                     @click="toggleVoice(currentChannel)">
                 <i class="bi" :class="isInVoice(currentChannel) ? 'bi-telephone-x' : 'bi-mic'"></i>
             </button>
+            </template>
             <!-- Voice call with a friend (DM window, experimental) -->
+            <template x-if="hasFeature('calls')">
             <button class="chat-header-btn"
                     :class="{ 'is-active': isInCallWith(currentChannel), 'chat-header-btn--voice-live': isInCallWith(currentChannel) }"
                     x-show="canCallUser(currentChannel) || isInCallWith(currentChannel)"
@@ -47,6 +50,7 @@
                     @click="isInCallWith(currentChannel) ? hangUpCall() : startCall(currentChannel)">
                 <i class="bi" :class="isInCallWith(currentChannel) ? 'bi-telephone-x' : 'bi-telephone'"></i>
             </button>
+            </template>
             <button class="chat-header-btn"
                     :class="{ 'is-active': messageSearch.open }"
                     x-show="currentChannel && !isServerWindow()"
@@ -66,12 +70,14 @@
                     title="{{ t('channel_management') }}">
                 <i class="bi bi-sliders"></i>
             </button>
+            <template x-if="hasModule('settings')">
             <button class="chat-header-btn chat-header-btn--desktop"
                     :class="{ 'is-active': highlightWords.length > 0 }"
                     title="{{ t('highlight_words') }}"
                     @click="openSettings('notifications')">
                 <i class="bi" :class="highlightWords.length > 0 ? 'bi-bell-fill' : 'bi-bell'"></i>
             </button>
+            </template>
             <button class="chat-header-btn chat-header-btn--desktop"
                     :class="{ 'is-active': !hideJoinPart }"
                     x-show="currentChannel && currentChannel.startsWith('#')"
@@ -88,7 +94,9 @@
             </button>
         </div>
     </div>
-    {{> voice-bar }}
+    <template x-if="hasFeature('voice')">
+        <div>{{> voice-bar }}</div>
+    </template>
     <!-- Message search (Ctrl+F) -->
     <div class="message-search" x-show="messageSearch.open" x-cloak role="search">
         <i class="bi bi-search"></i>
