@@ -11,6 +11,18 @@ StarChat is being extracted from the chat client of [ST-City](https://st-city.ne
 - Public list of IRC networks to pick from (`servers/servers.json`)
 - Optional extra services per network (profiles, friends, uploads, voice and more), announced by the network itself through a discovery file at `https://<domain>/.well-known/starchat.json`. Networks without that file work as regular IRC servers.
 
+## Development
+
+Node.js 22.12 or newer.
+
+```
+npm install
+npm test          # unit tests (Vitest)
+npm run build     # library build to dist/
+```
+
+`src/core/` holds the IRC core without any UI: line parser, CAP/SASL negotiation, WebSocket transport, mIRC formatting, slash commands and the state for messages, nick lists and topics. The state is written through a small store adapter, so the UI can plug in its own reactive store.
+
 ## Adding a network
 
 Open a pull request that adds an entry to [`servers/servers.json`](servers/servers.json). The format is described in [`servers/servers.schema.json`](servers/servers.schema.json). Check it locally with:
