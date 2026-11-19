@@ -25,6 +25,8 @@ const CONNECT_TIMEOUT_MS = 10000;
  * @param {(event: { data: string }) => void} options.onMessage
  * @param {(status: 'disconnected'|'error') => void} [options.onStatusUpdate]
  * @param {string} [options.quitMessage] Default quit message of the embedding app.
+ * @param {() => (Promise<void>|void)} [options.beforeReconnect] Runs before each reconnect, e.g. to
+ *   fetch a fresh login token. The reconnect waits for it; an error keeps the old values.
  */
 export function connectWebSocket(options) {
     const { url, nickname, sasl = null, ctx, onMessage, onStatusUpdate = () => {} } = options;
@@ -55,11 +57,20 @@ export function connectWebSocket(options) {
         if (ctx._wsReconnectTimer) clearTimeout(ctx._wsReconnectTimer);
         ctx._wsReconnectTimer = setTimeout(() => {
             ctx._wsReconnectTimer = null;
-            if (!ctx.performLogout) {
-                // The countdown is over: "connecting" until the socket opens or fails
-                ctx.setConnectionState?.('connecting');
+            if (ctx.performLogout) return;
+            // The countdown is over: "connecting" until the socket opens or fails
+            ctx.setConnectionState?.('connecting');
+            if (!options.beforeReconnect) {
                 ctx.socket = connectWebSocket(options);
+                return;
             }
+            // A logout or a new login while waiting has its own socket already
+            const replaced = ctx.socket;
+            new Promise((resolve) => resolve(options.beforeReconnect()))
+                .catch((error) => console.warn('beforeReconnect failed, reconnecting with the old values:', error))
+                .then(() => {
+                    if (!ctx.performLogout && ctx.socket === replaced) ctx.socket = connectWebSocket(options);
+                });
         }, delay);
     }
 

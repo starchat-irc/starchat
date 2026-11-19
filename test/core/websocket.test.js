@@ -144,6 +144,45 @@ test('a reconnect uses the same options', () => {
     assert.equal(sockets[1].url, 'wss://other.test');
 });
 
+test('a reconnect waits for beforeReconnect, e.g. a fresh token', async () => {
+    let release;
+    const beforeReconnect = vi.fn(() => new Promise((resolve) => { release = resolve; }));
+    connect({ beforeReconnect }).drop();
+    vi.advanceTimersByTime(3000);
+    assert.equal(beforeReconnect.mock.calls.length, 1);
+    await Promise.resolve();
+    assert.equal(sockets.length, 1, 'still waiting for the token');
+
+    release();
+    await vi.waitFor(() => assert.equal(sockets.length, 2));
+});
+
+test('a failing beforeReconnect still reconnects', async () => {
+    connect({ beforeReconnect: () => Promise.reject(new Error('no parent')) }).drop();
+    vi.advanceTimersByTime(3000);
+    await vi.waitFor(() => assert.equal(sockets.length, 2));
+});
+
+test('a logout while beforeReconnect runs ends the reconnect', async () => {
+    let release;
+    connect({ beforeReconnect: () => new Promise((resolve) => { release = resolve; }) }).drop();
+    vi.advanceTimersByTime(3000);
+    ctx.performLogout = true;
+    release();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(sockets.length, 1);
+});
+
+test('a new login while beforeReconnect runs is not joined by a second socket', async () => {
+    let release;
+    connect({ beforeReconnect: () => new Promise((resolve) => { release = resolve; }) }).drop();
+    vi.advanceTimersByTime(3000);
+    ctx.socket = { replacedByLogin: true };
+    release();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(sockets.length, 1);
+});
+
 test('a handshake that hangs is given up and retried with backoff', () => {
     const socket = connect();
     vi.advanceTimersByTime(9999);

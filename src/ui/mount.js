@@ -25,6 +25,8 @@ import { applyColorScheme } from './color-scheme.js';
  * @param {string} [options.nickname] Connect right away with this nick instead of showing the login form.
  * @param {string} [options.defaultChannel]
  * @param {(type: string, data: Object) => void} [options.onHostMessage]
+ * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Login with a token
+ *   instead of the login dialog, e.g. bearerFromParent({ allowedOrigins }) inside an iframe.
  * @return {Promise<{ connection: Object, servers: Object[] }>}
  */
 export async function mountChat(target, options = {}) {

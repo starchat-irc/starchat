@@ -14,6 +14,7 @@ export { commands, registerCommand } from './core/commands.js';
 export { createTranslator, messages, resolveLanguage } from './i18n/index.js';
 export { renderTemplate, templates } from './ui/templates.js';
 export { mountChat } from './ui/mount.js';
+export { bearerFromParent, readBearerLogin } from './ui/embed.js';
 export { createChatComponent, guestNick } from './ui/component.js';
 export { registerNotificationSound } from './ui/notification-sound.js';
 export { applyColorScheme } from './ui/color-scheme.js';

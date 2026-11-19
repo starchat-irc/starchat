@@ -9,7 +9,7 @@ import { UserManager } from '../core/users.js';
 import { ChannelManager } from '../core/channels.js';
 import { commands } from '../core/commands.js';
 import { connectWebSocket } from '../core/websocket.js';
-import { saslPlain } from '../core/irc-protocol.js';
+import { saslBearer, saslPlain } from '../core/irc-protocol.js';
 import { botsMixin } from './mixins/bots.js';
 import { directMessagesMixin } from './mixins/direct-messages.js';
 import { channelManagementMixin } from './mixins/channel-management.js';
@@ -102,6 +102,9 @@ export function guestNick() {
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection] Builds the connection to another server.
  * @param {typeof connectWebSocket} [options.connectSocket]
  * @param {'auto'|'dark'|'light'} [options.defaultTheme] Theme of the edition until the user picks one.
+ * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Token source of the
+ *   embedding page (see bearerFromParent). Asked on start and before each reconnect; the token
+ *   only goes to the primary server.
  */
 export function createChatComponent(options) {
     const {
@@ -123,7 +126,9 @@ export function createChatComponent(options) {
         openServerConnection = null,
         connectSocket = connectWebSocket,
         defaultTheme = 'auto',
+        bearer = null,
     } = options;
+    const primaryServer = connection?.server || null;
     const storageScope = connection?.server?.id || '';
     const loadedModules = new Set(modules);
 
@@ -181,6 +186,7 @@ export function createChatComponent(options) {
         isLoading: false,
         performLogout: false,
         _saslPassword: password,
+        _bearer: null,
 
         hasMentions: false,
         mentionCount: 0,
@@ -275,7 +281,8 @@ export function createChatComponent(options) {
             this.initModules?.();
             if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
             this.applyWebTheme();
-            if (this.nickname) this.connect();
+            if (bearer) this.bearerLogin();
+            else if (this.nickname) this.connect();
         },
 
         /** Server features need both the server's discovery entry and the loaded module. */
@@ -303,13 +310,58 @@ export function createChatComponent(options) {
             }
             this.nickname = nick;
             this._saslPassword = this.loginPassword || '';
+            this._bearer = null;
             return this.connect();
         },
 
         guestLogin() {
             this.nickname = String(this.loginUsername || '').trim() || guestNick();
             this._saslPassword = '';
+            this._bearer = null;
             return this.connect();
+        },
+
+        /**
+         * Login with a token from the embedding page, always on the primary server. Without
+         * an answer the login dialog stays for a normal login.
+         */
+        async bearerLogin() {
+            if (!bearer || this.isLoading) return;
+            this.isLoading = true;
+            try {
+                if (!(await this.refreshBearer())) return;
+            } finally {
+                this.isLoading = false;
+            }
+            this.selectedServerId = primaryServer?.id || this.selectedServerId;
+            this._saslPassword = '';
+            this.nickname = this._bearer.nickname || this._bearer.account || this.nickname || guestNick();
+            return this.connect();
+        },
+
+        /** Asks the embedding page for a token; on failure the last one stays. */
+        async refreshBearer() {
+            try {
+                const result = await bearer?.();
+                if (result?.token) this._bearer = result;
+            } catch (error) {
+                console.warn('Token from the embedding page failed:', error);
+            }
+            return Boolean(this._bearer);
+        },
+
+        /** The token belongs to the primary server and is never sent to another one. */
+        usesBearer() {
+            const server = this.connection?.server;
+            return Boolean(this._bearer && primaryServer && server
+                && server.id === primaryServer.id && server.websocket === primaryServer.websocket);
+        },
+
+        loginMechanism() {
+            if (this.usesBearer()) {
+                return saslBearer(() => this._bearer.account || '', () => this._bearer.token, this._bearer.tokenType || 'jwt');
+            }
+            return this._saslPassword ? saslPlain(this.nickname, this._saslPassword) : null;
         },
 
         /** Connect to the server chosen in the login dialog and join the start channel. */
@@ -337,7 +389,8 @@ export function createChatComponent(options) {
             this.socket = connectSocket({
                 url: this.connection.websocketUrl,
                 nickname: this.nickname,
-                sasl: this._saslPassword ? saslPlain(this.nickname, this._saslPassword) : null,
+                sasl: this.loginMechanism(),
+                beforeReconnect: this.usesBearer() && bearer ? () => this.refreshBearer() : undefined,
                 ctx: this,
                 onMessage: this.handleMessage.bind(this),
                 onStatusUpdate: (status) => this.handleSocketStatus(status),
