@@ -6,6 +6,7 @@ StarChat is not released yet. Until the first release it is built from source, s
 
 ## Pages
 
+- [Features](features.md): what works on every network and what a network can add
 - [mountChat() options](options.md): starting the chat in a page and configuring it
 - [Embedding with login](embedding.md): logging in users of your site with a token
 - [Server list](servers.md): the public list of networks and how to use your own

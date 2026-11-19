@@ -51,12 +51,13 @@ test('discovery keeps known values and secure endpoints', () => {
     assert.deepEqual(discovery.branding, { logo: 'https://example.org/logo.svg' }, 'http is dropped');
 });
 
-test('discovery keeps https links, invites only with the channel placeholder', () => {
+test('discovery keeps https links, invites only with their placeholder', () => {
     const discovery = normalizeDiscovery({
         ...discoveryData,
         links: {
             register: 'https://example.org/register',
             channelInvite: 'https://example.org/join/{channel}',
+            communityInvite: 'https://example.org/invite/{community}',
             reportPolicy: 'http://example.org/policy',
             unknown: 'https://example.org/x',
         },
@@ -64,7 +65,9 @@ test('discovery keeps https links, invites only with the channel placeholder', (
     assert.deepEqual(discovery.links, {
         register: 'https://example.org/register',
         channelInvite: 'https://example.org/join/{channel}',
+        communityInvite: 'https://example.org/invite/{community}',
     });
+    assert.deepEqual(normalizeDiscovery({ ...discoveryData, links: { communityInvite: 'https://example.org/invite/{channel}' } }).links, {});
     assert.deepEqual(normalizeDiscovery({ ...discoveryData, links: { channelInvite: 'https://example.org/join' } }).links, {});
     assert.deepEqual(normalizeDiscovery({ ...discoveryData, links: { channelInvite: 'javascript:{channel}' } }).links, {});
     assert.deepEqual(normalizeDiscovery({ schemaVersion: 1, links: { register: 'https://example.org/r' } }).links,

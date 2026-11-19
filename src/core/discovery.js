@@ -12,11 +12,13 @@ export const DISCOVERY_SCHEMA_VERSION = 1;
 /** Feature names defined in docs/discovery.md. */
 export const DISCOVERY_FEATURES = Object.freeze([
     'profiles', 'friends', 'uploads', 'push', 'voice', 'calls', 'reports',
-    'explore', 'chatState', 'alwaysOn', 'events', 'gifs',
+    'explore', 'chatState', 'alwaysOn', 'events', 'gifs', 'communities',
 ]);
 
 /** Placeholder in links.channelInvite, replaced by the channel name without "#". */
 export const CHANNEL_PLACEHOLDER = '{channel}';
+/** Placeholder in links.communityInvite, replaced by the slug of the community. */
+export const COMMUNITY_PLACEHOLDER = '{community}';
 
 /** Login methods defined in docs/discovery.md. */
 export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'guest']);
@@ -29,7 +31,7 @@ export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'gu
  * @property {string[]} auth Subset of DISCOVERY_AUTH_METHODS.
  * @property {string[]} features
  * @property {{ logo?: string, themeCss?: string }} branding
- * @property {{ register?: string, channelInvite?: string, reportPolicy?: string }} links
+ * @property {{ register?: string, channelInvite?: string, communityInvite?: string, reportPolicy?: string }} links
  */
 
 /**
@@ -89,10 +91,13 @@ export function normalizeDiscovery(data) {
             links[key] = url;
         }
     }
-    const channelInvite = data.links?.channelInvite;
-    if (typeof channelInvite === 'string' && channelInvite.includes(CHANNEL_PLACEHOLDER)
-        && hostOf(channelInvite.replace(CHANNEL_PLACEHOLDER, 'channel'), 'https:')) {
-        links.channelInvite = channelInvite;
+    // Invite templates need their placeholder and must be https once it is filled in
+    for (const [key, placeholder] of [['channelInvite', CHANNEL_PLACEHOLDER], ['communityInvite', COMMUNITY_PLACEHOLDER]]) {
+        const template = data.links?.[key];
+        if (typeof template === 'string' && template.includes(placeholder)
+            && hostOf(template.replace(placeholder, 'name'), 'https:')) {
+            links[key] = template;
+        }
     }
 
     return {

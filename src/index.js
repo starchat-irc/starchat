@@ -20,7 +20,7 @@ export { registerNotificationSound } from './ui/notification-sound.js';
 export { applyColorScheme } from './ui/color-scheme.js';
 export {
     defaultModules, profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
-    chatStateModule, alwaysOnModule, eventsModule, pushModule,
+    chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
 } from './modules/index.js';
 export { copyText } from './ui/clipboard.js';
 export { settingsRegistry } from './ui/settings/registry.js';

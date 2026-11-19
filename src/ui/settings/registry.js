@@ -26,6 +26,7 @@ export const SETTING_TYPES = Object.freeze(['toggle', 'select', 'list', 'text', 
  * @property {string|null} shell     'desktop', 'mobile' or null (web)
  * @property {(name: string) => boolean} hasFeature  feature of the connected server
  * @property {boolean} hasAccount   logged into an account on a server with profiles
+ * @property {boolean} hasToken     the connection has an API token (not a guest)
  */
 
 /**

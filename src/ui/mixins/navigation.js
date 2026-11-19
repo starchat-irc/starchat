@@ -36,6 +36,24 @@ export function navigationMixin() {
             }
         },
 
+        /**
+         * Home button: every joined channel. Clears a community filter (communities module)
+         * and goes back to the channel last shown on Home.
+         */
+        openHome() {
+            if (this.activeCommunityFilter !== null) {
+                this.activeCommunityFilter = null;
+                this.callModuleHook('communityChanged', null);
+            }
+            const target = this.lastHomeChannel;
+            if (target && this.availableChannels.includes(target)) {
+                this.enterChannelsMode();
+                this.switchChannel(target);
+                return;
+            }
+            this.setSidebarMode('channels');
+        },
+
         setSidebarMode(mode) {
             const prev = this.sidebarMode;
             this.sidebarMode = mode;

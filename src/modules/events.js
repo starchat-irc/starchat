@@ -2,9 +2,9 @@
  * Events module (feature "events")
  * Calendar in the channel sidebar: upcoming events of the network, grouped by local day.
  * The server expands recurring events. The list is loaded after each registration and
- * every 15 minutes, so the button knows whether something is coming up. An edition can
- * narrow the list (e.g. to one community) by overriding eventsQuery() and calling
- * loadCommunityEvents() when its filter changes. API: docs/discovery.md.
+ * every 15 minutes, so the button knows whether something is coming up. While a
+ * community is shown (communities module) the list only has its events and is loaded
+ * again when the community changes. API: docs/discovery.md.
  */
 import { startOfDay } from '../core/formatting.js';
 
@@ -75,14 +75,14 @@ export function eventsMixin() {
             return this.hasFeature('events') && this.hasApiToken;
         },
 
-        /** Query parameters for the list; editions override this to filter. */
+        /** Query parameters for the list: the community shown, if any. */
         eventsQuery() {
-            return {};
+            return this.activeCommunityFilter !== null ? { community: String(this.activeCommunityFilter) } : {};
         },
 
-        /** Whether the list shows where an event belongs (off when the edition filters by group). */
+        /** The community of each event is only named on Home. */
         showsEventSource() {
-            return true;
+            return this.activeCommunityFilter === null;
         },
 
         /** Earliest upcoming start (ms) in the loaded list. */
@@ -181,6 +181,11 @@ export const eventsModule = {
             if (!this.canUseEvents()) return;
             this.loadCommunityEvents();
             this.startEventsRefresh();
+        },
+        communityChanged() {
+            if (!this.canUseEvents()) return;
+            this.communityEvents.items = [];
+            this.loadCommunityEvents();
         },
         loggedOut() {
             this.stopEventsRefresh();

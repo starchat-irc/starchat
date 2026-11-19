@@ -58,6 +58,7 @@ export function settingsMixin({ defaultTheme = 'auto' } = {}) {
                 shell: this.shell,
                 hasFeature: name => this.hasFeature(name),
                 hasAccount: Boolean(this.canUseProfiles?.()),
+                hasToken: Boolean(this.hasApiToken),
                 connectionsApi: Boolean(this.shellSettings?.app?.connectionsApi),
             };
         },

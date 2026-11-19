@@ -12,6 +12,8 @@ Example: [`discovery.example.json`](discovery.example.json). Schema: [`discovery
 
 ## Where the file is looked up
 
+These rules are about the file itself. The addresses inside it (API, WebSocket, logo, links) may be on any domain, see [Fields](#fields).
+
 - Always over `https`. The client sends no cookies with the request.
 - Redirects are followed only within the domain or its subdomains (`example.org` to `www.example.org`), not to another domain.
 - A list entry may point to another location with `discovery`, but only on the same domain or a subdomain of it. Otherwise an entry for a foreign network could hand out its own API and collect its logins.
@@ -31,7 +33,7 @@ Example: [`discovery.example.json`](discovery.example.json). Schema: [`discovery
 | `branding.themeCss` | `https://` URL | Stylesheet with the theme variables of the network. |
 | `links` | object | Pages of the network, see below. Works without `apiBaseUrl`. |
 
-Endpoints may be on other domains than the network itself, for example an API on a separate host. They must use `https` or `wss`. Plain `http` and `ws` are dropped.
+Endpoints may be on other domains than the network itself, for example an API on `api.example.net` or a WebSocket on a separate host. They must use `https` or `wss`. Plain `http` and `ws` are dropped. The file is trusted for these addresses because it was loaded from the network's own domain.
 
 Unknown fields and unknown values in `auth` and `features` are ignored, so a file written for a newer client still works with an older one. New fields and values are added to this document first.
 
@@ -44,6 +46,7 @@ Pages on the network's website that the client links to. All `https`, others are
 | `links.register` | Creating an account. Linked in the login dialog. |
 | `links.channelInvite` | Invite link of a channel. Must contain `{channel}`, which is replaced by the channel name without `#`, URL encoded (`https://example.org/join/{channel}`). The channel menu then offers "Copy invite link". |
 | `links.reportPolicy` | Rules for reports, linked in the report dialog (feature `reports`). |
+| `links.communityInvite` | Invite page of a community. Must contain `{community}`, which is replaced by the community's `slug`, URL encoded (`https://example.org/invite/{community}`). Feature `communities` then offers "Copy invite link" for the community shown. |
 
 ## Login methods (`auth`)
 
@@ -73,6 +76,7 @@ Every connection has its own features and its own token. A token is only sent to
 | `alwaysOn` | Staying connected while the client is closed (bouncer). |
 | `events` | Community events in the chat. |
 | `gifs` | GIF search in the message input. |
+| `communities` | Groups of channels the user belongs to, with their own view in the sidebar. |
 
 ## API
 
@@ -312,7 +316,7 @@ GET chat/events
 | `channel` | string or `null`, optional | Channel of the event (starting with `#`), opened or joined from the list. |
 | `community_name` | string, optional | Group the event belongs to, shown next to it. |
 
-The server expands recurring events into single dates and decides how far ahead the list goes. An edition can add filter parameters to the request (`eventsQuery()`), for example to show only the events of one group.
+The server expands recurring events into single dates and decides how far ahead the list goes. With the `communities` feature the client asks for `chat/events?community=<id>` while a community is shown, and the name of the community is then left out.
 
 ### `push`
 
@@ -334,6 +338,83 @@ App and chat talk through `onHostMessage` and methods of the chat component:
 | chat → app | `push-filter` | `{ muted, ignored }`: channels and nicks whose pushes the app drops. |
 | chat → app | `push-unsubscribe` | Logout, the app deletes its keys. |
 | app → chat | `openPushTarget(target)` | A tapped notification: channel or nick to open. |
+
+### `voice`
+
+Needs a token. Voice chat per channel through a [LiveKit](https://livekit.io) server of the network. The user switches it on under Settings → Voice chat (experimental, off by default). Who is in a voice chat is published as IRC metadata `voice` (value: the channel), so the nick list shows a speaker icon. Leaving the channel on IRC also leaves its voice chat.
+
+```
+POST chat/voice/token
+```
+
+Body `{ "channel": "#bridge", "nick": "alice" }`. The server checks that the nick belongs to the account of the token and is in the channel, for example with a WHOIS through the IRC server's API. Answer:
+
+```json
+{ "url": "wss://voice.example.org", "token": "…", "is_moderator": false }
+```
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `url` | URL | LiveKit server. |
+| `token` | string | LiveKit access token for the room. The participant identity should be the account name, the participant name the nick. |
+| `is_moderator` | boolean, optional | Channel operator: room admin in LiveKit. |
+
+Refusals have a status and a `reason`, the client shows its own text for each:
+
+| Status | `reason` | Meaning |
+|--------|----------|---------|
+| `403` | `not_allowed` | Voice is not enabled for this account (for example while testing). |
+| `403` | `wrong_account` | The nick belongs to another account. |
+| `403` | `not_in_channel` | The nick is not in the channel. |
+| `503` | `whois_failed` | The nick could not be checked right now. |
+| `404` | | Voice is not set up on this server. |
+
+```
+GET chat/voice/filters
+```
+
+Optional microphone filters (noise suppression) the client can load. The client ships the AudioWorklet of each filter it knows, the server hosts the WebAssembly files. Unknown ids are ignored, so a new build of a filter gets a new id (`rnnoise-v2`) and older clients keep loading theirs.
+
+```json
+{ "filters": [{ "id": "rnnoise-v1", "wasm": "https://example.org/voice-filters/rnnoise-v1/rnnoise.wasm", "wasm_simd": "https://example.org/voice-filters/rnnoise-v1/rnnoise_simd.wasm" }] }
+```
+
+`rnnoise-v1` pairs with the files of [`@sapphi-red/web-noise-suppressor`](https://github.com/sapphi-red/web-noise-suppressor) 0.4.1. An empty list or an error leaves the browser's own noise suppression.
+
+### `calls`
+
+Needs a token and the features `voice` and `friends`. Voice calls between two friends from the DM window. Ringing runs over IRC (see [IRCv3 support](ircv3.md#client-tags)), the API only hands out the room and rings app builds.
+
+| Request | Answer |
+|---------|--------|
+| `POST chat/voice/call-token` | Body `{ "peer": "bob", "nick": "alice" }` (`peer`: account of the other side). Same answer as `chat/voice/token`. Both sides have to get the same room, for example `dm:` plus both account names sorted. `403` with `reason: "not_friends"` for anyone who is no friend. |
+| `POST chat/voice/call-ring` | Body `{ "peer": "bob", "call_id": "…", "nick": "alice", "action": "invite" \| "cancel" }`. Rings the app builds of the other side (for example through FCM) or takes the notification back. Answer `{ "pushed": 1 }`, the number of installs reached; `0` without a push service. |
+
+An app build that receives the ring opens the chat with `openPushTarget('call:id=…&nick=…&account=…&answer=accept|decline')` (`answer` optional, without it the chat rings). In the background a browser or desktop chat shows a system notification and sends `call-incoming` with `{ nick }` to `onHostMessage`, so a desktop shell can flash its window.
+
+### `communities`
+
+Needs a token. Groups of channels the user belongs to. Each one gets an icon in the rail: picking it shows only its channels (the ones not joined yet as joinable) and opens its lobby. Home shows every joined channel, the ones of a community grouped under its name. Creating communities, members and roles are left to the network's website.
+
+```
+GET my-communities
+```
+
+```json
+[
+  { "id": 1, "name": "Starfleet", "slug": "starfleet", "lobby_channel": "#bridge", "channels": ["#bridge", "#engineering"] }
+]
+```
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | number or string | |
+| `name` | string | Shown in the rail (first letter) and as the group heading. |
+| `slug` | string, optional | Letters, digits, `_` and `-`. Fills `{community}` in `links.communityInvite`. |
+| `lobby_channel` | string or `null` | Opened first. Must be one of `channels`, otherwise the first channel is used. |
+| `channels` | array of strings | In the order the community wants them. Compared in lower case. |
+
+An empty list for users without communities. The client loads it after every registration. While a community is shown, the `events` feature asks for `chat/events?community=<id>` and the server returns only that community's events.
 
 ### Other features
 

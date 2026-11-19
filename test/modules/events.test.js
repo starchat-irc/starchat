@@ -96,7 +96,7 @@ test('a failed load shows the error, an older answer does not overwrite a newer 
         'GET chat/events?community=7': json({ events: [] }),
     });
     const first = racing.loadCommunityEvents();
-    racing.eventsQuery = () => ({ community: 7 });
+    racing.activeCommunityFilter = 7;
     await racing.loadCommunityEvents();
     release();
     await first;

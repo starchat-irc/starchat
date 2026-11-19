@@ -14,6 +14,9 @@ import { chatStateModule } from './chat-state.js';
 import { alwaysOnModule } from './always-on.js';
 import { eventsModule } from './events.js';
 import { pushModule } from './push.js';
+import { voiceModule } from './voice.js';
+import { callsModule } from './calls.js';
+import { communitiesModule } from './communities.js';
 
 /**
  * @typedef {Object} ChatModule
@@ -23,16 +26,18 @@ import { pushModule } from './push.js';
  * @property {Object<string, Function>} [hooks] Called with the component as `this`
  *   (settingsSectionOpened, settingsSectionClosed, registered after every IRC
  *   registration, connecting after the socket was opened, loggedOut, exploreTabOpened
- *   with the tab name, init when the component starts, loggingOut before the socket closes).
+ *   with the tab name, init when the component starts, loggingOut before the socket closes,
+ *   pageHide when the page is closed, before the QUIT, communityChanged with the id of the
+ *   community shown or null for Home).
  */
 
 export {
     profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
-    chatStateModule, alwaysOnModule, eventsModule, pushModule,
+    chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
 };
 
 /** Loaded by mountChat() unless the edition passes its own list. */
 export const defaultModules = [
     profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
-    chatStateModule, alwaysOnModule, eventsModule, pushModule,
+    chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
 ];

@@ -241,6 +241,11 @@ export function createChatComponent(options) {
 
         // Answers of feature modules while they are not loaded (the modules replace them)
         userInVoice: () => false,
+        // Community shown in the sidebar (communities module), null for Home
+        activeCommunityFilter: null,
+        // The voice bar asks for calls also when the calls module is not loaded
+        voiceCall: null,
+        incomingCall: null,
         canReportMessage: () => false,
         canUseProfiles: () => false,
         // Paste, drop and backspace of the input only matter for attachments (uploads module)
@@ -289,7 +294,10 @@ export function createChatComponent(options) {
             // Network is back: reconnect now instead of waiting for the backoff
             window.addEventListener('online', () => this.socket?.resume?.());
             // Closing the tab: a clean QUIT instead of "Connection closed"
-            window.addEventListener('pagehide', () => this.socket?.quit?.());
+            window.addEventListener('pagehide', () => {
+                this.callModuleHook('pageHide');
+                this.socket?.quit?.();
+            });
             window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
             this.callModuleHook('init');
             if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
@@ -979,6 +987,11 @@ export function createChatComponent(options) {
             const lobby = this.lobbyChannel;
             const rest = joined.filter(ch => ch !== lobby).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
             return [...(lobby && joined.includes(lobby) ? [lobby] : []), ...rest];
+        },
+
+        /** Heading of the channel list: the community shown, otherwise the network. */
+        sidebarTitle() {
+            return this.activeCommunity?.()?.name || this.serverName || this.t('home');
         },
 
         isHomeChannel(channel) {

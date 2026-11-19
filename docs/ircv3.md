@@ -18,7 +18,7 @@ StarChat requests the capabilities below when the server offers them. Without th
 | `draft/message-redaction` | Deleting messages. |
 | `draft/multiline` | Messages with several lines. |
 | `draft/read-marker` | Read position shared by all sessions of an account. |
-| `draft/metadata-3` or `draft/metadata-2` | Avatars and status of users. |
+| `draft/metadata-3` or `draft/metadata-2` | Avatars and status of users, the voice chat a user is in (key `voice`). |
 | `draft/webpush` or `soju.im/webpush` | Push notifications for logged-in accounts while no client is connected. In the browser it needs the `pushWorker` option ([Push notifications](options.md#push-notifications)), apps need the `push` feature of the network. |
 
 ## Client tags
@@ -28,8 +28,25 @@ StarChat requests the capabilities below when the server offers them. Without th
 | `+draft/react`, `+draft/unreact` | Emoji reactions to a message. |
 | `+draft/reply` | Answers to a specific message. |
 | `+typing` | Shown when other users type. |
+| `+getstarchat.net/call`, `+getstarchat.net/call-id` | Ringing for voice calls between friends (feature `calls`), sent as `TAGMSG` to the nick. |
 
 Reactions and replies are offered only when the server does not deny the tags with `CLIENTTAGDENY` in `ISUPPORT`.
+
+### Calls
+
+`+getstarchat.net/call` carries the step of the call, `+getstarchat.net/call-id` a random id of up to 32 letters and digits that keeps two calls apart.
+
+| Value | Sent by | Meaning |
+|-------|---------|---------|
+| `invite` | caller | It should ring. The caller is already waiting in the voice room. |
+| `ringing` | callee | It rings here. Without it within 6 seconds the caller assumes a client without calls and gives up. |
+| `unavailable` | callee | Voice is switched off here. |
+| `busy` | callee | Already in a call or another one rings. |
+| `accept`, `decline` | callee | The answer. Other sessions of the same account see it as echo and stop ringing. |
+| `cancel` | caller | Gave up before an answer. |
+| `end` | either | Hung up. |
+
+Only invites from friends ring (by `account` tag, otherwise by nick). Calls publish no metadata.
 
 ## Tested servers
 

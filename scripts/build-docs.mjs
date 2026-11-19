@@ -18,6 +18,7 @@ const SITE_URL = 'https://getstarchat.net';
 /** Order of the sidebar. Every Markdown file in docs/ has to be listed here. */
 export const PAGES = [
     { file: 'index.md', title: 'Overview' },
+    { file: 'features.md', title: 'Features' },
     { file: 'options.md', title: 'mountChat() options' },
     { file: 'embedding.md', title: 'Embedding with login' },
     { file: 'servers.md', title: 'Server list' },

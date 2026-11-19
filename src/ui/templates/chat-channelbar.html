@@ -2,17 +2,17 @@
      :class="{ 'is-mobile-open': mobileSidebarOpen }"
      x-show="sidebarMode != 'uploads' || isMobileLayout" x-cloak>
     <div class="icon-rail d-flex flex-column align-items-center py-3 px-1 gap-1">
-        <!-- Channels -->
+        <!-- Home: every joined channel -->
         <button class="icon-rail-button position-relative"
                 :class="{
-                    'is-active': sidebarMode === 'channels' && !isServerWindow(),
-                    'has-unread': channelsHaveUnread && sidebarMode !== 'channels'
+                    'is-active': sidebarMode === 'channels' && activeCommunityFilter === null && !isServerWindow(),
+                    'has-unread': channelsHaveUnread && (sidebarMode !== 'channels' || activeCommunityFilter !== null)
                 }"
                 title="{{ t('home') }}"
-                @click="setSidebarMode('channels')">
+                @click="openHome()">
             <span class="icon-rail-icon"><i class="bi bi-house-door-fill"></i></span>
             <span class="rail-badge"
-                  x-show="channelsMentionCount > 0 && sidebarMode !== 'channels'"
+                  x-show="channelsMentionCount > 0 && (sidebarMode !== 'channels' || activeCommunityFilter !== null)"
                   x-text="channelsMentionCount"></span>
         </button>
 
@@ -45,6 +45,40 @@
             <span class="icon-rail-icon"><i class="bi bi-terminal"></i></span>
             <span class="rail-activity-dot" x-show="serverWindowActivity && !isServerWindow()" x-cloak></span>
         </button>
+
+        <!-- Communities of the user, the rest behind "+N", then "discover" (directory of the network) -->
+        <template x-if="hasFeature('communities')">
+            <div class="d-flex flex-column align-items-center gap-1 w-100" x-show="canUseCommunities()">
+                <hr class="sidebar-rail-divider w-75 my-1" x-show="myCommunities.length > 0 || hasFeature('explore')">
+                <template x-for="community in visibleCommunities()" :key="community.id">
+                    <button class="icon-rail-button community-rail-btn position-relative"
+                            :class="{
+                                'is-active': sidebarMode === 'channels' && activeCommunityFilter === community.id && !isServerWindow(),
+                                'has-unread': communityHasUnread(community) && activeCommunityFilter !== community.id
+                            }"
+                            :title="community.name"
+                            @click="openCommunity(community)">
+                        <span class="icon-rail-icon community-icon-initial" x-text="community.name.charAt(0).toUpperCase()"></span>
+                        <span class="rail-badge"
+                              x-show="communityMentionCount(community) > 0"
+                              x-text="communityMentionCount(community)"></span>
+                    </button>
+                </template>
+                <button class="icon-rail-button community-rail-btn position-relative"
+                        x-show="hiddenCommunityCount() > 0"
+                        :title="t('more_communities', { count: hiddenCommunityCount() })"
+                        @click="hasFeature('explore') && openExplore('directory')">
+                    <span class="icon-rail-icon community-icon-initial community-overflow-initial"
+                          x-text="'+' + hiddenCommunityCount()"></span>
+                </button>
+                <button class="icon-rail-button icon-rail-button--discover"
+                        x-show="hasFeature('explore')"
+                        title="{{ t('discover_communities') }}"
+                        @click="openExplore('directory')">
+                    <span class="icon-rail-icon"><i class="bi bi-plus-lg"></i></span>
+                </button>
+            </div>
+        </template>
 
         <!-- Settings and own profile (bottom of the rail) -->
         <button class="icon-rail-button mt-auto"
@@ -133,7 +167,7 @@
         <!-- Channels -->
         <div class="position-relative" x-show="sidebarMode === 'channels'" x-cloak>
             <div class="sidebar-section-title">
-                <span class="text-truncate me-auto" x-text="serverName || t('home')"></span>
+                <span class="text-truncate me-auto" x-text="sidebarTitle()"></span>
                 <template x-if="hasFeature('events')">
                     <button class="sidebar-section-action sidebar-events-button"
                             x-show="showEventsButton()"
@@ -144,6 +178,14 @@
                             @click="toggleCommunityEvents()">
                         <i class="bi bi-calendar-event"></i>
                         <span class="sidebar-events-dot" x-show="hasEventSoon()"></span>
+                    </button>
+                </template>
+                <template x-if="hasFeature('communities')">
+                    <button class="sidebar-section-action"
+                            x-show="communityInviteUrl(activeCommunity())"
+                            title="{{ t('copy_invite_link') }}"
+                            @click="copyInviteLink(communityInviteUrl(activeCommunity()))">
+                        <i class="bi bi-link-45deg"></i>
                     </button>
                 </template>
                 <button class="sidebar-section-action" title="{{ t('explore_channels') }}" @click="openExplore()">
@@ -182,7 +224,7 @@
                     </div>
                 </template>
                 <div class="sidebar-empty" x-show="channelListEntries.length === 0">
-                    <span x-text="t('home_empty')"></span>
+                    <span x-text="activeCommunityFilter !== null ? t('community_no_channels') : t('home_empty')"></span>
                 </div>
             </div>
         </div>

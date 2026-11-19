@@ -7,28 +7,30 @@
         <i class="bi bi-x-lg"></i>
     </button>
 </div>
-<!-- Incoming call from a friend -->
-<div class="voice-call-incoming" x-show="incomingCall" x-cloak role="alertdialog" aria-live="assertive">
-    <i class="bi bi-telephone-inbound-fill"></i>
-    <span class="voice-notice-text">
-        <span x-text="incomingCall ? t('voice_call_incoming', { nick: incomingCall.nick }) : ''"></span>
-        <small class="voice-call-incoming-hint" x-show="isInVoice() && voice.kind === 'channel'"
-               x-text="t('voice_call_leaves_channel', { channel: voice.channel })"></small>
-    </span>
-    <button type="button" class="voice-call-btn voice-call-btn--accept" @click="acceptCall()">
-        <i class="bi bi-telephone-fill"></i> {{ t('voice_call_accept') }}
-    </button>
-    <button type="button" class="voice-call-btn voice-call-btn--decline" @click="declineCall()">
-        <i class="bi bi-telephone-x-fill"></i> {{ t('voice_call_decline') }}
-    </button>
-</div>
+<!-- Incoming call from a friend (calls module) -->
+<template x-if="hasFeature('calls')">
+    <div class="voice-call-incoming" x-show="incomingCall" x-cloak role="alertdialog" aria-live="assertive">
+        <i class="bi bi-telephone-inbound-fill"></i>
+        <span class="voice-notice-text">
+            <span x-text="incomingCall ? t('voice_call_incoming', { nick: incomingCall.nick }) : ''"></span>
+            <small class="voice-call-incoming-hint" x-show="isInVoice() && voice.kind === 'channel'"
+                   x-text="t('voice_call_leaves_channel', { channel: voice.channel })"></small>
+        </span>
+        <button type="button" class="voice-call-btn voice-call-btn--accept" @click="acceptCall()">
+            <i class="bi bi-telephone-fill"></i> {{ t('voice_call_accept') }}
+        </button>
+        <button type="button" class="voice-call-btn voice-call-btn--decline" @click="declineCall()">
+            <i class="bi bi-telephone-x-fill"></i> {{ t('voice_call_decline') }}
+        </button>
+    </div>
+</template>
 <div class="voice-bar" x-show="voice.state !== 'idle'" x-cloak role="region" aria-label="{{ t('settings_section_voice') }}">
     <div class="voice-bar-status">
         <span class="voice-bar-dot" :class="'is-' + voice.state"></span>
         <button type="button" class="voice-bar-channel"
                 @click="switchChannel(voiceCall ? resolveTargetKey(voiceCall.nick) : voice.channel)"
                 x-text="voiceCall ? voiceCall.nick : voice.channel"></button>
-        <span class="voice-bar-state" x-text="voiceCall?.state === 'ringing' ? voiceCallLabel() : voiceStateLabel()"></span>
+        <span class="voice-bar-state" x-text="voiceStateLabel()"></span>
         <span class="voice-bar-badge">{{ t('voice_experimental') }}</span>
     </div>
 
@@ -91,7 +93,7 @@
         </button>
         <button type="button" class="voice-bar-btn voice-bar-btn--leave"
                 :title="voiceCall ? t('voice_call_hangup') : t('voice_leave')"
-                @click="voiceCall ? hangUpCall() : leaveVoice()">
+                @click="leaveVoice()">
             <i class="bi bi-telephone-x-fill"></i>
         </button>
     </div>

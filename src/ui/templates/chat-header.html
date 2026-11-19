@@ -44,7 +44,7 @@
                     :class="{ 'is-active': isInCallWith(currentChannel), 'chat-header-btn--voice-live': isInCallWith(currentChannel) }"
                     x-show="canCallUser(currentChannel) || isInCallWith(currentChannel)"
                     x-cloak
-                    :disabled="voice.state === 'connecting' && !isInCallWith(currentChannel)"
+                    :disabled="callButtonDisabled(currentChannel)"
                     :title="isInCallWith(currentChannel) ? t('voice_call_hangup') : t('voice_call_start')"
                     :aria-label="isInCallWith(currentChannel) ? t('voice_call_hangup') : t('voice_call_start')"
                     @click="isInCallWith(currentChannel) ? hangUpCall() : startCall(currentChannel)">
