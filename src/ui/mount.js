@@ -68,6 +68,8 @@ export async function mountChat(target, options = {}) {
         connection,
         stores,
         t,
+        servers: serverList === false ? [primary] : servers,
+        openServerConnection: (server) => openConnection(server),
         notifyHost: onHostMessage,
         rawOf: (value) => Alpine.raw(value),
     }));

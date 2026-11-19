@@ -119,7 +119,9 @@ body {
     background: var(--chat-bg);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: safe center;
+    overflow-y: auto;
+    padding: 48px 16px 16px;
     z-index: 2000;
 }
 .cursor-pointer { cursor: pointer; }

@@ -179,6 +179,12 @@ export function preferencesMixin({ storageScope = '', defaultQuitMessage = '' } 
         ...readStoredPreferences(storageScope),
         nickColorHues: NICK_COLOR_HUES,
 
+        /** Another connection: read its stored preferences. */
+        switchPreferenceScope(scope) {
+            this.storageScope = scope;
+            Object.assign(this, readStoredPreferences(scope));
+        },
+
         // Highlight words
 
         /**

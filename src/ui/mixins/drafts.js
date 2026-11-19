@@ -75,6 +75,12 @@ export function draftsMixin({ storageScope = '' } = {}) {
         storageScope,
         channelDrafts: loadDrafts(storageScope),
 
+        /** Another connection: read its stored drafts. */
+        switchDraftScope(scope) {
+            this.storageScope = scope;
+            this.channelDrafts = loadDrafts(scope);
+        },
+
         /** Remember (or forget, when empty) the draft of a target, in memory and on disk. */
         saveDraft(target, text) {
             if (!target) return;

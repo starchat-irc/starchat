@@ -27,6 +27,7 @@ import { serverWindowMixin, SERVER_WINDOW } from './mixins/server-window.js';
 import { shortcutsMixin } from './mixins/shortcuts.js';
 import { uiMixin } from './mixins/ui.js';
 import { userCardMixin } from './mixins/user-card.js';
+import { serverSelectMixin } from './mixins/server-select.js';
 import { unreadMixin } from './mixins/unread.js';
 import { DEFAULT_EMOTES, MIRC_COLORS } from '../core/formatting.js';
 import { defaultNotificationSound } from './notification-sound.js';
@@ -42,6 +43,9 @@ const EVENT_GROUP_NAMES = 5;
 
 /** Guest nicks get a number, so two guests don't fight over one nick. */
 const GUEST_NICK = 'Guest';
+
+/** Failed connects in a row (without ever registering) before the login dialog comes back. */
+const CONNECT_ATTEMPTS_BEFORE_GIVING_UP = 3;
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🔥', '💯', '🚀', '💡', '🎉', '👍', '❤️', '😎', '🤖', '😜'];
 
@@ -94,6 +98,9 @@ export function guestNick() {
  * @param {(value: Object) => Object} [options.rawOf] Unwraps a reactive proxy (Alpine.raw).
  * @param {string[]} [options.modules] Names of the loaded feature modules.
  * @param {Object[]} [options.mixins] Mixins of feature modules and the edition.
+ * @param {Object[]} [options.servers] Servers offered in the login dialog, the primary one first.
+ * @param {(server: Object) => Promise<Object>} [options.openServerConnection] Builds the connection to another server.
+ * @param {typeof connectWebSocket} [options.connectSocket]
  */
 export function createChatComponent(options) {
     const {
@@ -111,6 +118,9 @@ export function createChatComponent(options) {
         rawOf = (value) => value,
         modules = [],
         mixins = [],
+        servers = [],
+        openServerConnection = null,
+        connectSocket = connectWebSocket,
     } = options;
     const storageScope = connection?.server?.id || '';
     const loadedModules = new Set(modules);
@@ -240,6 +250,7 @@ export function createChatComponent(options) {
         ...messageSearchMixin(),
         ...directMessagesMixin(),
         ...userCardMixin(),
+        ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection }),
         ...Object.assign({}, ...mixins),
 
         // Lifecycle
@@ -260,6 +271,7 @@ export function createChatComponent(options) {
             window.addEventListener('pagehide', () => this.socket?.quit?.());
             window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
             this.initModules?.();
+            if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
             if (this.nickname) this.connect();
         },
 
@@ -288,38 +300,64 @@ export function createChatComponent(options) {
             }
             this.nickname = nick;
             this._saslPassword = this.loginPassword || '';
-            this.connect();
+            return this.connect();
         },
 
         guestLogin() {
             this.nickname = String(this.loginUsername || '').trim() || guestNick();
             this._saslPassword = '';
-            this.connect();
+            return this.connect();
         },
 
-        connect() {
-            const url = this.connection?.websocketUrl;
-            if (!url) {
-                this.loginError = this.t('server_no_websocket');
-                return;
-            }
+        /** Connect to the server chosen in the login dialog and join the start channel. */
+        async connect() {
+            if (this.isLoading) return;
+            this.isLoading = true;
             this.loginError = '';
+            try {
+                const connection = await this.prepareSelectedConnection();
+                if (!connection.websocketUrl) throw new Error('server_no_websocket');
+                this.applyStartChannel();
+            } catch (error) {
+                this.loginError = this.t(error.message);
+                return;
+            } finally {
+                this.isLoading = false;
+            }
+
+            this.rememberLogin();
             this.isAuthenticated = true;
             this.performLogout = false;
+            this._registeredOnce = false;
+            this._failedConnects = 0;
             this.restoreCurrentDraft();
-            this.socket = connectWebSocket({
-                url,
+            this.socket = connectSocket({
+                url: this.connection.websocketUrl,
                 nickname: this.nickname,
                 sasl: this._saslPassword ? saslPlain(this.nickname, this._saslPassword) : null,
                 ctx: this,
                 onMessage: this.handleMessage.bind(this),
-                onStatusUpdate: (status) => this.updateStatus(status === 'error' ? this.t('connection_error') : ''),
+                onStatusUpdate: (status) => this.handleSocketStatus(status),
                 quitMessage: this.effectiveQuitMessage(),
             });
             this.$nextTick(() => {
                 this.setupMediaPlayers();
                 this.setupStickToBottom();
             });
+        },
+
+        /**
+         * A server that never lets us register (wrong address, refuses this page's origin,
+         * no WebSocket) would be retried forever. After a few failures the login dialog
+         * comes back with a hint instead.
+         */
+        handleSocketStatus(status) {
+            this.updateStatus(status === 'error' ? this.t('connection_error') : '');
+            if (status !== 'disconnected' || this._registeredOnce || this.performLogout) return;
+            this._failedConnects = (this._failedConnects || 0) + 1;
+            if (this._failedConnects < CONNECT_ATTEMPTS_BEFORE_GIVING_UP) return;
+            this.logout();
+            this.loginError = this.t('server_unreachable');
         },
 
         logout() {
@@ -422,6 +460,7 @@ export function createChatComponent(options) {
                 }, 1000);
             }
             if (state === 'reconnecting') this.isRegistered = false;
+            if (state === 'connected') this._registeredOnce = true;
             this.notifyHost('connection-state', { state });
         },
 

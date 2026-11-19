@@ -1,10 +1,7 @@
 <!-- Login overlay, shown when the user is not yet connected -->
 <div class="login-overlay" x-show="!isAuthenticated" x-cloak>
     <form class="card bg-dark text-light" style="width: 400px; max-width: calc(100vw - 32px);" @submit.prevent="loginPassword ? login() : guestLogin()">
-        <div class="card-header">
-            <div>{{ t('login_welcome') }}</div>
-            <div class="small text-secondary" x-show="serverName" x-text="serverName"></div>
-        </div>
+        <div class="card-header">{{ t('login_welcome') }}</div>
         <div class="card-body">
             <!-- Arrived through a channel / invite link: say where the user is about to go -->
             <div class="alert alert-info py-2 small" x-show="requestedChannels.length > 0" x-cloak>
@@ -24,6 +21,44 @@
                        x-model="loginPassword" :disabled="isLoading">
                 <div class="form-text text-secondary">{{ t('login_account_password_hint') }}</div>
             </div>
+
+            <!-- Advanced settings: server and start channel -->
+            <div class="mb-3">
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-secondary d-flex align-items-center gap-1 w-100 text-start"
+                        :aria-expanded="showAdvancedLogin ? 'true' : 'false'"
+                        @click="showAdvancedLogin = !showAdvancedLogin">
+                    <i class="bi" :class="showAdvancedLogin ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                    <span>{{ t('login_advanced') }}</span>
+                    <span class="ms-auto text-truncate small" x-show="!showAdvancedLogin" x-text="loginSummary()"></span>
+                </button>
+                <div class="mt-2" x-show="showAdvancedLogin" x-cloak>
+                    <label for="starchat-server" class="form-label small mb-1">{{ t('login_server') }}</label>
+                    <select id="starchat-server" class="form-select form-select-sm bg-secondary text-light border-0 mb-2"
+                            x-model="selectedServerId" :disabled="isLoading">
+                        <template x-for="server in serverOptions" :key="server.id">
+                            <option :value="server.id" x-text="serverOptionLabel(server)" :selected="server.id === selectedServerId"></option>
+                        </template>
+                        <option value="__other__" :selected="selectedServerId === '__other__'">{{ t('login_server_other') }}</option>
+                    </select>
+                    <div x-show="selectedServerId === '__other__'">
+                        <input type="text" class="form-control form-control-sm bg-secondary text-light border-0 mb-1"
+                               placeholder="irc.example.org" autocapitalize="off" spellcheck="false"
+                               aria-label="{{ t('login_server_domain') }}"
+                               x-model="customServerDomain" :disabled="isLoading">
+                        <input type="text" class="form-control form-control-sm bg-secondary text-light border-0 mb-1"
+                               placeholder="wss://irc.example.org/webirc" autocapitalize="off" spellcheck="false"
+                               aria-label="{{ t('login_server_websocket') }}"
+                               x-model="customWebsocketUrl" :disabled="isLoading">
+                        <div class="form-text text-secondary mt-0 mb-2">{{ t('login_server_websocket_hint') }}</div>
+                    </div>
+                    <label for="starchat-channel" class="form-label small mb-1">{{ t('login_start_channel') }}</label>
+                    <input type="text" id="starchat-channel" class="form-control form-control-sm bg-secondary text-light border-0"
+                           placeholder="#channel" autocapitalize="off" spellcheck="false"
+                           x-model="startChannel" :disabled="isLoading">
+                    <div class="form-text text-secondary">{{ t('login_start_channel_hint') }}</div>
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100" :disabled="isLoading">
                 <span x-show="!isLoading">{{ t('login_connect') }}</span>
                 <span x-show="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

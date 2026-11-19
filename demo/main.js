@@ -1,30 +1,19 @@
 /**
- * Demo page of getstarchat.net. ST-City is preselected and guests land in #starchat.
- * ?server=<domain> connects to another server of the public list instead.
+ * Demo page of getstarchat.net. ST-City is preselected with #starchat as start channel,
+ * the login dialog offers the other servers of the public list.
+ * ?server=<domain> preselects another server.
  */
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.min.css';
 import './theme.css';
 import { mountChat } from '../src/index.js';
 
-const DEMO_SERVER = 'st-city.net';
-const DEMO_CHANNEL = '#starchat';
-
 const params = new URLSearchParams(window.location.search);
-const server = params.get('server') || DEMO_SERVER;
-const isDemoServer = server === DEMO_SERVER;
-
-if (!isDemoServer) {
-    document.getElementById('demo-server').textContent = server;
-    // Privacy and imprint links name ST-City: only shown for the ST-City demo
-    document.getElementById('demo-privacy').hidden = true;
-    document.getElementById('demo-imprint').hidden = true;
-}
 
 mountChat('#chat', {
-    primaryServer: server,
+    primaryServer: params.get('server') || 'st-city.net',
     serverList: 'default',
-    defaultChannel: isDemoServer ? DEMO_CHANNEL : '',
+    defaultChannel: '#starchat',
     ctcpVersion: 'StarChat (demo) https://getstarchat.net',
 }).catch((error) => {
     const message = document.createElement('div');
