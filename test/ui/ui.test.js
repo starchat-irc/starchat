@@ -102,3 +102,27 @@ test('tab completion offers the registered commands', () => {
     const candidates = chat.completionCandidates('/jo', true).map(candidate => candidate.text);
     assert.ok(candidates.includes('/join'));
 });
+
+test('the colour scheme follows the system until a fixed one is chosen', async () => {
+    const { applyColorScheme } = await import('../../src/ui/color-scheme.js');
+    const listeners = new Set();
+    const query = {
+        matches: false,
+        addEventListener: (type, listener) => listeners.add(listener),
+        removeEventListener: (type, listener) => listeners.delete(listener),
+    };
+    globalThis.matchMedia = () => query;
+    const attributes = {};
+    const element = { setAttribute: (name, value) => { attributes[name] = value; } };
+
+    applyColorScheme(element, 'auto');
+    assert.equal(attributes['data-bs-theme'], 'dark');
+    query.matches = true;
+    listeners.forEach(listener => listener());
+    assert.equal(attributes['data-bs-theme'], 'light');
+
+    applyColorScheme(element, 'dark');
+    assert.equal(attributes['data-bs-theme'], 'dark');
+    assert.equal(listeners.size, 0);
+    delete globalThis.matchMedia;
+});

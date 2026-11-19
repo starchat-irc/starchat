@@ -8,13 +8,18 @@ export const FALLBACK_LANGUAGE = 'en';
 
 /**
  * Language code for a locale ("de-DE" -> "de"), English when the language is not bundled.
+ * A list (navigator.languages) gives the first bundled language of the user's order.
  *
- * @param {string} [locale]
+ * @param {string|string[]} [locale]
  * @return {string}
  */
 export function resolveLanguage(locale) {
-    const language = String(locale || '').toLowerCase().split(/[-_]/)[0];
-    return Object.hasOwn(messages, language) ? language : FALLBACK_LANGUAGE;
+    const candidates = Array.isArray(locale) ? locale : [locale];
+    for (const candidate of candidates) {
+        const language = String(candidate || '').toLowerCase().split(/[-_]/)[0];
+        if (Object.hasOwn(messages, language)) return language;
+    }
+    return FALLBACK_LANGUAGE;
 }
 
 function replaceParams(text, params) {
@@ -32,7 +37,7 @@ function replaceParams(text, params) {
  * the app name, so editions can show their own name without changing the texts.
  *
  * @param {Object} [options]
- * @param {string} [options.locale] e.g. "de-DE" or "en"
+ * @param {string|string[]} [options.locale] e.g. "de-DE", "en" or navigator.languages
  * @param {Object<string, string>} [options.overrides] Texts that replace bundled ones (edition specific wording).
  * @param {string} [options.appName]
  * @return {(key: string, params?: Object<string, string|number>) => string}

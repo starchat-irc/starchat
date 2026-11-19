@@ -10,6 +10,7 @@ import { renderTemplate } from './templates.js';
 import { createChatComponent } from './component.js';
 import { createChannelManagementState } from './mixins/channel-management.js';
 import { emojiPicker } from './emoji-picker.js';
+import { applyColorScheme } from './color-scheme.js';
 
 /**
  * @param {string|Element} target Selector or element the chat replaces the content of.
@@ -17,7 +18,8 @@ import { emojiPicker } from './emoji-picker.js';
  * @param {Object} [options.Alpine] An Alpine instance the page already uses (e.g. from Livewire).
  * @param {string|Object} [options.primaryServer] Domain or server list entry, preselected.
  * @param {'default'|string|false} [options.serverList] 'default' (public list), own URL, or false.
- * @param {string} [options.locale] e.g. "de-DE"; the browser language when left out.
+ * @param {string|string[]} [options.locale] e.g. "de-DE"; the browser languages when left out.
+ * @param {'auto'|'dark'|'light'} [options.theme] 'auto' follows the system setting.
  * @param {Object<string, string>} [options.overrides] Texts that replace bundled ones.
  * @param {string} [options.appName]
  * @param {string} [options.nickname] Connect right away with this nick instead of showing the login form.
@@ -30,7 +32,8 @@ export async function mountChat(target, options = {}) {
         Alpine = DefaultAlpine,
         primaryServer = null,
         serverList = 'default',
-        locale = globalThis.navigator?.language,
+        locale = globalThis.navigator?.languages?.length ? globalThis.navigator.languages : globalThis.navigator?.language,
+        theme = 'auto',
         overrides = {},
         appName = 'StarChat',
         onHostMessage = () => {},
@@ -41,6 +44,7 @@ export async function mountChat(target, options = {}) {
     if (!element) {
         throw new Error(`mountChat: ${target} not found`);
     }
+    applyColorScheme(element, theme);
 
     const t = createTranslator({ locale, overrides, appName });
     const { primary, servers } = await resolveServers({ primaryServer, serverList });
@@ -68,6 +72,7 @@ export async function mountChat(target, options = {}) {
         connection,
         stores,
         t,
+        defaultTheme: theme,
         servers: serverList === false ? [primary] : servers,
         openServerConnection: (server) => openConnection(server),
         notifyHost: onHostMessage,

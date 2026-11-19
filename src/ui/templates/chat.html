@@ -39,9 +39,7 @@
             <template x-if="hasFeature('explore')">
                 <div>{{> modal-explore }}</div>
             </template>
-            <template x-if="hasModule('settings')">
-                <div>{{> settings-window }}</div>
-            </template>
+            {{> settings-window }}
             {{> quick-switcher }}
             <template x-if="hasFeature('reports')">
                 <div>{{> report-dialog }}</div>

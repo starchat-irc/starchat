@@ -54,19 +54,19 @@
                              x-text="setting.group ? t(setting.group) : ''"></div>
 
                         <!-- Custom views -->
-                        <template x-if="setting.type === 'custom' && setting.view === 'profile'">
+                        <template x-if="hasFeature('profiles') && setting.type === 'custom' && setting.view === 'profile'">
                             <div class="settings-item settings-item--stacked">
                                 {{> profile-editor }}
                             </div>
                         </template>
 
-                        <template x-if="setting.type === 'custom' && setting.view === 'connections'">
+                        <template x-if="hasModule('connections') && setting.type === 'custom' && setting.view === 'connections'">
                             <div class="settings-item settings-item--stacked">
                                 {{> connections-settings }}
                             </div>
                         </template>
 
-                        <template x-if="setting.type === 'custom' && setting.view === 'voice'">
+                        <template x-if="hasFeature('voice') && setting.type === 'custom' && setting.view === 'voice'">
                             <div class="settings-item settings-item--stacked">
                                 {{> voice-settings }}
                             </div>

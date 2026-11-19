@@ -10,5 +10,7 @@ export default defineConfig({
     build: {
         outDir: '../dist-demo',
         emptyOutDir: true,
+        // One bundle with Alpine and Bootstrap, about 140 kB gzipped
+        chunkSizeWarningLimit: 800,
     },
 });

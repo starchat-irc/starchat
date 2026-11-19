@@ -25,7 +25,8 @@
     "main": "./dist/starchat.js",
     "module": "./dist/starchat.js",
     "exports": {
-        ".": "./dist/starchat.js"
+        ".": "./dist/starchat.js",
+        "./theme.css": "./src/ui/theme.css"
     },
     "files": [
         "dist",

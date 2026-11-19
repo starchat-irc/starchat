@@ -1,4 +1,4 @@
-/* Temporary theme for the demo, taken from the ST-City chat. Replaced by the neutral theme (CSS variables) later. */
+/* StarChat theme: colours as CSS variables on :root / [data-bs-theme=dark] and [data-bs-theme=light]. Needs Bootstrap 5 and Bootstrap Icons. */
 
 :root,
 [data-bs-theme=dark] {
@@ -1631,7 +1631,8 @@ iframe.chat-media-player { width: 480px; aspect-ratio: 16 / 9; border: 0; }
 [data-bs-theme=light] .form-control.bg-black,
 [data-bs-theme=light] .form-select.bg-dark,
 [data-bs-theme=light] textarea.form-control.bg-black { background-color: #fff !important; color: #212529 !important; border-color: #ced4da !important; }
-[data-bs-theme=light] .form-control.bg-secondary { background-color: #e9ecef !important; color: #212529 !important; }
+[data-bs-theme=light] .form-control.bg-secondary,
+[data-bs-theme=light] .form-select.bg-secondary { background-color: #e9ecef !important; color: #212529 !important; }
 [data-bs-theme=light] .login-overlay .card,
 [data-bs-theme=light] .login-overlay .card.bg-dark { background-color: #fff !important; color: #212529 !important; }
 [data-bs-theme=light] .dropdown-menu { background-color: #fff !important; border-color: #dee2e6 !important; }

@@ -28,9 +28,9 @@ import { shortcutsMixin } from './mixins/shortcuts.js';
 import { uiMixin } from './mixins/ui.js';
 import { userCardMixin } from './mixins/user-card.js';
 import { serverSelectMixin } from './mixins/server-select.js';
+import { settingsMixin } from './mixins/settings.js';
 import { unreadMixin } from './mixins/unread.js';
 import { DEFAULT_EMOTES, MIRC_COLORS } from '../core/formatting.js';
-import { defaultNotificationSound } from './notification-sound.js';
 
 /** Outgoing lines that are queued while the connection is down instead of being dropped. */
 const QUEUEABLE_COMMAND = /^(@\S+ )?(PRIVMSG|NOTICE|BATCH) /i;
@@ -101,6 +101,7 @@ export function guestNick() {
  * @param {Object[]} [options.servers] Servers offered in the login dialog, the primary one first.
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection] Builds the connection to another server.
  * @param {typeof connectWebSocket} [options.connectSocket]
+ * @param {'auto'|'dark'|'light'} [options.defaultTheme] Theme of the edition until the user picks one.
  */
 export function createChatComponent(options) {
     const {
@@ -121,6 +122,7 @@ export function createChatComponent(options) {
         servers = [],
         openServerConnection = null,
         connectSocket = connectWebSocket,
+        defaultTheme = 'auto',
     } = options;
     const storageScope = connection?.server?.id || '';
     const loadedModules = new Set(modules);
@@ -168,7 +170,6 @@ export function createChatComponent(options) {
         showIdentifyPrompt: false,
         identifyPassword: '',
         defaultChannel: defaultChannel.toLowerCase(),
-        notificationSound: defaultNotificationSound(),
         requestedChannels: [],
 
         // Login
@@ -250,6 +251,7 @@ export function createChatComponent(options) {
         ...messageSearchMixin(),
         ...directMessagesMixin(),
         ...userCardMixin(),
+        ...settingsMixin({ defaultTheme }),
         ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection }),
         ...Object.assign({}, ...mixins),
 
@@ -272,6 +274,7 @@ export function createChatComponent(options) {
             window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
             this.initModules?.();
             if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
+            this.applyWebTheme();
             if (this.nickname) this.connect();
         },
 

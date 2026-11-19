@@ -7,6 +7,7 @@ import DOMPurify from 'dompurify';
 import linkifyHtml from 'linkify-html';
 import { decorateText, formatClock, mircToHtml, nickHue } from '../../core/formatting.js';
 import { NOTIFICATION_SOUND_MIN_INTERVAL_MS, playNotificationSound, playsOwnSound } from '../notification-sound.js';
+import { applyColorScheme } from '../color-scheme.js';
 
 const IMAGE_URL = /\.(jpe?g|png|gif|webp)(\?.*)?$/i;
 const MEDIA_URL = /\.(mp4|webm|mp3)(\?.*)?$/i;
@@ -416,9 +417,9 @@ export function uiMixin() {
             this.notifyHost('unread-state-update', { totalUnread });
         },
 
-        /** Light or dark colours ([data-bs-theme=light|dark] in the theme CSS). */
+        /** 'auto', 'dark' or 'light' for the element the chat is mounted in. */
         applyTheme(theme) {
-            document.documentElement.setAttribute('data-bs-theme', theme === 'light' ? 'light' : 'dark');
+            applyColorScheme(this.$root?.parentElement || document.documentElement, theme);
         },
     };
 }

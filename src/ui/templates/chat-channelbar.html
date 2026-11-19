@@ -47,14 +47,12 @@
         </button>
 
         <!-- Settings and own profile (bottom of the rail) -->
-        <template x-if="hasModule('settings')">
-            <button class="icon-rail-button mt-auto"
-                    :class="{ 'is-active': settingsWindow.show && settingsWindow.section !== 'account' }"
-                    title="{{ t('settings_title') }}"
-                    @click="openSettings()">
-                <span class="icon-rail-icon"><i class="bi bi-gear"></i></span>
-            </button>
-        </template>
+        <button class="icon-rail-button mt-auto"
+                :class="{ 'is-active': settingsWindow.show && settingsWindow.section !== 'account' }"
+                title="{{ t('settings_title') }}"
+                @click="openSettings()">
+            <span class="icon-rail-icon"><i class="bi bi-gear"></i></span>
+        </button>
         <template x-if="hasFeature('profiles')">
             <button class="icon-rail-button icon-rail-button--profile"
                     x-show="canUseProfiles()"

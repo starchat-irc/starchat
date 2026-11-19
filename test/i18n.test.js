@@ -27,6 +27,10 @@ test('the locale picks the language, unknown ones fall back to English', () => {
     assert.equal(resolveLanguage('EN'), 'en');
     assert.equal(resolveLanguage('fr-FR'), 'en');
     assert.equal(resolveLanguage(undefined), 'en');
+    // navigator.languages: the first bundled one in the user's order
+    assert.equal(resolveLanguage(['fr-FR', 'de-CH', 'en']), 'de');
+    assert.equal(resolveLanguage(['fr-FR', 'es']), 'en');
+    assert.equal(resolveLanguage([]), 'en');
     assert.equal(createTranslator({ locale: 'de-DE' })('close'), 'Schließen');
     assert.equal(createTranslator({ locale: 'fr' })('close'), 'Close');
 });

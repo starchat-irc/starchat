@@ -45,17 +45,15 @@
                                placeholder="irc.example.org" autocapitalize="off" spellcheck="false"
                                aria-label="{{ t('login_server_domain') }}"
                                x-model="customServerDomain" :disabled="isLoading">
-                        <input type="text" class="form-control form-control-sm bg-secondary text-light border-0 mb-1"
-                               placeholder="wss://irc.example.org/webirc" autocapitalize="off" spellcheck="false"
+                        <input type="text" class="form-control form-control-sm bg-secondary text-light border-0 mb-2"
+                               placeholder="wss://… (optional)" autocapitalize="off" spellcheck="false"
                                aria-label="{{ t('login_server_websocket') }}"
                                x-model="customWebsocketUrl" :disabled="isLoading">
-                        <div class="form-text text-secondary mt-0 mb-2">{{ t('login_server_websocket_hint') }}</div>
                     </div>
                     <label for="starchat-channel" class="form-label small mb-1">{{ t('login_start_channel') }}</label>
                     <input type="text" id="starchat-channel" class="form-control form-control-sm bg-secondary text-light border-0"
                            placeholder="#channel" autocapitalize="off" spellcheck="false"
                            x-model="startChannel" :disabled="isLoading">
-                    <div class="form-text text-secondary">{{ t('login_start_channel_hint') }}</div>
                 </div>
             </div>
 

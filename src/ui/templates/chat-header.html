@@ -70,14 +70,12 @@
                     title="{{ t('channel_management') }}">
                 <i class="bi bi-sliders"></i>
             </button>
-            <template x-if="hasModule('settings')">
             <button class="chat-header-btn chat-header-btn--desktop"
                     :class="{ 'is-active': highlightWords.length > 0 }"
                     title="{{ t('highlight_words') }}"
                     @click="openSettings('notifications')">
                 <i class="bi" :class="highlightWords.length > 0 ? 'bi-bell-fill' : 'bi-bell'"></i>
             </button>
-            </template>
             <button class="chat-header-btn chat-header-btn--desktop"
                     :class="{ 'is-active': !hideJoinPart }"
                     x-show="currentChannel && currentChannel.startsWith('#')"

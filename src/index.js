@@ -16,3 +16,4 @@ export { renderTemplate, templates } from './ui/templates.js';
 export { mountChat } from './ui/mount.js';
 export { createChatComponent, guestNick } from './ui/component.js';
 export { registerNotificationSound } from './ui/notification-sound.js';
+export { applyColorScheme } from './ui/color-scheme.js';
