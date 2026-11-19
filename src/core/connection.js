@@ -75,6 +75,32 @@ export function createConnection({ server, discovery = null, token = null, fetch
             }
             return fetch(apiUrl(path), { ...init, headers, credentials: 'omit' });
         },
+        /** One login for API and IRC, only when the server offers it. */
+        supportsTokenLogin: () => Boolean(apiBaseUrl && discovery?.auth?.includes('bearer')),
+        /**
+         * Exchanges name and password for a token (POST login, docs/discovery.md) and
+         * keeps it for API calls. Returns { token, nickname }, or null for wrong
+         * credentials. Other failures throw.
+         */
+        async login(username, password) {
+            const response = await this.api('login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            if (response.status === 401 || response.status === 422) {
+                return null;
+            }
+            if (!response.ok) {
+                throw new Error(`login failed with HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            if (typeof data?.token !== 'string' || data.token === '') {
+                throw new Error('login answer without token');
+            }
+            currentToken = data.token;
+            return { token: data.token, nickname: typeof data.nickname === 'string' ? data.nickname : '' };
+        },
     };
 }
 

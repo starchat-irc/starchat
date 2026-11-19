@@ -38,6 +38,12 @@
                           x-text="user.name"
                           :title="user.name"></span>
                     <span class="bot-badge ms-1" x-show="isBotNick(user.name)" x-cloak :title="botBadgeTitle(user.name)">{{ t('bot_badge') }}</span>
+                    <!-- Next to the nick, so typing never changes the height of the row -->
+                    <i class="bi bi-three-dots ms-1 text-muted userlist-typing"
+                       x-show="user.isTyping"
+                       x-cloak
+                       title="{{ t('typing_suffix') }}"
+                       aria-label="{{ t('typing_suffix') }}"></i>
 
                     <i class="bi bi-volume-up-fill ms-1 userlist-voice"
                        x-show="userInVoice(user)"
@@ -50,22 +56,16 @@
                           x-text="'(' + user.account + ')'"
                           :title="user.account"></span>
                 </div>
-                <div class="mt-1 user-activity">
-                    <template x-if="user.isTyping">
-                        <span class="text-muted fst-italic">
-                            <i class="bi bi-three-dots user-activity-icon"></i> {{ t('typing_suffix') }}
-                        </span>
-                    </template>
-
-                    <template x-if="!user.isTyping && user.playing && user.playing.trim()">
+                <!-- Second line only when there is something to show, rows without it stay compact -->
+                <div class="mt-1 user-activity" x-show="(user.playing && user.playing.trim()) || userStatus(user.name)" x-cloak>
+                    <template x-if="user.playing && user.playing.trim()">
                         <span class="user-playing" :title="user.playing">
                             <i class="bi bi-music-note-beamed user-activity-icon"></i> <span x-text="user.playing"></span>
                         </span>
                     </template>
-                    <template x-if="!user.isTyping && !(user.playing && user.playing.trim()) && userStatus(user.name)">
+                    <template x-if="!(user.playing && user.playing.trim()) && userStatus(user.name)">
                         <span class="user-custom-status" :title="userStatus(user.name)" x-text="userStatus(user.name)"></span>
                     </template>
-                    <span x-show="!user.isTyping && !(user.playing && user.playing.trim()) && !userStatus(user.name)">&nbsp;</span>
                 </div>
             </li>
 

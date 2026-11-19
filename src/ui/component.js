@@ -96,8 +96,9 @@ export function guestNick() {
  * @param {string} [options.ctcpVersion] Answer to CTCP VERSION.
  * @param {(type: string, data: Object) => void} [options.notifyHost] Messages for the app around the chat.
  * @param {(value: Object) => Object} [options.rawOf] Unwraps a reactive proxy (Alpine.raw).
- * @param {string[]} [options.modules] Names of the loaded feature modules.
- * @param {Object[]} [options.mixins] Mixins of feature modules and the edition.
+ * @param {Array<string|import('../modules/index.js').ChatModule>} [options.modules] Loaded feature
+ *   modules (or only their names). Their mixins and hooks become part of the component.
+ * @param {Object[]} [options.mixins] Mixins of the edition.
  * @param {Object[]} [options.servers] Servers offered in the login dialog, the primary one first.
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection] Builds the connection to another server.
  * @param {typeof connectWebSocket} [options.connectSocket]
@@ -130,7 +131,10 @@ export function createChatComponent(options) {
     } = options;
     const primaryServer = connection?.server || null;
     const storageScope = connection?.server?.id || '';
-    const loadedModules = new Set(modules);
+    const moduleList = modules.map(module => (typeof module === 'string' ? { name: module } : module));
+    const loadedModules = new Set(moduleList.map(module => module.name));
+    const moduleMixins = moduleList.map(module => module.mixin?.() || {});
+    const moduleHooks = moduleList.map(module => module.hooks).filter(Boolean);
 
     return {
         // State
@@ -187,6 +191,9 @@ export function createChatComponent(options) {
         performLogout: false,
         _saslPassword: password,
         _bearer: null,
+        _apiLogin: null,
+        // Mirrors connection.getToken() for Alpine, which does not see the token change
+        hasApiToken: false,
 
         hasMentions: false,
         mentionCount: 0,
@@ -259,6 +266,7 @@ export function createChatComponent(options) {
         ...userCardMixin(),
         ...settingsMixin({ defaultTheme }),
         ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection }),
+        ...Object.assign({}, ...moduleMixins),
         ...Object.assign({}, ...mixins),
 
         // Lifecycle
@@ -299,6 +307,11 @@ export function createChatComponent(options) {
             notifyHost(type, data);
         },
 
+        /** Calls a hook (e.g. settingsSectionOpened) on every module that has it. */
+        callModuleHook(name, ...args) {
+            moduleHooks.forEach(hooks => hooks[name]?.call(this, ...args));
+        },
+
         // Login
 
         /** Connect with the nick from the form; a password logs into the account (SASL PLAIN). */
@@ -311,6 +324,7 @@ export function createChatComponent(options) {
             this.nickname = nick;
             this._saslPassword = this.loginPassword || '';
             this._bearer = null;
+            this._apiLogin = null;
             return this.connect();
         },
 
@@ -318,6 +332,7 @@ export function createChatComponent(options) {
             this.nickname = String(this.loginUsername || '').trim() || guestNick();
             this._saslPassword = '';
             this._bearer = null;
+            this._apiLogin = null;
             return this.connect();
         },
 
@@ -335,6 +350,7 @@ export function createChatComponent(options) {
             }
             this.selectedServerId = primaryServer?.id || this.selectedServerId;
             this._saslPassword = '';
+            this._apiLogin = null;
             this.nickname = this._bearer.nickname || this._bearer.account || this.nickname || guestNick();
             return this.connect();
         },
@@ -347,6 +363,7 @@ export function createChatComponent(options) {
             } catch (error) {
                 console.warn('Token from the embedding page failed:', error);
             }
+            if (this.usesBearer()) this.setApiToken(this.connection, this._bearer.token);
             return Boolean(this._bearer);
         },
 
@@ -361,6 +378,9 @@ export function createChatComponent(options) {
             if (this.usesBearer()) {
                 return saslBearer(() => this._bearer.account || '', () => this._bearer.token, this._bearer.tokenType || 'jwt');
             }
+            if (this._apiLogin) {
+                return saslBearer(() => '', () => this._apiLogin.token, 'jwt');
+            }
             return this._saslPassword ? saslPlain(this.nickname, this._saslPassword) : null;
         },
 
@@ -373,6 +393,7 @@ export function createChatComponent(options) {
                 const connection = await this.prepareSelectedConnection();
                 if (!connection.websocketUrl) throw new Error('server_no_websocket');
                 this.applyStartChannel();
+                await this.prepareToken(connection);
             } catch (error) {
                 this.loginError = this.t(error.message);
                 return;
@@ -400,6 +421,36 @@ export function createChatComponent(options) {
                 this.setupMediaPlayers();
                 this.setupStickToBottom();
             });
+        },
+
+        setApiToken(connection, token) {
+            connection.setToken(token);
+            this.hasApiToken = Boolean(token);
+        },
+
+        /**
+         * Token for the API (and IRC) of this connection: from the embedding page, or from
+         * the server's login when it offers one. A failed API login falls back to SASL PLAIN.
+         */
+        async prepareToken(connection) {
+            if (this.usesBearer()) {
+                this.setApiToken(connection, this._bearer.token);
+                return;
+            }
+            this.setApiToken(connection, null);
+            this._apiLogin = null;
+            if (!this._saslPassword || !connection.supportsTokenLogin?.()) return;
+            let result;
+            try {
+                result = await connection.login(this.nickname, this._saslPassword);
+            } catch (error) {
+                console.warn('API login failed, using SASL PLAIN:', error);
+                return;
+            }
+            if (!result) throw new Error('login_sasl_failed');
+            this._apiLogin = result;
+            this.hasApiToken = true;
+            if (result.nickname) this.nickname = result.nickname;
         },
 
         /**

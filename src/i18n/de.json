@@ -560,5 +560,12 @@
     "uploads_empty": "Noch keine Uploads vorhanden.",
     "uploads_no_caption": "Ohne Beschreibung",
     "copy_link": "Link kopieren",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "event_joined": ":nick hat den Channel betreten",
+    "event_joined_account": ":nick (:account) hat den Channel betreten",
+    "event_left": ":nick hat den Channel verlassen",
+    "event_quit": ":nick hat den Chat verlassen",
+    "event_kicked": ":target wurde von :nick gekickt",
+    "event_nick": ":nick heißt jetzt :newnick",
+    "event_topic": ":nick hat das Topic geändert:"
 }

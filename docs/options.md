@@ -27,6 +27,7 @@ The returned promise resolves with the connection of the primary server and the 
 | `defaultChannel` | | Channel joined and shown after login. Only used on the primary server. |
 | `nickname` | | Connect right away with this nick instead of showing the login dialog. |
 | `bearer` | | Function that returns a login token, see [Embedding with login](embedding.md). |
+| `modules` | all bundled | Feature modules, for example `[profilesModule]` (exported by the package). A module only runs on servers that list its feature in the [discovery file](discovery.md#features). Pass `[]` for a plain IRC client. |
 | `locale` | browser languages | Language code or list of codes, for example `'de-DE'`. The first one with bundled texts wins, English otherwise. |
 | `theme` | `'auto'` | `'auto'` follows the system setting, `'dark'` or `'light'` fix it. Users can change it in the settings, their choice is kept in the browser. |
 | `overrides` | `{}` | Texts that replace bundled ones, by key (see `src/i18n/en.json`). |

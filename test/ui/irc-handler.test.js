@@ -282,3 +282,33 @@ test('server numerics are logged in the server window, noisy ones are not', () =
     const lines = chat.messageManager.get(SERVER_WINDOW).map(message => message.text);
     assert.deepEqual(lines, ['bob is u@host – Bob Real']);
 });
+
+// Join, part, quit and similar lines are translated
+
+test('status lines follow the language of the chat', async () => {
+    const { createTranslator } = await import('../../src/i18n/index.js');
+    const { chat, receive } = joinedChat({ state: { t: createTranslator({ locale: 'de' }) } });
+    receive(':bob!u@h JOIN #chan bobaccount :Bob Real');
+    receive(':bob!u@h PART #chan');
+
+    const lines = chat.messageManager.get('#chan').slice(-2).map((message) => message.text);
+    assert.deepEqual(lines, ['bob (bobaccount) hat den Channel betreten', 'bob hat den Channel verlassen']);
+});
+
+test('a quit reason is shown as sent, even when it looks like a placeholder', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h JOIN #chan * :Bob');
+    receive(':bob!u@h QUIT :bye :nick');
+
+    assert.equal(chat.messageManager.get('#chan').at(-1).text, 'bob has quit (bye :nick)');
+});
+
+test('kick and nick change lines', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h JOIN #chan * :Bob');
+    receive(':bob!u@h NICK robert');
+    receive(':op!u@h KICK #chan robert :spam');
+
+    const lines = chat.messageManager.get('#chan').slice(-2).map((message) => message.text);
+    assert.deepEqual(lines, ['bob is now known as robert', 'robert was kicked by op (spam)']);
+});

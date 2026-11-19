@@ -99,18 +99,18 @@ export function settingsMixin({ defaultTheme = 'auto' } = {}) {
             this.showingUserOptions = false;
             this.settingsWindow = { show: true, section: target?.id || null, query: '' };
             this.requestShellSettings();
-            this.settingsSectionOpened?.(target?.id);
+            this.callModuleHook?.('settingsSectionOpened', target?.id);
         },
 
         selectSettingsSection(sectionId) {
-            this.settingsSectionClosed?.(this.settingsWindow.section);
+            this.callModuleHook?.('settingsSectionClosed', this.settingsWindow.section);
             this.settingsWindow.section = sectionId;
             this.settingsWindow.query = '';
-            this.settingsSectionOpened?.(sectionId);
+            this.callModuleHook?.('settingsSectionOpened', sectionId);
         },
 
         closeSettings() {
-            this.settingsSectionClosed?.(this.settingsWindow.section);
+            this.callModuleHook?.('settingsSectionClosed', this.settingsWindow.section);
             this.settingsWindow.show = false;
             this.focusMessageInput?.();
         },

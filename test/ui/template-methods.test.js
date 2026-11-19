@@ -13,6 +13,7 @@ import { createChannelManagementState } from '../../src/ui/mixins/channel-manage
 import { installBrowserStubs } from './chat-harness.js';
 import { emojiPicker } from '../../src/ui/emoji-picker.js';
 import { templates } from '../../src/ui/templates.js';
+import { defaultModules } from '../../src/modules/index.js';
 
 const IGNORED = new Set(('true false null undefined if else return const let var new typeof instanceof in of this '
     + 'window document Math Date Number String Object Array JSON Boolean parseInt parseFloat encodeURIComponent '
@@ -22,11 +23,12 @@ const IGNORED = new Set(('true false null undefined if else return const let var
  * Drops <template x-if="hasFeature('…')">…</template> blocks (also hasModule, also with
  * "&& more conditions"), nested templates included.
  */
-export function withoutGatedParts(html) {
-    const opener = /<template\s+x-if="(?:hasFeature|hasModule)\('[\w-]+'\)(?:\s*&&[^"]*)?"\s*>/g;
+export function withoutGatedParts(html, keep = []) {
+    const opener = /<template\s+x-if="(?:hasFeature|hasModule)\('([\w-]+)'\)(?:\s*&&[^"]*)?"\s*>/g;
     let result = html;
     let match;
     while ((match = opener.exec(result))) {
+        if (keep.includes(match[1])) continue;
         const start = match.index;
         let depth = 1;
         const tag = /<template\b|<\/template>/g;
@@ -108,4 +110,25 @@ test('the templates only use what the component has, or gate it', () => {
         Object.keys(templates).filter(file => new RegExp(`\\b${name}\\b`).test(templates[file])).join(' '),
     ]));
     assert.deepEqual(where, {});
+});
+
+test('the parts of each bundled module only use what the module brings', () => {
+    const t = createTranslator({ locale: 'en' });
+    for (const module of defaultModules) {
+        const component = createChatComponent({
+            connection: { server: { id: 'test' }, hasFeature: () => true, websocketUrl: 'wss://irc.example.org' },
+            t,
+            modules: [module],
+            stores: {
+                messages: createPlainStore(),
+                users: createPlainStore(),
+                channelTopics: createPlainStore(),
+                channelManagement: createPlainStore(createChannelManagementState()),
+            },
+        });
+        const keys = new Set([...Object.getOwnPropertyNames(component), ...Object.keys(emojiPicker(t))]);
+        const html = withoutGatedParts(renderTemplate('chat', t), [module.name]);
+        const missing = [...usedIdentifiers(html).keys()].filter(name => !keys.has(name)).sort();
+        assert.deepEqual(missing, [], `module ${module.name}`);
+    }
 });

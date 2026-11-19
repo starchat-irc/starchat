@@ -11,6 +11,8 @@ import { createChatComponent } from './component.js';
 import { createChannelManagementState } from './mixins/channel-management.js';
 import { emojiPicker } from './emoji-picker.js';
 import { applyColorScheme } from './color-scheme.js';
+import { settingsRegistry } from './settings/registry.js';
+import { defaultModules } from '../modules/index.js';
 
 /**
  * @param {string|Element} target Selector or element the chat replaces the content of.
@@ -25,6 +27,8 @@ import { applyColorScheme } from './color-scheme.js';
  * @param {string} [options.nickname] Connect right away with this nick instead of showing the login form.
  * @param {string} [options.defaultChannel]
  * @param {(type: string, data: Object) => void} [options.onHostMessage]
+ * @param {import('../modules/index.js').ChatModule[]} [options.modules] Feature modules, all bundled
+ *   ones when left out. A module only runs on servers that offer its feature.
  * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Login with a token
  *   instead of the login dialog, e.g. bearerFromParent({ allowedOrigins }) inside an iframe.
  * @return {Promise<{ connection: Object, servers: Object[] }>}
@@ -39,6 +43,7 @@ export async function mountChat(target, options = {}) {
         overrides = {},
         appName = 'StarChat',
         onHostMessage = () => {},
+        modules = defaultModules,
         ...componentOptions
     } = options;
 
@@ -47,6 +52,8 @@ export async function mountChat(target, options = {}) {
         throw new Error(`mountChat: ${target} not found`);
     }
     applyColorScheme(element, theme);
+
+    modules.forEach(module => module.register?.(settingsRegistry));
 
     const t = createTranslator({ locale, overrides, appName });
     const { primary, servers } = await resolveServers({ primaryServer, serverList });
@@ -71,6 +78,7 @@ export async function mountChat(target, options = {}) {
 
     Alpine.data('chatComponent', () => createChatComponent({
         ...componentOptions,
+        modules,
         connection,
         stores,
         t,

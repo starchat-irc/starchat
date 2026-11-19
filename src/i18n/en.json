@@ -560,5 +560,12 @@
     "uploads_empty": "No uploads yet.",
     "uploads_no_caption": "No description",
     "copy_link": "Copy link",
-    "delete": "Delete"
+    "delete": "Delete",
+    "event_joined": ":nick has joined the channel",
+    "event_joined_account": ":nick (:account) has joined the channel",
+    "event_left": ":nick has left the channel",
+    "event_quit": ":nick has quit",
+    "event_kicked": ":target was kicked by :nick",
+    "event_nick": ":nick is now known as :newnick",
+    "event_topic": ":nick changed the topic to:"
 }

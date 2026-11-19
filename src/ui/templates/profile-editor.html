@@ -103,6 +103,7 @@
                 <div class="profile-editor-message is-error" x-show="profileEditor.statusError" x-text="profileEditor.statusError"></div>
             </div>
 
+            <template x-if="hasFeature('alwaysOn')">
             <div class="profile-editor-section" x-show="alwaysOn.loaded || alwaysOn.loadFailed">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" role="switch" id="alwaysOnSwitch"
@@ -114,6 +115,7 @@
                 <div class="profile-editor-message is-success" x-show="alwaysOn.notice" x-text="alwaysOn.notice"></div>
                 <div class="profile-editor-message is-error" x-show="alwaysOn.error && !alwaysOn.showPrompt" x-text="alwaysOn.error"></div>
             </div>
+            </template>
 
             <div class="profile-editor-footer" x-show="profileEditor.profile?.settings_url">
                 <a :href="profileEditor.profile?.settings_url" target="_blank" rel="noopener" class="profile-editor-link">

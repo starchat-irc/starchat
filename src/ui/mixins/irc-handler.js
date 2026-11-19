@@ -73,19 +73,42 @@ function applyUserMetadata(chat, nick, key, rawValue) {
  * self: false keeps the line even for own events.
  */
 const HISTORY_EVENT_LINES = {
-    JOIN: (msg) => {
-        const account = msg.params[1] && msg.params[1] !== '*' ? ` (${msg.params[1]})` : '';
-        return { text: `${msg.nick}${account} has joined the channel`, type: 'join' };
-    },
-    PART: (msg) => ({ text: `${msg.nick} has left the channel`, type: 'part' }),
-    QUIT: (msg) => ({ text: `${msg.nick} has quit${msg.params[0] ? ` (${msg.params[0]})` : ''}`, type: 'part' }),
-    KICK: (msg) => msg.params[1]
-        ? { text: `${msg.params[1]} was kicked by ${msg.nick}${msg.params[2] ? ` (${msg.params[2]})` : ''}`, type: 'kick', self: false }
+    JOIN: (msg, t) => ({ text: eventText(t, 'join', { nick: msg.nick, account: msg.params[1] }), type: 'join' }),
+    PART: (msg, t) => ({ text: eventText(t, 'part', { nick: msg.nick }), type: 'part' }),
+    QUIT: (msg, t) => ({ text: eventText(t, 'quit', { nick: msg.nick, reason: msg.params[0] }), type: 'part' }),
+    KICK: (msg, t) => msg.params[1]
+        ? { text: eventText(t, 'kick', { nick: msg.nick, target: msg.params[1], reason: msg.params[2] }), type: 'kick', self: false }
         : null,
-    NICK: (msg) => msg.params[0] ? { text: `${msg.nick} is now known as ${msg.params[0]}`, type: 'nick', self: false } : null,
-    TOPIC: (msg) => ({ text: `${msg.nick} changed the topic to: ${msg.params[1] || ''}`, type: 'info', self: false }),
+    NICK: (msg, t) => msg.params[0] ? { text: eventText(t, 'nick', { nick: msg.nick, newnick: msg.params[0] }), type: 'nick', self: false } : null,
+    TOPIC: (msg, t) => ({ text: eventText(t, 'topic', { nick: msg.nick, topic: msg.params[1] }), type: 'info', self: false }),
     MODE: () => null,
 };
+
+/**
+ * Text of a join/part/quit/kick/nick/topic line. Reasons and topics are appended
+ * after translating, so text from other users is never read as a placeholder.
+ */
+export function eventText(t, kind, { nick = '', account = '', target = '', newnick = '', reason = '', topic = '' } = {}) {
+    const suffix = reason ? ` (${reason})` : '';
+    switch (kind) {
+        case 'join':
+            return account && account !== '*'
+                ? t('event_joined_account', { nick, account })
+                : t('event_joined', { nick });
+        case 'part':
+            return t('event_left', { nick });
+        case 'quit':
+            return t('event_quit', { nick }) + suffix;
+        case 'kick':
+            return t('event_kicked', { target, nick }) + suffix;
+        case 'nick':
+            return t('event_nick', { nick, newnick });
+        case 'topic':
+            return `${t('event_topic', { nick })} ${topic || ''}`.trimEnd();
+        default:
+            return '';
+    }
+}
 
 function sameNick(a, b) {
     return typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
@@ -343,7 +366,7 @@ const COMMAND_HANDLERS = {
             if (this.supportsMetadata && this.hasFeature('profiles') && !this.avatarUrl(user)) {
                 this.sendRaw(`METADATA ${user} GET avatar`);
             }
-            this.addSystemLine(channel, `${user}${account ? ` (${account})` : ''} has joined the channel`, { user, isJoinPart: true, joinPartType: 'join', tags: msg.tags });
+            this.addSystemLine(channel, eventText(this.t, 'join', { nick: user, account }), { user, isJoinPart: true, joinPartType: 'join', tags: msg.tags });
             if (channel === this.currentChannel) this.updatePresence();
         } else {
             if (!this.availableChannels.some(c => c.toLowerCase() === channel)) {
@@ -378,7 +401,7 @@ const COMMAND_HANDLERS = {
         const user    = msg.nick;
         const channel = (msg.params[0] || '').toLowerCase();
         if (!sameNick(user, this.nickname)) {
-            this.addSystemLine(channel, `${user} has left the channel`, { user, isJoinPart: true, joinPartType: 'part', tags: msg.tags });
+            this.addSystemLine(channel, eventText(this.t, 'part', { nick: user }), { user, isJoinPart: true, joinPartType: 'part', tags: msg.tags });
         } else {
             this._joinedChannels.delete(channel);
             this.voiceChannelLeft?.(channel);
@@ -392,8 +415,7 @@ const COMMAND_HANDLERS = {
         const channel = (msg.params[0] || '').toLowerCase();
         const target  = msg.params[1];
         if (!target) return;
-        const reason = msg.params[2] ? ` (${msg.params[2]})` : '';
-        this.addSystemLine(channel, `${target} was kicked by ${msg.nick}${reason}`, { isJoinPart: true, joinPartType: 'kick', tags: msg.tags });
+        this.addSystemLine(channel, eventText(this.t, 'kick', { nick: msg.nick, target, reason: msg.params[2] }), { isJoinPart: true, joinPartType: 'kick', tags: msg.tags });
         this.activeUsers.removeUser(channel, target);
         this.activeUsers.sort(channel);
 
@@ -410,11 +432,11 @@ const COMMAND_HANDLERS = {
 
     QUIT(msg) {
         const user = msg.nick;
-        const reason = msg.params[0] ? ` (${msg.params[0]})` : '';
+        const reason = msg.params[0] || '';
         Object.keys(this.reactiveUsers).forEach(channel => {
             if (!this.activeUsers.getUser(channel, user)) return;
             if (!sameNick(user, this.nickname)) {
-                this.addSystemLine(channel, `${user} has quit${reason}`, { user, isJoinPart: true, joinPartType: 'part', tags: msg.tags });
+                this.addSystemLine(channel, eventText(this.t, 'quit', { nick: user, reason }), { user, isJoinPart: true, joinPartType: 'part', tags: msg.tags });
             }
             this.activeUsers.removeUser(channel, user);
         });
@@ -478,7 +500,7 @@ const COMMAND_HANDLERS = {
 
         Object.keys(this.reactiveUsers)
             .filter(channel => this.activeUsers.getUser(channel, oldName))
-            .forEach(channel => this.addSystemLine(channel, `${oldName} is now known as ${newName}`, { joinPartType: 'nick', tags: msg.tags }));
+            .forEach(channel => this.addSystemLine(channel, eventText(this.t, 'nick', { nick: oldName, newnick: newName }), { joinPartType: 'nick', tags: msg.tags }));
 
         this.activeUsers.renameUser(oldName, newName);
         this.renameBot(oldName, newName);
@@ -785,7 +807,7 @@ export function ircHandlerMixin() {
             if (!target) return;
             this.updateHistoryCursor(target, msg.tags);
 
-            const line = HISTORY_EVENT_LINES[msg.command](msg);
+            const line = HISTORY_EVENT_LINES[msg.command](msg, this.t);
             // Own joins/parts are not shown live either
             if (!line || (line.self !== false && sameNick(msg.nick, this.nickname))) return;
             if (this.isSystemLineSeen(target, msg.tags)) return;
