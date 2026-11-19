@@ -2,32 +2,33 @@
      class="gif-picker-popup"
      style="bottom: calc(100% + 4px); left: .5rem;"
      @click.outside="showGifPicker = false"
-     x-data="gifPicker()"
-     x-init="$watch('showGifPicker', v => { if (v) onOpen(); })">
+     x-init="$watch('showGifPicker', open => { if (open) openGifPickerResults(); })">
 
     <div class="gp-search-row">
         <i class="bi bi-search gp-search-icon"></i>
-        <input type="text" class="gp-search-input" x-model="gifSearch"
+        <input type="text" class="gp-search-input" x-model="gifPicker.search"
+               @input.debounce.300ms="searchGifs()"
                placeholder="{{ t('gif_search_placeholder') }}" @keydown.escape="showGifPicker = false"
                x-ref="gifSearchInput">
-        <button class="gp-close-btn" x-show="gifSearch.length > 0" @click="gifSearch = ''"><i class="bi bi-x"></i></button>
+        <button class="gp-close-btn" x-show="gifPicker.search.length > 0" @click="gifPicker.search = ''; searchGifs()"><i class="bi bi-x"></i></button>
     </div>
 
-    <div class="gp-grid" @scroll.debounce.150ms="if ($el.scrollTop + $el.clientHeight >= $el.scrollHeight - 50) loadMore()">
-        <template x-for="gif in gifs" :key="gif.id">
-            <button class="gp-gif-btn" @click="newMessage = gif.url; sendMessage(); showGifPicker = false" :title="gif.title">
+    <div class="gp-grid" @scroll.debounce.150ms="if ($el.scrollTop + $el.clientHeight >= $el.scrollHeight - 50) loadMoreGifs()">
+        <template x-for="gif in gifPicker.results" :key="gif.id">
+            <button class="gp-gif-btn" @click="sendGif(gif)" :title="gif.title">
                 <img :src="gif.preview" :alt="gif.title" loading="lazy">
             </button>
         </template>
 
-        <div x-show="loading" class="gp-loading">
+        <div x-show="gifPicker.loading" class="gp-loading">
             <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
         </div>
-        <div x-show="!loading && gifs.length === 0" class="gp-empty">{{ t('gif_none') }}</div>
+        <div x-show="!gifPicker.loading && gifPicker.results.length === 0" class="gp-empty"
+             x-text="gifPicker.failed ? t('gif_failed') : t('gif_none')"></div>
     </div>
 
-    <div class="gp-attribution">
-        <span style="color:#888;font-size:.7rem;">Powered by <a href="https://klipy.com" target="_blank" rel="noopener" style="color:#6e8efb;text-decoration:none;">KLIPY</a></span>
+    <div class="gp-attribution" x-show="gifPicker.provider">
+        <span>{{ t('gif_powered_by') }} <a :href="gifPicker.provider?.url" target="_blank" rel="noopener" x-text="gifPicker.provider?.name"></a></span>
     </div>
 </div>
 
@@ -132,5 +133,8 @@
         text-align: right;
         border-top: 1px solid rgba(255,255,255,.06);
         opacity: .6;
+        color: #888;
+        font-size: .7rem;
     }
+    .gp-attribution a { color: #6e8efb; text-decoration: none; }
 </style>

@@ -61,12 +61,10 @@
                 <span x-show="!isLoading">{{ t('login_connect') }}</span>
                 <span x-show="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             </button>
-            <template x-if="hasModule('invites')">
-                <p class="small text-center mt-3 mb-0" x-show="canShareInvites()">
-                    {{ t('login_no_account') }}
-                    <a :href="`${inviteBaseUrl()}/register`" target="_blank" rel="noopener">{{ t('login_register') }}</a>
-                </p>
-            </template>
+            <p class="small text-center mt-3 mb-0" x-show="registerUrl()">
+                {{ t('login_no_account') }}
+                <a :href="registerUrl()" target="_blank" rel="noopener">{{ t('login_register') }}</a>
+            </p>
             <p class="text-danger mt-2 mb-0" x-show="loginError" x-text="loginError"></p>
         </div>
     </form>

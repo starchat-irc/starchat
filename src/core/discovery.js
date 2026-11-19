@@ -12,8 +12,11 @@ export const DISCOVERY_SCHEMA_VERSION = 1;
 /** Feature names defined in docs/discovery.md. */
 export const DISCOVERY_FEATURES = Object.freeze([
     'profiles', 'friends', 'uploads', 'push', 'voice', 'calls', 'reports',
-    'explore', 'chatState', 'alwaysOn', 'events',
+    'explore', 'chatState', 'alwaysOn', 'events', 'gifs',
 ]);
+
+/** Placeholder in links.channelInvite, replaced by the channel name without "#". */
+export const CHANNEL_PLACEHOLDER = '{channel}';
 
 /** Login methods defined in docs/discovery.md. */
 export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'guest']);
@@ -26,6 +29,7 @@ export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'gu
  * @property {string[]} auth Subset of DISCOVERY_AUTH_METHODS.
  * @property {string[]} features
  * @property {{ logo?: string, themeCss?: string }} branding
+ * @property {{ register?: string, channelInvite?: string, reportPolicy?: string }} links
  */
 
 /**
@@ -78,6 +82,18 @@ export function normalizeDiscovery(data) {
     if (themeCss) {
         branding.themeCss = themeCss;
     }
+    const links = {};
+    for (const key of ['register', 'reportPolicy']) {
+        const url = urlWith(data.links?.[key], 'https:');
+        if (url) {
+            links[key] = url;
+        }
+    }
+    const channelInvite = data.links?.channelInvite;
+    if (typeof channelInvite === 'string' && channelInvite.includes(CHANNEL_PLACEHOLDER)
+        && hostOf(channelInvite.replace(CHANNEL_PLACEHOLDER, 'channel'), 'https:')) {
+        links.channelInvite = channelInvite;
+    }
 
     return {
         name: typeof data.name === 'string' && data.name.trim() !== '' ? data.name.trim().slice(0, 60) : null,
@@ -88,6 +104,7 @@ export function normalizeDiscovery(data) {
         // Features talk to the API, without one there is nothing to switch on.
         features: apiBaseUrl ? knownValues(data.features, DISCOVERY_FEATURES) : [],
         branding,
+        links,
     };
 }
 

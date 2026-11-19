@@ -36,9 +36,7 @@
                 {{> chat-input }}
             </div>
 
-            <template x-if="hasFeature('explore')">
-                <div>{{> modal-explore }}</div>
-            </template>
+            {{> modal-explore }}
             {{> settings-window }}
             {{> quick-switcher }}
             <template x-if="hasFeature('reports')">

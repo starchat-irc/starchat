@@ -116,7 +116,6 @@ export function navigationMixin() {
                 this.sendRaw(`JOIN ${channel}`);
                 this.updateStatus(`Trying to join ${channel}...`);
             }
-            this.closeExplore?.();
             this.scheduleChatStateSave?.();
         },
 

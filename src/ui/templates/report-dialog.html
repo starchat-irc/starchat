@@ -24,7 +24,7 @@
                 <fieldset class="report-dialog-reasons">
                     <legend class="report-dialog-label">{{ t('report_reason') }}</legend>
                     <!-- Reasons come from the server that receives the report -->
-                    <template x-for="reason in reportReasons" :key="reason.value">
+                    <template x-for="reason in reportReasons()" :key="reason.value">
                         <label class="report-dialog-reason">
                             <input type="radio" name="report_reason" :value="reason.value" x-model="reportDialog.reason">
                             <span x-text="reason.label"></span>
@@ -43,7 +43,7 @@
                 <div class="report-dialog-error" x-show="reportDialog.error" x-text="reportDialog.error" role="alert"></div>
 
                 <div class="report-dialog-actions">
-                    <a :href="reportPolicyUrl" x-show="reportPolicyUrl" target="_blank" rel="noopener" class="report-dialog-policy">{{ t('report_policy_link') }}</a>
+                    <a :href="reportPolicyUrl()" x-show="reportPolicyUrl()" target="_blank" rel="noopener" class="report-dialog-policy">{{ t('report_policy_link') }}</a>
                     <button type="button" class="btn btn-sm btn-outline-secondary" @click="closeReportDialog()">{{ t('report_cancel') }}</button>
                     <button type="submit" class="btn btn-sm btn-danger" :disabled="reportDialog.sending">
                         <span x-show="reportDialog.sending" class="spinner-border spinner-border-sm me-1"></span>

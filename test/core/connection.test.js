@@ -51,6 +51,27 @@ test('discovery keeps known values and secure endpoints', () => {
     assert.deepEqual(discovery.branding, { logo: 'https://example.org/logo.svg' }, 'http is dropped');
 });
 
+test('discovery keeps https links, invites only with the channel placeholder', () => {
+    const discovery = normalizeDiscovery({
+        ...discoveryData,
+        links: {
+            register: 'https://example.org/register',
+            channelInvite: 'https://example.org/join/{channel}',
+            reportPolicy: 'http://example.org/policy',
+            unknown: 'https://example.org/x',
+        },
+    });
+    assert.deepEqual(discovery.links, {
+        register: 'https://example.org/register',
+        channelInvite: 'https://example.org/join/{channel}',
+    });
+    assert.deepEqual(normalizeDiscovery({ ...discoveryData, links: { channelInvite: 'https://example.org/join' } }).links, {});
+    assert.deepEqual(normalizeDiscovery({ ...discoveryData, links: { channelInvite: 'javascript:{channel}' } }).links, {});
+    assert.deepEqual(normalizeDiscovery({ schemaVersion: 1, links: { register: 'https://example.org/r' } }).links,
+        { register: 'https://example.org/r' }, 'links work without an API');
+    assert.ok(normalizeDiscovery({ ...discoveryData, features: ['gifs'] }).features.includes('gifs'));
+});
+
 test('endpoints may be on other domains, but not without TLS', () => {
     const elsewhere = normalizeDiscovery({ ...discoveryData, apiBaseUrl: 'https://api.example.net/v1', websocketUrl: 'wss://ws.example.net' });
     assert.equal(elsewhere.apiBaseUrl, 'https://api.example.net/v1');
@@ -81,6 +102,7 @@ test('the documented example matches the schema and the client', () => {
     assert.deepEqual(discovery.auth, example.auth);
     assert.deepEqual(discovery.features, example.features);
     assert.deepEqual(discovery.branding, example.branding);
+    assert.deepEqual(discovery.links, example.links);
 });
 
 test('fetchDiscovery returns null for missing files, errors and foreign redirects', async () => {

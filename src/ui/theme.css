@@ -1176,6 +1176,21 @@ iframe.chat-media-player { width: 480px; aspect-ratio: 16 / 9; border: 0; }
 .report-dialog-error { font-size: .85rem; color: var(--chat-danger); }
 .report-dialog-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; }
 .report-dialog-policy { margin-right: auto; font-size: .85rem; }
+.quick-switcher.report-dialog.explore-dialog { width: 720px; height: min(640px, calc(100dvh - 2rem)); }
+.explore-dialog .report-dialog-body { flex: 1; }
+.explore-dialog .nav-tabs { border-color: var(--chat-border); }
+.explore-dialog .nav-link { color: var(--chat-text-muted); }
+.explore-dialog .nav-link.active { color: var(--chat-text); background: transparent; border-color: var(--chat-border) var(--chat-border) transparent; }
+.explore-tab { display: flex; flex-direction: column; gap: .6rem; min-height: 0; }
+.explore-count, .explore-empty { font-size: .85rem; color: var(--chat-text-muted); }
+.explore-empty { padding: 1rem 0; text-align: center; }
+.explore-list { display: flex; flex-direction: column; gap: .15rem; }
+.explore-item { display: flex; align-items: center; gap: .75rem; padding: .5rem; border-radius: 6px; }
+.explore-item:hover { background: var(--chat-hover, rgba(255, 255, 255, .05)); }
+.explore-item-text { flex: 1; min-width: 0; }
+.explore-item-name { font-weight: 600; overflow-wrap: anywhere; }
+.explore-item-users { margin-left: .4rem; font-size: .75rem; color: var(--chat-text-muted); }
+.explore-item-topic { margin: .1rem 0 0; font-size: .85rem; color: var(--chat-text-muted); overflow-wrap: anywhere; }
 .always-on-dialog-hint { font-size: .85rem; color: var(--chat-text-muted); }
 
 .quick-switcher-backdrop {

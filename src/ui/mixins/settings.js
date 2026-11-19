@@ -240,7 +240,9 @@ export function settingsMixin({ defaultTheme = 'auto' } = {}) {
 
         async requestBrowserNotifications() {
             if (globalThis.Notification?.permission !== 'default') return;
-            await Notification.requestPermission();
+            const permission = await Notification.requestPermission();
+            // Allowed after the connect: register for push now instead of on the next connect
+            if (permission === 'granted') this.registerWebPush?.();
             // permission is not reactive: nudge Alpine to read the status again
             this.settingsWindow = { ...this.settingsWindow };
         },

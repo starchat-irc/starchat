@@ -31,6 +31,8 @@ import { defaultModules } from '../modules/index.js';
  *   ones when left out. A module only runs on servers that offer its feature.
  * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Login with a token
  *   instead of the login dialog, e.g. bearerFromParent({ allowedOrigins }) inside an iframe.
+ * @param {string} [options.pushWorker] URL of a copy of starchat/push-sw.js on this origin. Turns on
+ *   browser push on networks with draft/webpush; see the comment at the top of that file.
  * @return {Promise<{ connection: Object, servers: Object[] }>}
  */
 export async function mountChat(target, options = {}) {

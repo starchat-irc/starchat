@@ -30,6 +30,8 @@ import { userCardMixin } from './mixins/user-card.js';
 import { serverSelectMixin } from './mixins/server-select.js';
 import { settingsMixin } from './mixins/settings.js';
 import { unreadMixin } from './mixins/unread.js';
+import { channelListMixin } from './mixins/channel-list.js';
+import { networkLinksMixin } from './mixins/network-links.js';
 import { DEFAULT_EMOTES, MIRC_COLORS } from '../core/formatting.js';
 
 /** Outgoing lines that are queued while the connection is down instead of being dropped. */
@@ -106,6 +108,8 @@ export function guestNick() {
  * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Token source of the
  *   embedding page (see bearerFromParent). Asked on start and before each reconnect; the token
  *   only goes to the primary server.
+ * @param {string|null} [options.pushWorker] URL of the push service worker on the page's origin
+ *   (copy of starchat/push-sw.js). Browser push stays off without it.
  */
 export function createChatComponent(options) {
     const {
@@ -128,6 +132,7 @@ export function createChatComponent(options) {
         connectSocket = connectWebSocket,
         defaultTheme = 'auto',
         bearer = null,
+        pushWorker = null,
     } = options;
     const primaryServer = connection?.server || null;
     const storageScope = connection?.server?.id || '';
@@ -143,6 +148,7 @@ export function createChatComponent(options) {
         connection,
         rawOf,
         shell,
+        pushWorker,
         publishesNowPlaying,
         nickname,
         newMessage: '',
@@ -227,9 +233,6 @@ export function createChatComponent(options) {
         avatarUrls: {},
         ownStatus: '',
         userStatuses: {},
-        serverChannels: [],
-        isListing: false,
-        exploreSearch: '',
         lastChannelBeforeDM: null,
         lastDMBeforeChannel: null,
         sidebarMode: 'channels',
@@ -264,6 +267,8 @@ export function createChatComponent(options) {
         ...messageSearchMixin(),
         ...directMessagesMixin(),
         ...userCardMixin(),
+        ...channelListMixin(),
+        ...networkLinksMixin(),
         ...settingsMixin({ defaultTheme }),
         ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection }),
         ...Object.assign({}, ...moduleMixins),
@@ -286,7 +291,7 @@ export function createChatComponent(options) {
             // Closing the tab: a clean QUIT instead of "Connection closed"
             window.addEventListener('pagehide', () => this.socket?.quit?.());
             window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
-            this.initModules?.();
+            this.callModuleHook('init');
             if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
             this.applyWebTheme();
             if (bearer) this.bearerLogin();
@@ -417,6 +422,7 @@ export function createChatComponent(options) {
                 onStatusUpdate: (status) => this.handleSocketStatus(status),
                 quitMessage: this.effectiveQuitMessage(),
             });
+            this.callModuleHook('connecting');
             this.$nextTick(() => {
                 this.setupMediaPlayers();
                 this.setupStickToBottom();
@@ -472,7 +478,10 @@ export function createChatComponent(options) {
             this.performLogout = true;
             this._outgoingQueue = [];
             this.notifyHost('logout');
+            // Still connected: modules can tell the server (e.g. WEBPUSH UNREGISTER)
+            this.callModuleHook('loggingOut');
             this.socket?.close();
+            this.callModuleHook('loggedOut');
         },
 
         onSaslFailure() {

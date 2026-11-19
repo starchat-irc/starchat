@@ -13,6 +13,7 @@ import { fetchDiscovery } from './discovery.js';
  * @property {string|null} websocketUrl
  * @property {{ host: string, port: number, tls: boolean }|null} irc
  * @property {string|null} apiBaseUrl
+ * @property {{ register?: string, channelInvite?: string, reportPolicy?: string }} links
  * @property {(name: string) => boolean} hasFeature
  * @property {() => string|null} getToken
  * @property {(token: string|null) => void} setToken
@@ -61,6 +62,8 @@ export function createConnection({ server, discovery = null, token = null, fetch
         websocketUrl: discovery?.websocketUrl || server.websocket || null,
         irc: server.irc ?? null,
         apiBaseUrl,
+        /** Pages of the network (register, channelInvite, reportPolicy), see docs/discovery.md. */
+        links: discovery?.links ?? {},
         hasFeature: (name) => features.has(name),
         getToken: () => currentToken,
         setToken: (value) => { currentToken = value || null; },

@@ -1,64 +1,65 @@
-<!-- Explore modal: Bootstrap modal for browsing server channels and communities -->
-<div class="modal fade" id="exploreModal" tabindex="-1" aria-labelledby="exploreModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content bg-dark text-light">
+<!--
+    Explore dialog: channel list of the server (LIST, every network) and the directory
+    of the network (explore feature).
+-->
+<div x-show="exploreDialog.show"
+     x-cloak
+     class="quick-switcher-backdrop report-dialog-backdrop"
+     @click.self="closeExplore()"
+     @keydown.escape.window="exploreDialog.show && closeExplore()">
+    <div class="quick-switcher report-dialog explore-dialog" role="dialog" aria-modal="true" aria-labelledby="exploreDialogTitle">
+        <div class="report-dialog-header">
+            <i class="bi bi-compass"></i>
+            <h2 id="exploreDialogTitle" class="report-dialog-title">{{ t('explore_title') }}</h2>
+            <button type="button" class="btn-close btn-close-white ms-auto" aria-label="{{ t('close') }}" @click="closeExplore()"></button>
+        </div>
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="exploreModalLabel">{{ t('explore_title') }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ t('close') }}"></button>
-            </div>
-
-            <div class="modal-body">
-
-                <!-- Tab nav -->
-                <ul class="nav nav-tabs mb-3">
+        <div class="report-dialog-body">
+            <template x-if="hasFeature('explore')">
+                <ul class="nav nav-tabs">
                     <li class="nav-item">
-                        <button class="nav-link" :class="{ active: activeExploreTab === 'list' }"
-                                @click="activeExploreTab = 'list'; requestChannelList();">
+                        <button type="button" class="nav-link" :class="{ active: exploreDialog.tab === 'list' }"
+                                @click="showExploreTab('list')">
                             {{ t('explore_tab_list') }}
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link" :class="{ active: activeExploreTab === 'communities' }"
-                                @click="activeExploreTab = 'communities'; fetchExploreData();">
+                        <button type="button" class="nav-link" :class="{ active: exploreDialog.tab === 'directory' }"
+                                @click="showExploreTab('directory')">
                             {{ t('explore_tab_communities') }}
                         </button>
                     </li>
                 </ul>
+            </template>
 
-                <!-- Tab: Server channel list -->
-                <div x-show="activeExploreTab === 'list'">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0 text-uppercase text-muted">{{ t('explore_server_list') }}</h6>
-                        <button class="btn btn-sm btn-outline-light" @click="requestChannelList()" :disabled="isListing">
-                            <span x-show="!isListing">↻ {{ t('refresh') }}</span>
-                            <span x-show="isListing">
-                                <span class="spinner-border spinner-border-sm"></span> {{ t('loading') }}
-                            </span>
+            <!-- Channel list of the server -->
+            <template x-if="exploreDialog.tab === 'list'">
+                <div class="explore-tab">
+                    <div class="d-flex gap-2">
+                        <input type="search" class="form-control form-control-sm report-dialog-details"
+                               placeholder="{{ t('explore_search_placeholder') }}"
+                               aria-label="{{ t('explore_search_placeholder') }}"
+                               x-model="exploreSearch">
+                        <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" @click="requestChannelList()" :disabled="isListing">
+                            <span x-show="!isListing"><i class="bi bi-arrow-clockwise"></i> {{ t('refresh') }}</span>
+                            <span x-show="isListing"><span class="spinner-border spinner-border-sm"></span> {{ t('loading') }}</span>
                         </button>
                     </div>
 
-                    <div class="mb-3">
-                        <input type="text"
-                               class="form-control form-control-sm bg-secondary text-light border-secondary"
-                               placeholder="{{ t('explore_search_placeholder') }}"
-                               x-model="exploreSearch">
-                    </div>
-
-                    <div class="text-muted small mb-2" x-show="serverChannels.length > 0">
+                    <div class="explore-count" x-show="serverChannels.length > 0">
                         <span x-text="t('explore_count', { shown: filteredServerChannels.length, total: serverChannels.length })"></span>
                         <span x-show="exploreSearch.trim()" x-text="t('explore_count_query', { query: exploreSearch })"></span>
                     </div>
 
-                    <div class="list-group" style="max-height:400px; overflow-y:auto;">
+                    <div class="explore-list">
                         <template x-for="channel in filteredServerChannels" :key="channel.name">
-                            <div class="list-group-item list-group-item-action bg-dark text-light d-flex justify-content-between align-items-center">
-                                <div class="text-truncate me-2">
-                                    <span class="fw-semibold" x-text="channel.name"></span>
-                                    <span class="badge text-bg-secondary ms-1" x-text="channel.users + ' Users'"></span>
-                                    <p class="mb-0 small text-muted text-truncate" x-text="channel.topic || t('explore_no_topic')"></p>
+                            <div class="explore-item">
+                                <div class="explore-item-text">
+                                    <span class="explore-item-name" x-text="channel.name"></span>
+                                    <span class="explore-item-users" x-text="t('explore_users', { count: channel.users })"></span>
+                                    <p class="explore-item-topic" x-text="channel.topic || t('explore_no_topic')"></p>
                                 </div>
-                                <button class="btn btn-sm flex-shrink-0"
+                                <button type="button" class="btn btn-sm flex-shrink-0"
                                         :class="isChannelJoined(channel.name) ? 'btn-outline-secondary' : 'btn-success'"
                                         @click="joinChannel(channel.name)"
                                         :disabled="isChannelJoined(channel.name)">
@@ -69,28 +70,32 @@
                         </template>
                     </div>
 
-                    <div class="text-muted small text-center py-3"
-                         x-show="!isListing && filteredServerChannels.length === 0">
+                    <div class="explore-empty" x-show="!isListing && filteredServerChannels.length === 0">
                         <span x-show="exploreSearch.trim()">{{ t('explore_none_found') }}</span>
                         <span x-show="!exploreSearch.trim()">{{ t('explore_none') }}</span>
                     </div>
                 </div>
+            </template>
 
-                <!-- Tab: Communities -->
-                <div x-show="activeExploreTab === 'communities'">
-                    <h6 class="mb-2 text-uppercase text-muted">{{ t('explore_tab_communities') }}</h6>
-                    <div class="list-group">
+            <!-- Directory of the network -->
+            <template x-if="hasFeature('explore') && exploreDialog.tab === 'directory'">
+                <div class="explore-tab">
+                    <div class="explore-empty" x-show="directoryLoading">
+                        <span class="spinner-border spinner-border-sm"></span> {{ t('loading') }}
+                    </div>
+                    <div class="report-dialog-error" x-show="directoryError" role="alert">{{ t('explore_directory_error') }}</div>
+                    <div class="explore-list">
                         <template x-for="community in communities" :key="community.id">
-                            <div class="list-group-item list-group-item-action bg-dark text-light d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-1" x-text="community.name"></h5>
-                                    <p class="mb-1 text-muted" x-text="community.description"></p>
-                                    <p class="mb-1 text-muted">
+                            <div class="explore-item">
+                                <div class="explore-item-text">
+                                    <span class="explore-item-name" x-text="community.name"></span>
+                                    <p class="explore-item-topic" x-show="community.description" x-text="community.description"></p>
+                                    <p class="explore-item-topic">
                                         <strong>{{ t('channels_label') }}</strong>
                                         <span x-text="community.channel_names.join(', ')"></span>
                                     </p>
                                 </div>
-                                <button class="btn btn-sm flex-shrink-0"
+                                <button type="button" class="btn btn-sm flex-shrink-0"
                                         :class="isCommunityJoined(community) ? 'btn-outline-secondary' : 'btn-success'"
                                         :disabled="isCommunityJoined(community)"
                                         :title="isCommunityJoined(community) ? '' : missingCommunityChannels(community).join(', ')"
@@ -101,9 +106,9 @@
                             </div>
                         </template>
                     </div>
+                    <div class="explore-empty" x-show="!directoryLoading && !directoryError && communities.length === 0">{{ t('explore_none') }}</div>
                 </div>
-
-            </div><!-- /.modal-body -->
+            </template>
         </div>
     </div>
 </div>

@@ -169,6 +169,7 @@ const COMMAND_HANDLERS = {
         this.joinChannels(channelsToJoin);
 
         this.syncFriendMonitor?.();
+        this.callModuleHook?.('registered');
         this.notifyHost('update-profile-name', { nickname: this.nickname });
         this.privateMessageKeys.forEach(nick => this.requestHistoryLatest(nick));
         if (this.supportsMetadata) {
@@ -472,14 +473,14 @@ const COMMAND_HANDLERS = {
             return;
         }
         if (msg.params.includes('NICKNAME_RESERVED')) {
-            this.updateStatus('Der Name ist bereits in Verwendung.');
+            this.updateStatus(this.t('nick_reserved'));
         }
     },
     '400'() {
-        this.updateStatus('You must use your account name as your nickname.');
+        this.updateStatus(this.t('nick_must_match_account'));
     },
     '432'(msg) {
-        this.updateStatus(`Nickname ${msg.params[1]} is invalid.`);
+        this.updateStatus(this.t('nick_invalid', { nick: msg.params[1] || '' }));
     },
     '433'(msg) {
         const attempted = msg.params[1] || this.nickname;

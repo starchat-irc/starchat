@@ -3,79 +3,18 @@
  */
 import { beforeEach, test } from 'vitest';
 import assert from 'node:assert/strict';
-import { createPlainStore } from '../../src/core/store.js';
 import { createConnection } from '../../src/core/connection.js';
-import { createTranslator } from '../../src/i18n/index.js';
-import { createChatComponent } from '../../src/ui/component.js';
-import { createChannelManagementState } from '../../src/ui/mixins/channel-management.js';
 import { createSettingsRegistry } from '../../src/ui/settings/registry.js';
 import { normalizeProfile, profilesModule } from '../../src/modules/profiles.js';
 import { installBrowserStubs } from '../ui/chat-harness.js';
-
-const SERVER = { id: 'home', name: 'Home Net', domain: 'home.example.org', languages: ['en'], websocket: 'wss://home.example.org/ws' };
-const API = 'https://home.example.org/api';
+import { SERVER, apiStub, chatWith as baseChatWith, connectionWith, json, loggedInChat as baseLoggedInChat } from './module-harness.js';
 
 beforeEach(() => {
     installBrowserStubs();
 });
 
-const json = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
-
-/** fetch stub answering by "METHOD path" (path relative to the API), recording every call. */
-function apiStub(routes) {
-    const calls = [];
-    const fn = async (url, init = {}) => {
-        const method = init.method || 'GET';
-        const path = url.slice(API.length + 1);
-        calls.push({ method, path, init });
-        const answer = routes[`${method} ${path}`];
-        if (answer instanceof Error) throw answer;
-        if (!answer) return json({ message: 'not found' }, 404);
-        return typeof answer === 'function' ? answer(init) : answer;
-    };
-    fn.calls = calls;
-    return fn;
-}
-
-function connectionWith(fetch, { auth = ['sasl-plain', 'bearer', 'guest'], features = ['profiles'] } = {}) {
-    return createConnection({
-        server: SERVER,
-        discovery: { schemaVersion: 1, apiBaseUrl: API, auth, features },
-        fetch,
-    });
-}
-
-function chatWith(connection, { modules = [profilesModule] } = {}) {
-    const sockets = [];
-    const sent = [];
-    const chat = createChatComponent({
-        connection,
-        modules,
-        t: createTranslator({ locale: 'en' }),
-        stores: {
-            messages: createPlainStore(),
-            users: createPlainStore(),
-            channelTopics: createPlainStore(),
-            channelManagement: createPlainStore(createChannelManagementState()),
-        },
-        connectSocket: (options) => {
-            const socket = { options, send: (line) => sent.push(line), close() {}, quit() {} };
-            sockets.push(socket);
-            return socket;
-        },
-    });
-    chat.$nextTick = (callback) => callback?.();
-    chat.$refs = {};
-    chat.positionUserMenu = () => {};
-    return { chat, sockets, sent };
-}
-
-/** As after registration: socket up, metadata supported. */
-function registered(chat) {
-    chat.isRegistered = true;
-    chat.connectionState = 'connected';
-    chat.supportsMetadata = true;
-}
+const chatWith = (connection, { modules = [profilesModule] } = {}) => baseChatWith(connection, { modules });
+const loggedInChat = (routes, options = {}) => baseLoggedInChat(routes, { modules: [profilesModule], ...options });
 
 // Connection login
 
@@ -159,16 +98,6 @@ test('guests and servers without bearer get no token', async () => {
 
 // Profiles
 
-async function loggedInChat(routes, options) {
-    const fetch = apiStub({ 'POST login': json({ token: 'jwt-1' }), ...routes });
-    const result = chatWith(connectionWith(fetch, options));
-    result.chat.loginUsername = 'alice';
-    result.chat.loginPassword = 'secret';
-    await result.chat.login();
-    registered(result.chat);
-    result.fetch = fetch;
-    return result;
-}
 
 test('the card loads the profile of the WHOIS account, not of the nick', async () => {
     const { chat, fetch } = await loggedInChat({

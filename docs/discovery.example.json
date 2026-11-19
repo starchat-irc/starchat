@@ -9,5 +9,9 @@
     "branding": {
         "logo": "https://example.org/logo.svg",
         "themeCss": "https://example.org/starchat-theme.css"
+    },
+    "links": {
+        "register": "https://example.org/register",
+        "channelInvite": "https://example.org/join/{channel}"
     }
 }

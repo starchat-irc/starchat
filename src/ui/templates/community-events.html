@@ -1,8 +1,7 @@
-<!-- Upcoming events of the active community (Home: all my communities), opened from the calendar button -->
+<!-- Upcoming events of the network (events module), opened from the calendar button -->
 <div class="community-events-popover"
      x-show="communityEvents.open"
      x-cloak
-     x-init="$watch('activeCommunityFilter', () => closeCommunityEvents())"
      @click.outside="if (!$refs.eventsButton?.contains($event.target)) closeCommunityEvents()"
      @keydown.escape.window="closeCommunityEvents()"
      role="dialog"
@@ -36,7 +35,7 @@
                         <div class="community-event-body">
                             <div class="community-event-title" x-text="event.title"></div>
                             <div class="community-event-meta">
-                                <span x-show="!activeCommunity" x-text="event.community_name"></span>
+                                <span x-show="showsEventSource() && event.community_name" x-text="event.community_name"></span>
                                 <span x-show="eventRecurrenceLabel(event.recurrence)" x-text="eventRecurrenceLabel(event.recurrence)"></span>
                                 <button type="button"
                                         class="community-event-channel"

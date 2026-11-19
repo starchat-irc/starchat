@@ -18,5 +18,9 @@ export { bearerFromParent, readBearerLogin } from './ui/embed.js';
 export { createChatComponent, guestNick } from './ui/component.js';
 export { registerNotificationSound } from './ui/notification-sound.js';
 export { applyColorScheme } from './ui/color-scheme.js';
-export { defaultModules, profilesModule } from './modules/index.js';
+export {
+    defaultModules, profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
+    chatStateModule, alwaysOnModule, eventsModule, pushModule,
+} from './modules/index.js';
+export { copyText } from './ui/clipboard.js';
 export { settingsRegistry } from './ui/settings/registry.js';

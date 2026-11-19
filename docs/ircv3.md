@@ -19,7 +19,7 @@ StarChat requests the capabilities below when the server offers them. Without th
 | `draft/multiline` | Messages with several lines. |
 | `draft/read-marker` | Read position shared by all sessions of an account. |
 | `draft/metadata-3` or `draft/metadata-2` | Avatars and status of users. |
-| `draft/webpush` or `soju.im/webpush` | Push notifications while no client is connected. Only in builds with their own app ID. |
+| `draft/webpush` or `soju.im/webpush` | Push notifications for logged-in accounts while no client is connected. In the browser it needs the `pushWorker` option ([Push notifications](options.md#push-notifications)), apps need the `push` feature of the network. |
 
 ## Client tags
 

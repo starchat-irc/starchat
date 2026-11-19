@@ -146,11 +146,9 @@
                         <span class="sidebar-events-dot" x-show="hasEventSoon()"></span>
                     </button>
                 </template>
-                <template x-if="hasFeature('explore')">
-                    <button class="sidebar-section-action" title="{{ t('explore_channels') }}" @click="openExploreModal()">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
-                </template>
+                <button class="sidebar-section-action" title="{{ t('explore_channels') }}" @click="openExplore()">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
             </div>
             <template x-if="hasFeature('events')">
                 <div>{{> community-events }}</div>
@@ -214,13 +212,11 @@
             <i class="bi bi-check2 ms-auto" x-show="channelNotifyLevel(contextMenu.channel) === level"></i>
         </button>
     </template>
-    <template x-if="hasModule('invites')">
-        <button type="button" class="context-action"
-                x-show="canShareInvites() && channelInviteUrl(contextMenu.channel)"
-                @click="copyInviteLink(channelInviteUrl(contextMenu.channel))">
-            <i class="bi bi-link-45deg"></i> {{ t('copy_invite_link') }}
-        </button>
-    </template>
+    <button type="button" class="context-action"
+            x-show="channelInviteUrl(contextMenu.channel)"
+            @click="copyInviteLink(channelInviteUrl(contextMenu.channel))">
+        <i class="bi bi-link-45deg"></i> {{ t('copy_invite_link') }}
+    </button>
     <button type="button" class="context-action text-danger" @click="partChannel(contextMenu.channel)">
         <i class="bi bi-box-arrow-left"></i> {{ t('leave_channel') }}
     </button>

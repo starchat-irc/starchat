@@ -36,6 +36,7 @@ The returned promise resolves with the connection of the primary server and the 
 | `defaultQuitMessage` | | Quit message until the user sets one. |
 | `Alpine` | bundled | An Alpine.js instance your page already runs, for example from Livewire. Without it StarChat starts its own. Never run two. |
 | `onHostMessage` | | `(type, data) => {}`. Messages from the chat for the page around it, for example unread counts. |
+| `pushWorker` | | URL of the push service worker on your origin, see [Push notifications](#push-notifications). Without it there is no push in the browser. |
 
 ## Theme
 
@@ -63,6 +64,29 @@ registerNotificationSound('/sounds/ping.ogg');
 ```
 
 Pass `{ makeDefault: false }` to only add it to the list.
+
+## Push notifications
+
+On networks with `draft/webpush` (Ergo, soju) logged-in users can get direct messages and mentions while the chat is closed. The browser needs a service worker on the origin of your page. Copy `node_modules/starchat/src/push-sw.js` (package path `starchat/push-sw.js`) to your public folder and pass its URL:
+
+```js
+await mountChat('#chat', {
+    primaryServer: 'irc.example.org',
+    pushWorker: '/push-sw.js?name=MyNet&chat=/chat&icon=/icon.png',
+});
+```
+
+The query string configures the worker:
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `name` | `StarChat` | Title of notifications without a sender. |
+| `chat` | `/` | Path of the chat page. A tapped notification focuses a window under this path or opens it with `?open=<target>`. Can be given more than once, the first is opened. |
+| `icon` | `/favicon.ico` | Notification icon, a path on your origin. |
+
+The user turns push on under Settings → Notifications, which also asks for the browser permission. Muted channels and ignored users stay silent, the chat sends that list to the worker. Logging out unregisters the device.
+
+No network API is needed for this. Only app builds (FCM) need the network's relay, the `push` feature of the [discovery file](discovery.md#push).
 
 ## Own commands
 

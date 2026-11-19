@@ -29,6 +29,14 @@
                 "logo": { "type": "string", "pattern": "^https://" },
                 "themeCss": { "type": "string", "pattern": "^https://" }
             }
+        },
+        "links": {
+            "type": "object",
+            "properties": {
+                "register": { "type": "string", "pattern": "^https://" },
+                "channelInvite": { "type": "string", "pattern": "^https://.*[{]channel[}]" },
+                "reportPolicy": { "type": "string", "pattern": "^https://" }
+            }
         }
     },
     "dependentRequired": { "features": ["apiBaseUrl"] }

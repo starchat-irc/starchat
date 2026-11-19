@@ -59,6 +59,16 @@ test('a taken nick is retried with a suffix', () => {
     assert.match(chat.connectionStatus, /me_ is in use, trying me2/);
 });
 
+test('nick errors of the server are shown in the chat language', () => {
+    const { chat, receive } = createTestChat();
+    receive(':irc.test FAIL NICK NICKNAME_RESERVED me :Reserved');
+    assert.equal(chat.connectionStatus, 'This nick is already taken.');
+    receive(':irc.test 400 me :Account name required');
+    assert.equal(chat.connectionStatus, 'You must use your account name as your nick.');
+    receive(':irc.test 432 * b@d :Erroneous nickname');
+    assert.equal(chat.connectionStatus, 'The nick b@d is invalid.');
+});
+
 // Channels
 
 test('the own JOIN adds the channel and asks for its history', () => {

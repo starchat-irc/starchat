@@ -28,7 +28,8 @@
     "module": "./dist/starchat.js",
     "exports": {
         ".": "./dist/starchat.js",
-        "./theme.css": "./src/ui/theme.css"
+        "./theme.css": "./src/ui/theme.css",
+        "./push-sw.js": "./src/push-sw.js"
     },
     "files": [
         "dist",
