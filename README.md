@@ -25,49 +25,9 @@ npm run build     # library build to dist/
 
 It also loads the server list (cached, with the shipped copy as fallback), reads the discovery file of each server and keeps features, API access and token per connection, so a token is never sent to another network.
 
-## Embedding with login
+## Documentation
 
-A site that already knows its users can log them into the chat with a token instead of the login dialog. The chat sends the token to its primary server with SASL `IRCV3BEARER` (for Ergo a JWT signed with the key from its config), the server checks it. The token is never sent to another server.
-
-On the same page, pass a function that returns a token:
-
-```js
-mountChat('#chat', {
-    primaryServer: 'irc.example.org',
-    bearer: async () => ({ token: await fetchChatToken() }),
-});
-```
-
-It is called on start and before each reconnect, so short-lived tokens work. Return `null` to show the login dialog.
-
-In an iframe, the chat page asks its parent window:
-
-```js
-import { mountChat, bearerFromParent } from 'starchat';
-
-mountChat('#chat', {
-    primaryServer: 'irc.example.org',
-    bearer: bearerFromParent({ allowedOrigins: ['https://game.example.net'] }),
-});
-```
-
-The chat posts `{ type: 'get-token' }` to the parent and only takes the answer from the direct parent window and from the listed origins (its own origin is always allowed). `allowedOrigins` is set by whoever serves the chat page, not by the embedding site. Without an answer within 10 seconds the login dialog is shown.
-
-The embedding page answers with the token. Check the origin and send the answer to that origin only, never to `'*'`:
-
-```js
-const CHAT_ORIGIN = 'https://chat.example.org';
-
-window.addEventListener('message', async (event) => {
-    if (event.origin !== CHAT_ORIGIN || event.data?.type !== 'get-token') return;
-    const token = await fetchChatToken();
-    event.source.postMessage({ type: 'token-response', token }, CHAT_ORIGIN);
-});
-```
-
-Optional fields in the answer: `account` (authorization identity; leave it out and the server takes the account from the token), `nickname` (nick for the registration, otherwise the account) and `tokenType` (default `jwt`).
-
-The server of the chat page should also limit who may frame it, with `Content-Security-Policy: frame-ancestors https://game.example.net`.
+The docs are in [`docs/`](docs/) and published at [getstarchat.net/docs](https://getstarchat.net/docs/): `mountChat()` options, [embedding with login](docs/embedding.md), server list, [discovery file](docs/discovery.md), commands and IRCv3 support. Build them locally with `npm run build:docs` (output in `dist-docs/`, styled only inside the website).
 
 ## Adding a network
 

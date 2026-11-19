@@ -120,9 +120,12 @@ export function navigationMixin() {
             this.scheduleChatStateSave?.();
         },
 
-        partChannel(args) {
+        partChannel(args = []) {
             if (typeof args === 'string') args = [args];
-            const channels = args[0].split(',').map(ch => {
+            // /part without a channel leaves the current one, if that is a channel
+            const target = args[0] || (this.currentChannel?.startsWith('#') ? this.currentChannel : '');
+            if (!target) return;
+            const channels = target.split(',').map(ch => {
                 const trimmed = ch.trim();
                 return (trimmed.startsWith('#') ? trimmed : `#${trimmed}`).toLowerCase();
             });

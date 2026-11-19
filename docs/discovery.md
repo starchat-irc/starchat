@@ -1,6 +1,6 @@
 # Discovery file
 
-A network can tell StarChat which extra services it offers by serving a JSON file at
+A network can tell StarChat its WebSocket address and the extra services it offers with a small JSON file on its own domain, at this address:
 
 ```
 https://<domain>/.well-known/starchat.json
