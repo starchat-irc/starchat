@@ -27,7 +27,8 @@
     },
     "files": [
         "dist",
-        "src"
+        "src",
+        "servers"
     ],
     "engines": {
         "node": ">=22.12"

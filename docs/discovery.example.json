@@ -1,0 +1,13 @@
+{
+    "$schema": "https://raw.githubusercontent.com/starchat-irc/starchat/main/docs/discovery.schema.json",
+    "schemaVersion": 1,
+    "name": "Example Net",
+    "websocketUrl": "wss://irc.example.org/webirc",
+    "apiBaseUrl": "https://example.org/api",
+    "auth": ["sasl-plain", "bearer", "guest"],
+    "features": ["profiles", "friends", "uploads"],
+    "branding": {
+        "logo": "https://example.org/logo.svg",
+        "themeCss": "https://example.org/starchat-theme.css"
+    }
+}

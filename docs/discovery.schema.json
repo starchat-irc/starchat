@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/starchat-irc/starchat/blob/main/docs/discovery.schema.json",
+    "title": "StarChat discovery file",
+    "description": "Served at https://<domain>/.well-known/starchat.json. See docs/discovery.md.",
+    "type": "object",
+    "required": ["schemaVersion"],
+    "properties": {
+        "$schema": { "type": "string" },
+        "schemaVersion": { "const": 1 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "websocketUrl": { "type": "string", "pattern": "^wss://" },
+        "apiBaseUrl": { "type": "string", "pattern": "^https://" },
+        "auth": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["sasl-plain", "bearer", "guest"] }
+        },
+        "features": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+                "enum": ["profiles", "friends", "uploads", "push", "voice", "calls", "reports", "explore", "chatState", "alwaysOn", "events"]
+            }
+        },
+        "branding": {
+            "type": "object",
+            "properties": {
+                "logo": { "type": "string", "pattern": "^https://" },
+                "themeCss": { "type": "string", "pattern": "^https://" }
+            }
+        }
+    },
+    "dependentRequired": { "features": ["apiBaseUrl"] }
+}
