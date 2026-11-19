@@ -202,7 +202,7 @@ test('closing the page sends a QUIT with the user\'s message and does not reconn
     assert.equal(sockets.length, 1, 'no reconnect after the goodbye');
 });
 
-test('without a user quit message the app default and then "Leaving" is used', () => {
+test('without a user quit message the app default and then "Avoid staring into the cosmic void. It might stare back at you" is used', () => {
     const socket = connect({ quitMessage: 'Bye from the app' });
     socket.open();
     ctx.socket.quit();
@@ -212,7 +212,7 @@ test('without a user quit message the app default and then "Leaving" is used', (
     const plain = connect();
     plain.open();
     ctx.socket.quit();
-    assert.equal(plain.sent.at(-1), 'QUIT :Leaving\r\n');
+    assert.equal(plain.sent.at(-1), 'QUIT :Avoid staring into the cosmic void. It might stare back at you\r\n');
 });
 
 test('a socket closed by logout does not reconnect after the next login', () => {
