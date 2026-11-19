@@ -1,0 +1,40 @@
+{
+    "$schema": "./servers.schema.json",
+    "schemaVersion": 1,
+    "servers": [
+        {
+            "id": "st-city",
+            "name": "ST-City",
+            "domain": "st-city.net",
+            "description": {
+                "de": "Deutschsprachige Rollenspiel- und Chat-Community.",
+                "en": "German-speaking roleplay and chat community."
+            },
+            "languages": ["de"],
+            "websocket": "wss://skynet.st-city.net",
+            "irc": { "host": "irc.st-city.net", "port": 6697, "tls": true }
+        },
+        {
+            "id": "ergo-testnet",
+            "name": "Ergo Testnet",
+            "domain": "testnet.ergo.chat",
+            "description": {
+                "en": "Public test instance of the Ergo IRC server, open for trying out clients."
+            },
+            "languages": ["en"],
+            "websocket": "wss://testnet.ergo.chat/webirc",
+            "irc": { "host": "testnet.ergo.chat", "port": 6697, "tls": true }
+        },
+        {
+            "id": "libera",
+            "name": "Libera.Chat",
+            "domain": "libera.chat",
+            "description": {
+                "en": "Network for free and open source software projects."
+            },
+            "languages": ["en"],
+            "websocket": "wss://web.libera.chat/webirc/websocket/",
+            "irc": { "host": "irc.libera.chat", "port": 6697, "tls": true }
+        }
+    ]
+}

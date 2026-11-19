@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/starchat-irc/starchat/blob/main/servers/servers.schema.json",
+    "title": "StarChat server list",
+    "type": "object",
+    "required": ["schemaVersion", "servers"],
+    "additionalProperties": false,
+    "properties": {
+        "$schema": { "type": "string" },
+        "schemaVersion": { "const": 1 },
+        "servers": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/server" }
+        }
+    },
+    "$defs": {
+        "server": {
+            "type": "object",
+            "required": ["id", "name", "domain", "languages"],
+            "anyOf": [{ "required": ["websocket"] }, { "required": ["irc"] }],
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "description": "Stable identifier, used for saved connections. Never change it.",
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{1,39}$"
+                },
+                "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+                "domain": {
+                    "description": "Main domain of the network. The discovery file is looked up at https://<domain>/.well-known/starchat.json.",
+                    "type": "string",
+                    "pattern": "^([a-z0-9-]+\\.)+[a-z]{2,}$"
+                },
+                "description": {
+                    "description": "Short description per language code.",
+                    "type": "object",
+                    "minProperties": 1,
+                    "propertyNames": { "pattern": "^[a-z]{2}$" },
+                    "additionalProperties": { "type": "string", "maxLength": 200 }
+                },
+                "languages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "type": "string", "pattern": "^[a-z]{2}$" }
+                },
+                "websocket": {
+                    "description": "IRC over WebSocket. Required for the web build.",
+                    "type": "string",
+                    "pattern": "^wss://"
+                },
+                "irc": {
+                    "description": "Plain IRC over TCP. Only used by the desktop client.",
+                    "type": "object",
+                    "required": ["host", "port", "tls"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "host": { "type": "string", "minLength": 1 },
+                        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+                        "tls": { "type": "boolean" }
+                    }
+                },
+                "discovery": {
+                    "description": "Only needed if the discovery file is not at the default location. Must be on the server domain or a subdomain of it.",
+                    "type": "string",
+                    "pattern": "^https://"
+                }
+            }
+        }
+    }
+}

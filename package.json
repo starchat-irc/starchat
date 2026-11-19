@@ -1,0 +1,18 @@
+{
+    "name": "starchat",
+    "version": "0.0.0",
+    "description": "IRCv3 web and desktop client",
+    "license": "AGPL-3.0-only",
+    "private": true,
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/starchat-irc/starchat.git"
+    },
+    "scripts": {
+        "validate:servers": "node scripts/validate-servers.mjs"
+    },
+    "devDependencies": {
+        "ajv": "^8.20.0"
+    }
+}
