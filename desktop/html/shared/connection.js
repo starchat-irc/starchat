@@ -209,6 +209,7 @@
 
     const api = {
         DEFAULT_PORT,
+        NICK_PATTERN,
         emptyExternalServer,
         fromCuratedServer,
         networkDomain,

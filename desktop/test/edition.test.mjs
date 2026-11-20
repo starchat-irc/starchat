@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { builderConfig, loadEdition, runtimeEdition, serverListForBuild } from '../scripts/edition.mjs';
 import runtime from '../edition.js';
 
-const { chooseDataDir, directoryEntries, directoryDomainFor, shellTexts, serverListUrl, toDirectoryEntries, createDiscoveryCache, PUBLIC_SERVER_LIST_URL } = runtime;
+const { chooseDataDir, directoryEntries, migrationDirectory, directoryDomainFor, shellTexts, serverListUrl, toDirectoryEntries, createDiscoveryCache, PUBLIC_SERVER_LIST_URL } = runtime;
 const desktopDir = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
 const pkg = JSON.parse(fs.readFileSync(path.join(desktopDir, 'package.json'), 'utf8'));
 
@@ -209,6 +209,12 @@ test('the downloaded directory wins, the bundled list fills in without one', () 
     assert.deepEqual(directoryEntries([{ name: 'Downloaded' }], bundled).map(entry => entry.name), ['Downloaded']);
     assert.deepEqual(directoryEntries([], null), []);
     assert.equal(directoryDomainFor(directoryEntries([], bundled), { connectionType: 'socket', host: 'irc.b.example' }), 'b.example', 'old profiles find their domain offline too');
+});
+
+test('taking over profiles uses cached entries with a domain, then the bundled list', () => {
+    const bundled = { schemaVersion: 1, servers: [{ id: 'b', name: 'Bundled', domain: 'b.example', irc: { host: 'irc.b.example', port: 6697, tls: true } }] };
+    const entries = migrationDirectory([{ name: 'Old cache' }, { name: 'New cache', domain: 'n.example' }], bundled);
+    assert.deepEqual(entries.map(entry => entry.name), ['New cache', 'Bundled']);
 });
 
 test('older profiles find their network domain in the directory', () => {

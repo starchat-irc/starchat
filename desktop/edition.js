@@ -160,6 +160,15 @@ function directoryEntries(cached, bundled, language = 'en') {
 }
 
 /**
+ * Directory for taking over profiles of another network at startup: the cached entries that
+ * already know their domain, then the bundled list (the cache may be from an older version).
+ */
+function migrationDirectory(cached, bundled, language = 'en') {
+    const withDomain = (Array.isArray(cached) ? cached : []).filter(entry => entry && entry.domain);
+    return [...withDomain, ...toDirectoryEntries(bundled, language)];
+}
+
+/**
  * Network domain of an older profile without one: the directory entry with the same IRC
  * host or WebSocket URL. The directory is the reviewed server list of the edition.
  *
@@ -180,6 +189,7 @@ function directoryDomainFor(entries, externalServer) {
 
 module.exports = {
     loadEdition,
+    migrationDirectory,
     loadBundledServerList,
     directoryEntries,
     directoryDomainFor,

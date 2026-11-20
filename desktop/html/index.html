@@ -524,6 +524,13 @@
         <!-- Main column -->
         <div class="main-col">
 
+            <!-- Profiles of an unknown network were kept aside at this start -->
+            <div class="update-banner" x-show="parkedProfiles > 0" x-cloak role="status">
+                <i class="bi bi-info-circle"></i>
+                <span class="update-banner-text" x-text="t('profiles_parked_notice').replace(':count', parkedProfiles)"></span>
+                <button type="button" @click="parkedProfiles = 0" x-text="t('profiles_parked_ok')"></button>
+            </div>
+
             <!-- Profile tabs -->
             <!-- Update ready -->
             <div class="update-banner" x-show="pendingUpdate && !updateBannerDismissed" x-cloak role="status">
@@ -895,6 +902,8 @@
             serverDialogTab: 'home',
             /** The edition has a primary server: "Home Server" tab, a first profile for it. */
             hasHomeServer: false,
+            /** Connections of an unknown network that were kept aside at this start. */
+            parkedProfiles: 0,
             curatedServers: [],
             curatedServersLoading: false,
             selectedCuratedServer: null,
@@ -990,6 +999,7 @@
                 this.hasHomeServer = Boolean(editionInfo?.primaryServer);
                 ConnectionForm.setHomeNetworkName(editionInfo?.networkName);
 
+                this.parkedProfiles = Number((await window.electronAPI.getStartupNotices?.())?.parkedProfiles) || 0;
                 const savedProfiles = await window.electronAPI.getProfiles();
                 if (savedProfiles?.length) {
                     this.profiles = savedProfiles;

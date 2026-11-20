@@ -76,5 +76,7 @@
     "update_ready_hint": "Ein Neustart dauert nur wenige Sekunden. Sonst wird sie beim nächsten Beenden installiert.",
     "update_later": "Später",
     "update_restart_now": "Jetzt neu starten",
-    "no_connection_hint": "Noch keine Verbindung. Wähle ein Netzwerk aus dem Verzeichnis oder richte einen eigenen Server ein."
+    "no_connection_hint": "Noch keine Verbindung. Wähle ein Netzwerk aus dem Verzeichnis oder richte einen eigenen Server ein.",
+    "profiles_parked_notice": ":count Verbindung(en) aus einer älteren App wurden nicht übernommen, weil unbekannt ist, zu welchem Netz sie gehören. Lege sie neu an. Gespeicherte Logins werden dafür nicht verwendet.",
+    "profiles_parked_ok": "Verstanden"
 }

@@ -76,5 +76,7 @@
     "update_ready_hint": "A restart only takes a few seconds. Otherwise it is installed the next time you quit.",
     "update_later": "Later",
     "update_restart_now": "Restart now",
-    "no_connection_hint": "No connection yet. Pick a network from the directory or set up your own server."
+    "no_connection_hint": "No connection yet. Pick a network from the directory or set up your own server.",
+    "profiles_parked_notice": ":count connection(s) of an older app were not taken over because it is unknown which network they belong to. Set them up again. Stored logins are not used for that.",
+    "profiles_parked_ok": "Got it"
 }

@@ -17,7 +17,7 @@ const os = require('os');
 const recentNotifications = new Map(); // key -> timestamp
 const NOTIF_DEDUP_TTL = 2000; // 2 Sekunden
 
-const { loadEdition, loadBundledServerList, directoryEntries, directoryDomainFor, chooseDataDir, shellTexts, serverListUrl, toDirectoryEntries, createDiscoveryCache } = require('./edition');
+const { loadEdition, loadBundledServerList, directoryEntries, migrationDirectory, directoryDomainFor, chooseDataDir, shellTexts, serverListUrl, toDirectoryEntries, createDiscoveryCache } = require('./edition');
 const { SCHEMES: IRC_SCHEMES, parseIrcUrl, ircUrlFromArgs, profileForLink } = require('./irc-links');
 
 /** Build time settings of this app (name, ids, servers), see edition.schema.json. */
@@ -241,7 +241,8 @@ function getStore(profileHash) {
 function cleanupOrphanedProfileStores() {
     try {
         const userDataPath = app.getPath('userData');
-        const profiles = appStore.get('profiles', []);
+        // Parked profiles keep their store (log paths) for when they are taken back
+        const profiles = [...appStore.get('profiles', []), ...appStore.get('parkedProfiles', [])];
         const activeHashes = new Set(profiles.map(p => p.hash));
         const files = fsSync.readdirSync(userDataPath);
         let removed = 0;
@@ -2245,6 +2246,11 @@ ipcMain.handle('connections-test', async (event, payload = {}) => {
 });
 
 // Curated servers: read from cache
+/** Profiles parked at this start (unknown network): the shell tells the user once. */
+let newlyParkedProfiles = 0;
+
+ipcMain.handle('get-startup-notices', () => ({ parkedProfiles: newlyParkedProfiles }));
+
 /** Server list bundled with this build: the directory until the first download. */
 const bundledServerList = loadBundledServerList();
 
@@ -2358,13 +2364,19 @@ app.whenReady().then(async () => {
         callback(allowed);
     });
 
-    // Home profiles belong to one primary server: bind older ones, drop those of another server
-    const { kept, dropped, bound } = usableProfiles(appStore.get('profiles', []), edition.chat.primaryServer || '');
-    if (dropped.length || bound) {
-        appStore.set('profiles', kept);
-        if (bound) log.info(`Bound ${bound} profile(s) to ${edition.chat.primaryServer}`);
-        if (dropped.length) log.warn(`Removed ${dropped.length} profile(s) of another primary server than ${edition.chat.primaryServer || '(none)'}, with their credentials`);
-    }
+    // Home profiles belong to one network: bind, convert or park them (see usableProfiles)
+    const parkedBefore = appStore.get('parkedProfiles', []);
+    const takeOver = usableProfiles(appStore.get('profiles', []), edition.chat.primaryServer || '', {
+        parked: parkedBefore,
+        directory: migrationDirectory(curatedServerStore.get('servers', []), bundledServerList, app.getLocale().slice(0, 2)),
+    });
+    appStore.set('profiles', takeOver.kept);
+    appStore.set('parkedProfiles', takeOver.parked);
+    newlyParkedProfiles = takeOver.parked.filter(profile => !parkedBefore.some(earlier => earlier.hash === profile.hash)).length;
+    if (takeOver.bound) log.info(`Bound ${takeOver.bound} profile(s) to ${edition.chat.primaryServer}`);
+    if (takeOver.converted) log.info(`Took over ${takeOver.converted} profile(s) of another network as connections`);
+    if (takeOver.restored) log.info(`Took back ${takeOver.restored} parked profile(s)`);
+    if (newlyParkedProfiles) log.warn(`Parked ${newlyParkedProfiles} profile(s) of an unknown network, their credentials stay unused`);
 
     // Cleanup orphaned profile store files
     cleanupOrphanedProfileStores();

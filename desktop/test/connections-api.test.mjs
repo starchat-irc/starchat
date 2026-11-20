@@ -195,24 +195,86 @@ test('changing the network domain of a connection drops its credentials', () => 
     assert.equal(result.errors.saslPassword, 'connection_error_sasl_password');
 });
 
-test('home profiles are bound to their primary server', () => {
+const DIRECTORY = [
+    { id: 'st-city', name: 'ST-City', domain: 'st-city.net', host: 'irc.st-city.net', port: 6697, ssl: true, websocket_url: '' },
+    { id: 'libera', name: 'Libera.Chat', domain: 'libera.chat', host: 'irc.libera.chat', port: 6697, ssl: true, websocket_url: '' },
+];
+
+test('home profiles of the primary server stay, older ones are bound to it', () => {
     const profiles = [
         { hash: 'legacy', name: 'Old' },
         { hash: 'bound', serverType: 'home', server: 'st-city.net', encryptedToken: 'x' },
-        { hash: 'other', serverType: 'home', server: 'other.example', encryptedToken: 'y' },
         { hash: 'libera', serverType: 'external', externalServer: { host: 'irc.libera.chat', port: 6697 } },
     ];
+    const result = usableProfiles(profiles, 'st-city.net', { directory: DIRECTORY });
+    assert.deepEqual(result.kept.map(profile => profile.hash), ['legacy', 'bound', 'libera']);
+    assert.equal(result.kept[0].server, 'st-city.net', 'older profiles are bound on the first start');
+    assert.equal(result.bound, 1);
+    assert.deepEqual(result.parked, []);
+});
 
-    const stcity = usableProfiles(profiles, 'st-city.net');
-    assert.deepEqual(stcity.kept.map(profile => profile.hash), ['legacy', 'bound', 'libera']);
-    assert.equal(stcity.kept[0].server, 'st-city.net', 'older profiles are bound on the first start');
-    assert.equal(stcity.bound, 1);
-    assert.deepEqual(stcity.dropped.map(profile => profile.hash), ['other'], 'credentials of another server never go to this one');
+test('a home profile of another network becomes a connection to it, with its login', () => {
+    const profiles = [{
+        hash: 'astaria', name: 'Astaria', serverType: 'home', server: 'st-city.net',
+        nickname: 'Astaria', saslUsername: 'astaria', encryptedSaslPassword: 'pw', encryptedToken: 'tok', authMethod: 'sasl_plain', loggingEnabled: true,
+    }];
+    const result = usableProfiles(profiles, '', { directory: DIRECTORY });
+    assert.equal(result.converted, 1);
+    const [connection] = result.kept;
+    assert.equal(connection.hash, 'astaria', 'same id: logs, settings and drafts stay');
+    assert.equal(connection.serverType, 'external');
+    assert.equal(connection.server, undefined);
+    assert.equal(connection.loggingEnabled, true);
+    assert.equal(connection.encryptedToken, 'tok');
+    assert.deepEqual(
+        { host: connection.externalServer.host, domain: connection.externalServer.domain, nickname: connection.externalServer.nickname, sasl: connection.externalServer.saslUsername, auth: connection.externalServer.authMethod, password: connection.externalServer.encryptedSaslPassword },
+        { host: 'irc.st-city.net', domain: 'st-city.net', nickname: 'Astaria', sasl: 'astaria', auth: 'sasl_plain', password: 'pw' },
+    );
+    assert.ok(mayUseCredentials(connection, ''), 'its own server: the login may be used');
+});
 
-    const generic = usableProfiles(profiles, '');
+test('the nick of a home profile may live in its name, as the old app stored it', () => {
+    const convert = profile => usableProfiles([{ serverType: 'home', server: 'st-city.net', ...profile }], '', { directory: DIRECTORY }).kept[0].externalServer.nickname;
+    assert.equal(convert({ hash: 'a', name: 'Astaria' }), 'Astaria');
+    assert.equal(convert({ hash: 'b', name: 'Default' }), '', 'no nick known');
+    assert.equal(convert({ hash: 'c', name: 'Zweiter Account' }), '', 'not a nick');
+    assert.equal(convert({ hash: 'd', name: 'Astaria', nickname: 'Asta' }), 'Asta');
+});
+
+test('profiles of an unknown network are parked, never dropped or used', () => {
+    const profiles = [
+        { hash: 'old-unbound', name: 'Old' },
+        { hash: 'unknown-net', serverType: 'home', server: 'nowhere.example', encryptedToken: 'y' },
+        { hash: 'libera', serverType: 'external', externalServer: { host: 'irc.libera.chat', port: 6697 } },
+    ];
+    const generic = usableProfiles(profiles, '', { directory: DIRECTORY });
     assert.deepEqual(generic.kept.map(profile => profile.hash), ['libera']);
-    assert.equal(generic.dropped.length, 3);
-    assert.deepEqual(usableProfiles(null, 'st-city.net'), { kept: [], dropped: [], bound: 0 });
+    assert.deepEqual(generic.parked.map(profile => profile.hash), ['old-unbound', 'unknown-net']);
+    assert.equal(generic.parked[1].encryptedToken, 'y', 'kept unchanged for a fitting edition');
+
+    const otherEdition = usableProfiles([{ hash: 'foreign', serverType: 'home', server: 'nowhere.example' }], 'st-city.net', { directory: DIRECTORY });
+    assert.deepEqual(otherEdition.parked.map(profile => profile.hash), ['foreign'], 'another primary server never gets them');
+    assert.deepEqual(usableProfiles(null, 'st-city.net'), { kept: [], parked: [], bound: 0, converted: 0, restored: 0 });
+});
+
+test('a fitting edition takes parked profiles back', () => {
+    const parked = [{ hash: 'old-unbound', name: 'Old', encryptedToken: 'z' }];
+    const result = usableProfiles([{ hash: 'libera', serverType: 'external', externalServer: {} }], 'st-city.net', { parked, directory: DIRECTORY });
+    assert.deepEqual(result.kept.map(profile => profile.hash), ['libera', 'old-unbound']);
+    assert.equal(result.kept[1].server, 'st-city.net');
+    assert.equal(result.restored, 1);
+    assert.deepEqual(result.parked, []);
+
+    const stillUnknown = usableProfiles([], '', { parked, directory: DIRECTORY });
+    assert.deepEqual(stillUnknown.parked.map(profile => profile.hash), ['old-unbound'], 'stays parked');
+    assert.equal(stillUnknown.restored, 0);
+});
+
+test('a directory entry whose host does not fit the domain gets no login', () => {
+    const forged = [{ id: 'evil', name: 'Evil', domain: 'st-city.net', host: 'irc.evil.example', port: 6697, ssl: true }];
+    const result = usableProfiles([{ hash: 'a', serverType: 'home', server: 'st-city.net', encryptedToken: 't' }], '', { directory: forged });
+    assert.deepEqual(result.kept, []);
+    assert.deepEqual(result.parked.map(profile => profile.hash), ['a']);
 });
 
 test('credentials only for the server a profile belongs to', () => {

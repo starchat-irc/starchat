@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getLocale: () => ipcRenderer.invoke('get-locale'),
     getTranslations: (locale) => ipcRenderer.invoke('get-translations', locale),
     getEditionInfo: () => ipcRenderer.invoke('get-edition-info'),
+    getStartupNotices: () => ipcRenderer.invoke('get-startup-notices'),
     forceClose: () => ipcRenderer.invoke('force-close'),
     getPendingUpdate: () => ipcRenderer.invoke('get-pending-update'),
     installUpdate: () => ipcRenderer.send('install-update'),

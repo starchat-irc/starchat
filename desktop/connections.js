@@ -222,35 +222,90 @@ function mayUseCredentials(profile, primaryServer) {
 }
 
 /**
- * Profiles that can work in this edition. Home profiles belong to the primary server they
- * were created for (`server`). Older ones without it are bound to the current primary
- * server on the first start (trust on first use). Home profiles of another server, or of
- * an edition without a primary server, are dropped together with their credentials, so
- * those never reach a different server.
+ * A home profile bound to another network than the primary server of this edition, as a
+ * connection to that network: server address from the directory entry with that domain.
+ * Token and password stay, the binding shows they belong to this network. Null when the
+ * directory has no fitting entry.
  *
- * @param {Object[]} profiles
- * @param {string} primaryServer domain, '' when the edition has none
- * @return {{ kept: Object[], dropped: Object[], bound: number }}
+ * @param {Object} profile home profile with `server`
+ * @param {Object[]} directory directory entries (toDirectoryEntries in edition.js)
  */
-function usableProfiles(profiles, primaryServer) {
+function homeProfileAsConnection(profile, directory) {
+    const domain = String(profile?.server || '').toLowerCase();
+    const candidates = (Array.isArray(directory) ? directory : []).filter(entry => String(entry?.domain || '').toLowerCase() === domain);
+    const entry = candidates.find(candidate => candidate.host) || candidates[0];
+    if (!entry) return null;
+
+    const hasSaslPassword = Boolean(profile.encryptedSaslPassword);
+    const externalServer = ConnectionForm.normalizeExternalServer({
+        connectionType: entry.host ? 'socket' : 'websocket',
+        websocketUrl: entry.host ? '' : String(entry.websocket_url || ''),
+        host: String(entry.host || ''),
+        port: Number(entry.port) || ConnectionForm.DEFAULT_PORT,
+        ssl: entry.ssl !== false,
+        // Home profiles keep the nick of the last login in their name ("Default" when unknown)
+        nickname: String(profile.nickname || '') || (profile.name !== 'Default' && ConnectionForm.NICK_PATTERN.test(String(profile.name || '')) ? profile.name : ''),
+        saslUsername: String(profile.saslUsername || ''),
+        defaultChannel: '',
+        domain,
+    }, { hasSaslPassword });
+    delete externalServer.saslPassword;
+    // The network domain must fit the server address, otherwise the credentials stay put
+    if (externalServer.domain !== domain) return null;
+    if (hasSaslPassword) externalServer.encryptedSaslPassword = profile.encryptedSaslPassword;
+
+    const connection = { ...profile, serverType: 'external', externalServer };
+    for (const field of ['server', 'nickname', 'saslUsername', 'encryptedSaslPassword', 'authMethod']) delete connection[field];
+    return connection;
+}
+
+/**
+ * Profiles that can work in this edition, and what happens with the others:
+ *  - home profiles of the primary server stay; older ones without `server` are bound to it
+ *    (trust on first use),
+ *  - home profiles of another network become a connection to that network when the
+ *    directory knows it (a switch from a branded app to StarChat or back),
+ *  - all other home profiles are parked: kept aside, never used, credentials never read.
+ *    A later start of a fitting edition takes them back.
+ * So credentials only ever go to the network they were stored for.
+ *
+ * @param {Object[]} profiles stored profiles
+ * @param {string} primaryServer domain, '' when the edition has none
+ * @param {{ parked?: Object[], directory?: Object[] }} [options]
+ * @return {{ kept: Object[], parked: Object[], bound: number, converted: number, restored: number }}
+ */
+function usableProfiles(profiles, primaryServer, { parked: parkedBefore = [], directory = [] } = {}) {
     const kept = [];
-    const dropped = [];
+    const parked = [];
     let bound = 0;
-    for (const profile of Array.isArray(profiles) ? profiles : []) {
-        if (profile?.serverType === 'external') {
-            kept.push(profile);
-        } else if (!primaryServer) {
-            dropped.push(profile);
-        } else if (!profile?.server) {
-            kept.push({ ...profile, server: primaryServer });
-            bound++;
-        } else if (mayUseCredentials(profile, primaryServer)) {
-            kept.push(profile);
+    let converted = 0;
+    let restored = 0;
+    const active = Array.isArray(profiles) ? profiles.filter(Boolean) : [];
+    const activeHashes = new Set(active.map(profile => profile.hash));
+    const waiting = (Array.isArray(parkedBefore) ? parkedBefore : []).filter(profile => profile && !activeHashes.has(profile.hash));
+    const primary = String(primaryServer || '').toLowerCase();
+
+    for (const [index, profile] of [...active, ...waiting].entries()) {
+        const fromParking = index >= active.length;
+        const server = String(profile.server || '').toLowerCase();
+        let usable = null;
+        if (profile.serverType === 'external') {
+            usable = profile;
+        } else if (primary && (server === primary || !server)) {
+            usable = server ? profile : { ...profile, server: primary };
+            if (!server) bound++;
+        } else if (server) {
+            usable = homeProfileAsConnection(profile, directory);
+            if (usable) converted++;
+        }
+        if (usable) {
+            kept.push(usable);
+            if (fromParking) restored++;
         } else {
-            dropped.push(profile);
+            parked.push(profile);
         }
     }
-    return { kept, dropped, bound };
+    return { kept, parked, bound, converted, restored };
 }
 
 /**
