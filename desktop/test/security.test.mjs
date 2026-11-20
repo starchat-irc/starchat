@@ -48,6 +48,20 @@ test('isFileUrlInside only accepts files inside the given directory', () => {
     assert.equal(isFileUrlInside('https://st-city.net/', dir), false);
 });
 
+test('isFileUrlInside follows the path rules of each system', () => {
+    const posix = { windows: false, path: path.posix };
+    const windows = { windows: true, path: path.win32 };
+
+    assert.equal(isFileUrlInside('file:///opt/app/html/index.html', '/opt/app', posix), true);
+    assert.equal(isFileUrlInside('file:///opt/app/../secret', '/opt/app', posix), false);
+    // A drive letter is no relative path on Linux or macOS: never inside the working directory
+    assert.equal(isFileUrlInside('file:///C:/Windows/win.ini', '/opt/app', posix), false);
+
+    assert.equal(isFileUrlInside('file:///C:/app/html/index.html', 'C:\\app', windows), true);
+    assert.equal(isFileUrlInside('file:///D:/app/html/index.html', 'C:\\app', windows), false);
+    assert.equal(isFileUrlInside('file:///C:/app/../secret', 'C:\\app', windows), false);
+});
+
 test('resolveLogFilePath rejects path traversal and non-log files', () => {
     const logDir = path.resolve('logs');
 

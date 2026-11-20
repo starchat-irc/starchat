@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+const { fileURLToPath } = require('url');
 
 const EXTERNAL_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
@@ -30,16 +31,21 @@ function isSameOrigin(url, origin) {
     }
 }
 
-/** True for file:// URLs that point to a file inside `directory`. */
-function isFileUrlInside(url, directory) {
+/**
+ * True for file:// URLs that point to a file inside `directory`.
+ *
+ * fileURLToPath() knows the rules of each system: file:///C:/foo is C:\foo on Windows and
+ * the absolute path /C:/foo elsewhere (never a path relative to the working directory).
+ * `platform` is only set by tests.
+ */
+function isFileUrlInside(url, directory, platform = { windows: process.platform === 'win32', path }) {
     try {
         const parsed = new URL(String(url));
         if (parsed.protocol !== 'file:') return false;
-        // file:///C:/foo → C:/foo on Windows, /foo elsewhere
-        const pathname = decodeURIComponent(parsed.pathname);
-        const filePath = path.resolve(/^\/[A-Za-z]:/.test(pathname) ? pathname.slice(1) : pathname);
-        const relative = path.relative(path.resolve(directory), filePath);
-        return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+        const paths = platform.path;
+        const filePath = fileURLToPath(parsed, { windows: platform.windows });
+        const relative = paths.relative(paths.resolve(directory), paths.resolve(filePath));
+        return relative !== '' && !relative.startsWith('..') && !paths.isAbsolute(relative);
     } catch {
         return false;
     }
