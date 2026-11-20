@@ -12,7 +12,7 @@ export const DISCOVERY_SCHEMA_VERSION = 1;
 /** Feature names defined in docs/discovery.md. */
 export const DISCOVERY_FEATURES = Object.freeze([
     'profiles', 'friends', 'uploads', 'push', 'voice', 'calls', 'reports',
-    'explore', 'chatState', 'alwaysOn', 'events', 'gifs', 'communities',
+    'explore', 'chatState', 'alwaysOn', 'events', 'gifs', 'communities', 'spotify',
 ]);
 
 /** Placeholder in links.channelInvite, replaced by the channel name without "#". */

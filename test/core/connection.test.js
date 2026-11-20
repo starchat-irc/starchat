@@ -5,7 +5,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import Ajv2020 from 'ajv/dist/2020.js';
-import { discoveryUrl, fetchDiscovery, normalizeDiscovery } from '../../src/core/discovery.js';
+import { DISCOVERY_FEATURES, discoveryUrl, fetchDiscovery, normalizeDiscovery } from '../../src/core/discovery.js';
 import { createConnection, openConnection } from '../../src/core/connection.js';
 
 const server = { id: 'example', name: 'Example', domain: 'example.org', languages: ['en'], websocket: 'wss://irc.example.org' };
@@ -106,6 +106,11 @@ test('the documented example matches the schema and the client', () => {
     assert.deepEqual(discovery.features, example.features);
     assert.deepEqual(discovery.branding, example.branding);
     assert.deepEqual(discovery.links, example.links);
+});
+
+test('the client knows exactly the features of the schema', () => {
+    const schema = JSON.parse(readFileSync(new URL('../../docs/discovery.schema.json', import.meta.url), 'utf8'));
+    assert.deepEqual([...schema.properties.features.items.enum].sort(), [...DISCOVERY_FEATURES].sort());
 });
 
 test('fetchDiscovery returns null for missing files, errors and foreign redirects', async () => {

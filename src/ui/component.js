@@ -29,6 +29,7 @@ import { uiMixin } from './mixins/ui.js';
 import { userCardMixin } from './mixins/user-card.js';
 import { serverSelectMixin } from './mixins/server-select.js';
 import { settingsMixin } from './mixins/settings.js';
+import { shellMixin } from './mixins/shell.js';
 import { unreadMixin } from './mixins/unread.js';
 import { channelListMixin } from './mixins/channel-list.js';
 import { networkLinksMixin } from './mixins/network-links.js';
@@ -91,12 +92,17 @@ export function guestNick() {
  * @param {(key: string, params?: Object) => string} options.t
  * @param {string} [options.nickname] Connect right away with this nick (no login form).
  * @param {string} [options.password] SASL PLAIN password for the nick's account.
+ * @param {string} [options.saslAccount] Account name for SASL PLAIN when it differs from the nick.
  * @param {string} [options.defaultChannel] Joined and shown first.
  * @param {string|null} [options.shell] 'desktop' | 'mobile' | null (web)
+ * @param {string} [options.storageScope] Key suffix of the stored settings and drafts, the
+ *   server id by default. An app with several connections to one server passes its own id.
  * @param {boolean} [options.publishesNowPlaying]
  * @param {string} [options.defaultQuitMessage]
  * @param {string} [options.ctcpVersion] Answer to CTCP VERSION.
  * @param {(type: string, data: Object) => void} [options.notifyHost] Messages for the app around the chat.
+ * @param {(listener: (type: string, data: Object) => void) => void} [options.shellMessages] Subscribes
+ *   the chat to messages from the app around it (see mixins/shell.js).
  * @param {(value: Object) => Object} [options.rawOf] Unwraps a reactive proxy (Alpine.raw).
  * @param {Array<string|import('../modules/index.js').ChatModule>} [options.modules] Loaded feature
  *   modules (or only their names). Their mixins and hooks become part of the component.
@@ -104,6 +110,8 @@ export function guestNick() {
  * @param {Object[]} [options.servers] Servers offered in the login dialog, the primary one first.
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection] Builds the connection to another server.
  * @param {typeof connectWebSocket} [options.connectSocket]
+ * @param {Function} [options.nativeSocket] IRC over TCP from the app around the chat, see
+ *   nativeSocketConnector() in core/native-socket.js. Used for servers without WebSocket.
  * @param {'auto'|'dark'|'light'} [options.defaultTheme] Theme of the edition until the user picks one.
  * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Token source of the
  *   embedding page (see bearerFromParent). Asked on start and before each reconnect; the token
@@ -118,24 +126,28 @@ export function createChatComponent(options) {
         t,
         nickname = '',
         password = '',
+        saslAccount = '',
         defaultChannel = '',
         shell = null,
         publishesNowPlaying = false,
         defaultQuitMessage = '',
         ctcpVersion = 'StarChat',
         notifyHost = () => {},
+        shellMessages = null,
         rawOf = (value) => value,
         modules = [],
         mixins = [],
         servers = [],
         openServerConnection = null,
         connectSocket = connectWebSocket,
+        nativeSocket = null,
         defaultTheme = 'auto',
         bearer = null,
         pushWorker = null,
+        storageScope: scopeOption = '',
     } = options;
     const primaryServer = connection?.server || null;
-    const storageScope = connection?.server?.id || '';
+    const storageScope = String(scopeOption || connection?.server?.id || '');
     const moduleList = modules.map(module => (typeof module === 'string' ? { name: module } : module));
     const loadedModules = new Set(moduleList.map(module => module.name));
     const moduleMixins = moduleList.map(module => module.mixin?.() || {});
@@ -196,6 +208,7 @@ export function createChatComponent(options) {
         isLoading: false,
         performLogout: false,
         _saslPassword: password,
+        _saslAccount: saslAccount,
         _bearer: null,
         _apiLogin: null,
         // Mirrors connection.getToken() for Alpine, which does not see the token change
@@ -275,7 +288,8 @@ export function createChatComponent(options) {
         ...channelListMixin(),
         ...networkLinksMixin(),
         ...settingsMixin({ defaultTheme }),
-        ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection }),
+        ...shellMixin(),
+        ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection, loginScope: scopeOption }),
         ...Object.assign({}, ...moduleMixins),
         ...Object.assign({}, ...mixins),
 
@@ -300,6 +314,9 @@ export function createChatComponent(options) {
             });
             window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
             this.callModuleHook('init');
+            shellMessages?.((type, data) => this.handleShellMessage(type, data || {}));
+            // App settings (theme, logging) at start; the desktop app also takes it as "chat is running"
+            this.requestShellSettings();
             if (!this.loginUsername) this.loginUsername = this.loginNickPreset;
             this.applyWebTheme();
             if (bearer) this.bearerLogin();
@@ -336,6 +353,7 @@ export function createChatComponent(options) {
             }
             this.nickname = nick;
             this._saslPassword = this.loginPassword || '';
+            this._saslAccount = '';
             this._bearer = null;
             this._apiLogin = null;
             return this.connect();
@@ -394,7 +412,7 @@ export function createChatComponent(options) {
             if (this._apiLogin) {
                 return saslBearer(() => '', () => this._apiLogin.token, 'jwt');
             }
-            return this._saslPassword ? saslPlain(this.nickname, this._saslPassword) : null;
+            return this._saslPassword ? saslPlain(this._saslAccount || this.nickname, this._saslPassword) : null;
         },
 
         /** Connect to the server chosen in the login dialog and join the start channel. */
@@ -404,9 +422,10 @@ export function createChatComponent(options) {
             this.loginError = '';
             try {
                 const connection = await this.prepareSelectedConnection();
-                if (!connection.websocketUrl) throw new Error('server_no_websocket');
+                if (!connection.websocketUrl && !(nativeSocket && connection.irc)) throw new Error('server_no_websocket');
                 this.applyStartChannel();
                 await this.prepareToken(connection);
+                this.saveShellLogin();
             } catch (error) {
                 this.loginError = this.t(error.message);
                 return;
@@ -420,8 +439,11 @@ export function createChatComponent(options) {
             this._registeredOnce = false;
             this._failedConnects = 0;
             this.restoreCurrentDraft();
-            this.socket = connectSocket({
+            // Without WebSocket, an app that can open sockets connects over TCP
+            const overTcp = !this.connection.websocketUrl && nativeSocket && this.connection.irc;
+            this.socket = (overTcp ? nativeSocket : connectSocket)({
                 url: this.connection.websocketUrl,
+                irc: this.connection.irc,
                 nickname: this.nickname,
                 sasl: this.loginMechanism(),
                 beforeReconnect: this.usesBearer() && bearer ? () => this.refreshBearer() : undefined,
@@ -435,6 +457,15 @@ export function createChatComponent(options) {
                 this.setupMediaPlayers();
                 this.setupStickToBottom();
             });
+        },
+
+        /**
+         * Desktop app: a password login got an API token. The app stores it (encrypted) when
+         * "remember me" is checked and starts the next session with it instead of the password.
+         */
+        saveShellLogin() {
+            if (this.shell !== 'desktop' || !this._apiLogin?.token) return;
+            this.notifyHost('save-credentials', { token: this._apiLogin.token, remember: Boolean(this.rememberMe) });
         },
 
         setApiToken(connection, token) {
@@ -456,7 +487,7 @@ export function createChatComponent(options) {
             if (!this._saslPassword || !connection.supportsTokenLogin?.()) return;
             let result;
             try {
-                result = await connection.login(this.nickname, this._saslPassword);
+                result = await connection.login(this._saslAccount || this.nickname, this._saslPassword);
             } catch (error) {
                 console.warn('API login failed, using SASL PLAIN:', error);
                 return;
@@ -477,15 +508,17 @@ export function createChatComponent(options) {
             if (status !== 'disconnected' || this._registeredOnce || this.performLogout) return;
             this._failedConnects = (this._failedConnects || 0) + 1;
             if (this._failedConnects < CONNECT_ATTEMPTS_BEFORE_GIVING_UP) return;
-            this.logout();
+            // Not a logout of the user: an app keeps its stored login for the next start
+            this.logout({ notify: false });
             this.loginError = this.t('server_unreachable');
         },
 
-        logout() {
+        /** @param {{ notify?: boolean }} [options] notify: tell the app around the chat (it forgets a stored login). */
+        logout({ notify = true } = {}) {
             this.isAuthenticated = false;
             this.performLogout = true;
             this._outgoingQueue = [];
-            this.notifyHost('logout');
+            if (notify) this.notifyHost('logout');
             // Still connected: modules can tell the server (e.g. WEBPUSH UNREGISTER)
             this.callModuleHook('loggingOut');
             this.socket?.close();

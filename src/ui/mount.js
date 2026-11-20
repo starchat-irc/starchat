@@ -27,6 +27,9 @@ import { defaultModules } from '../modules/index.js';
  * @param {string} [options.nickname] Connect right away with this nick instead of showing the login form.
  * @param {string} [options.defaultChannel]
  * @param {(type: string, data: Object) => void} [options.onHostMessage]
+ * @param {(listener: (type: string, data: Object) => void) => void} [options.shellMessages] Messages
+ *   from the app around the chat, see mixins/shell.js.
+ * @param {'desktop'|'mobile'} [options.shell]
  * @param {import('../modules/index.js').ChatModule[]} [options.modules] Feature modules, all bundled
  *   ones when left out. A module only runs on servers that offer its feature.
  * @param {() => Promise<import('./embed.js').BearerLogin|null>} [options.bearer] Login with a token

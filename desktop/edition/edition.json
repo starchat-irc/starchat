@@ -1,0 +1,15 @@
+{
+    "$schema": "../edition.schema.json",
+    "appName": "StarChat",
+    "appId": "net.getstarchat.desktop",
+    "executableName": "starchat",
+    "icon": "icon.png",
+    "chat": {
+        "serverList": "default"
+    },
+    "updates": {
+        "provider": "github",
+        "owner": "starchat-irc",
+        "repo": "starchat"
+    }
+}

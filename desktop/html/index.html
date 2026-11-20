@@ -1,0 +1,2606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app_title">StarChat</title>
+    <link rel="stylesheet" href="../vendor/bootstrap.min.css">
+    <script src="../vendor/i18n.js"></script>
+    <script src="shared/connection.js"></script>
+    <link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #1a1d21;
+            color: #dee2e6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            user-select: none;
+            -webkit-app-region: no-drag;
+        }
+
+        /* ── Title bar ─────────────────────────────────────────────────────── */
+        .title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #212529;
+            border-bottom: 1px solid #2c2f33;
+            padding: 0 0 0 12px;
+            height: 36px;
+            flex-shrink: 0;
+            -webkit-app-region: drag;
+            z-index: 100;
+        }
+        .app-title {
+            font-size: 13px;
+            color: #adb5bd;
+            letter-spacing: .03em;
+            pointer-events: none;
+        }
+        .window-controls {
+            display: flex;
+            -webkit-app-region: no-drag;
+            height: 100%;
+        }
+        .window-btn {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s, color 0.1s;
+        }
+        .window-btn:hover       { background: rgba(255,255,255,0.08); color: #fff; }
+        .window-btn.close:hover { background: #e81123; color: #fff; }
+        .window-btn.active-btn  { color: #4dabf7; }
+        .toolbar-btn {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            width: 42px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s, color 0.1s;
+            -webkit-app-region: no-drag;
+            font-size: 14px;
+        }
+        .toolbar-btn:hover,
+        .toolbar-btn.active {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        /* ── Root body ─────────────────────────────────────────────────────── */
+        .root-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            height: calc(100vh - 36px);
+        }
+
+        /* ── Main column ───────────────────────────────────────────────────── */
+        .main-col {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Profile tabs ──────────────────────────────────────────────────── */
+        .profile-tabs {
+            display: flex;
+            align-items: center;
+            background: #212529;
+            border-bottom: 1px solid #2c2f33;
+            padding: 0 8px;
+            height: 40px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .profile-tabs::-webkit-scrollbar { display: none; }
+        .profile-tab {
+            display: flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            color: #adb5bd;
+            font-size: 13px;
+            margin-right: 2px;
+            height: 30px;
+            transition: background 0.12s, color 0.12s;
+        }
+        .profile-tab:hover  { background: #2c2f33; color: #fff; }
+        .profile-tab.active { background: #0d6efd; color: #fff; }
+        .tab-close {
+            background: none;
+            border: none;
+            color: inherit;
+            opacity: 0.55;
+            cursor: pointer;
+            padding: 0 0 0 6px;
+            font-size: 13px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+        .tab-close:hover { opacity: 1; }
+        .add-tab-btn {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-left: 4px;
+            transition: background 0.12s, color 0.12s;
+            line-height: 1;
+        }
+        .add-tab-btn:hover { background: #2c2f33; color: #fff; }
+        .unread-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ff3b30;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            min-width: 15px;
+            height: 15px;
+            padding: 0 3px;
+            border-radius: 8px;
+            margin-left: 5px;
+            line-height: 1;
+        }
+
+        /* ── iFrame area ───────────────────────────────────────────────────── */
+        .iframe-wrap {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        .no-connection {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+            color: #adb5bd; font-size: 14px;
+        }
+        .no-connection .btn-connect {
+            background: #0d6efd; color: #fff; border: none; border-radius: 7px; padding: 8px 24px; font-size: 13px; cursor: pointer;
+        }
+        .iframe-wrap iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+        .iframe-wrap iframe.active { display: block; }
+
+        /* Update banner: a downloaded update waits for "restart now" (or the next quit) */
+        .update-banner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            background: #3b44c4;
+            color: #fff;
+            font-size: 13px;
+        }
+        .update-banner .bi { font-size: 15px; }
+        .update-banner-text { flex: 1; min-width: 200px; }
+        .update-banner-text small { opacity: .8; margin-left: 6px; }
+        .update-banner button {
+            border: 1px solid rgba(255,255,255,.55);
+            border-radius: 6px;
+            padding: 3px 12px;
+            background: none;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .update-banner button:hover { background: rgba(255,255,255,.14); }
+        .update-banner button.is-primary { border-color: #fff; background: #fff; color: #3b44c4; }
+        .update-banner button.is-primary:hover { background: #e8eaff; }
+        .update-banner button:disabled { opacity: .6; cursor: wait; }
+
+        /* ── Quit confirmation overlay ──────────────────────────────────────── */
+        .quit-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+        .quit-overlay.active { display: flex; }
+        .quit-dialog {
+            background: #23272b;
+            border: 1px solid #3a3d41;
+            border-radius: 12px;
+            padding: 28px 28px 20px;
+            width: 320px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: dialog-in 0.15s cubic-bezier(.2,0,.2,1);
+        }
+        @keyframes dialog-in {
+            from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .quit-dialog .quit-icon { font-size: 28px; margin-bottom: 12px; line-height: 1; }
+        .quit-dialog h4 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: #fff; overflow-wrap: anywhere; }
+        .quit-dialog p { margin: 0 0 22px; font-size: 13px; color: #868e96; line-height: 1.5; }
+        /* Wider variant for dialogs with an explanation (closing a connection) */
+        .quit-dialog.quit-dialog--wide { width: 440px; max-width: calc(100vw - 32px); }
+        .quit-dialog--wide .quit-actions { justify-content: flex-end; }
+        .quit-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .quit-actions .btn-cancel {
+            background: none; border: 1px solid #495057; color: #ced4da;
+            border-radius: 7px; padding: 7px 16px; font-size: 13px; white-space: nowrap;
+            cursor: pointer; transition: background 0.12s, border-color 0.12s;
+        }
+        .quit-actions .btn-cancel:hover { background: #2c2f33; border-color: #6c757d; }
+        .quit-actions .btn-close-app {
+            background: #c0392b; border: 1px solid transparent; color: #fff;
+            border-radius: 7px; padding: 7px 16px; font-size: 13px; font-weight: 500; white-space: nowrap;
+            cursor: pointer; transition: background 0.12s;
+        }
+        .quit-actions .btn-close-app:hover { background: #e74c3c; }
+
+        /* ── Server dialog overlay ──────────────────────────────────────────── */
+        .server-dialog-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+        .server-dialog-overlay.active { display: flex; }
+        .server-dialog {
+            background: #23272b;
+            border: 1px solid #3a3d41;
+            border-radius: 12px;
+            padding: 24px;
+            width: 440px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: dialog-in 0.15s cubic-bezier(.2,0,.2,1);
+        }
+        .server-dialog h4 { margin: 0 0 16px; font-size: 16px; font-weight: 600; color: #fff; }
+        .server-dialog-tabs {
+            display: flex; gap: 4px; margin-bottom: 16px;
+            background: #1a1d21; border-radius: 8px; padding: 3px;
+        }
+        .server-dialog-tabs button {
+            flex: 1; background: none; border: none; color: #868e96;
+            padding: 7px 10px; font-size: 12px; border-radius: 6px; cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+        }
+        .server-dialog-tabs button.active { background: #343a40; color: #fff; }
+        .server-dialog-tabs button:hover:not(.active) { color: #ced4da; }
+        .server-list { display: flex; flex-direction: column; gap: 6px; }
+        .server-list-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 8px; cursor: pointer;
+            border: 1px solid #343a40; transition: border-color 0.12s, background 0.12s;
+        }
+        .server-list-item:hover { border-color: #0d6efd; background: #1e2226; }
+        .server-list-item.selected { border-color: #0d6efd; background: #1a2332; }
+        .server-list-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
+        .server-list-item .server-info { flex: 1; min-width: 0; }
+        .server-list-item .server-name { font-size: 13px; font-weight: 500; color: #fff; }
+        .server-list-item .server-desc { font-size: 11px; color: #868e96; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .server-dialog input {
+            width: 100%; background: #1a1d21; border: 1px solid #343a40; color: #dee2e6;
+            border-radius: 7px; padding: 8px 12px; font-size: 13px; margin-bottom: 8px;
+            outline: none; transition: border-color 0.12s;
+        }
+        .server-dialog input:focus { border-color: #0d6efd; }
+        .server-dialog input::placeholder { color: #6c757d; }
+        .server-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+        .server-dialog-actions button {
+            border-radius: 7px; padding: 8px 18px; font-size: 13px; cursor: pointer; border: none;
+            transition: background 0.12s;
+        }
+        .server-dialog-actions .btn-cancel { background: none; border: 1px solid #495057; color: #ced4da; }
+        .server-dialog-actions .btn-cancel:hover { background: #2c2f33; border-color: #6c757d; }
+        .server-dialog-actions .btn-connect { background: #0d6efd; color: #fff; font-weight: 500; }
+        .server-dialog-actions .btn-connect:hover { background: #3d8bfd; }
+        .server-dialog-actions .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Winamp-inspired player ───────────────────────────────────────────── */
+        #winamp-player {
+            position: fixed;
+            top: 52px;
+            right: 14px;
+            width: 330px;
+            background: #2d2f36;
+            border: 1px solid #555;
+            box-shadow: 0 10px 30px rgba(0,0,0,.45);
+            z-index: 1200;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
+            color: #d7d7d7;
+            user-select: none;
+        }
+        .wp-titlebar { display:flex; justify-content:space-between; align-items:center; background:#1f2230; padding:4px 6px; cursor:move; }
+        .wp-logo { font-size:11px; color:#83d0f2; letter-spacing:.03em; }
+        .wp-winbtn { border:1px solid #666; background:#323746; color:#d8d8d8; width:22px; height:20px; }
+        .wp-display { background:#0f1a10; margin:6px; padding:6px; border:1px solid #364236; }
+        .wp-display-inner {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: center;
+        }
+        .wp-ticker-wrap {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .wp-ticker {
+            font-family: 'Consolas', monospace;
+            color: #b7ff72;
+            font-size: 12px;
+            white-space: pre;
+            width: 100%;         /* füllt immer den Wrapper */
+            display: block;
+        }
+        .wp-timecode {
+            font-family: 'Consolas', monospace;
+            color: #8df96c;
+            font-size: 11px;
+            flex-shrink: 0;      /* ← kritisch */
+            white-space: nowrap;
+        }
+        .wp-eq-bars { height:16px; margin-top:4px; display:flex; align-items:flex-end; gap:2px; }
+        .wp-eq-bar { width:5px; background:#5de452; transition:height .11s linear; }
+        .wp-progress-wrap,.wp-controls,.wp-volume-row,.wp-tabs { padding:0 6px 6px; }
+        .wp-progress { height:10px; border:1px solid #555; background:#1e222b; position:relative; cursor:pointer; }
+        .wp-progress-fill { position:absolute; inset:0 auto 0 0; background:#30a6ff; }
+        .wp-progress-knob { position:absolute; top:-3px; width:8px; height:14px; margin-left:-4px; background:#d8d8d8; }
+        .wp-controls { display:flex; gap:5px; }
+        .wp-btn { border:1px solid #666; background:#2f3342; color:#e7e7e7; min-width:35px; height:28px; font-size:13px; }
+        .wp-btn.active { background:#0d6efd; }
+        .wp-icon { width: 14px; height: 14px; display: inline-block; vertical-align: middle; }
+        .wp-btn-play .wp-icon { width: 18px; height: 18px; }
+        .wp-mode-btn { font-size:11px; min-width:44px; }
+        .wp-volume-row { display:flex; align-items:center; gap:6px; }
+        .wp-mute-btn,.wp-action-btn,.wp-remove-btn { border:1px solid #666; background:#2f3342; color:#e7e7e7; }
+        .wp-vol-slider { flex:1; }
+        .wp-vol-label { width:52px; text-align:right; font-size:11px; color:#aeb4bc; }
+        .wp-tabs { display:flex; gap:4px; }
+        .wp-tab { flex:1; border:1px solid #666; background:#222734; color:#d6d6d6; padding:5px 0; font-size:11px; }
+        .wp-tab.active { background:#0d6efd; color:#fff; }
+        .wp-panel { padding:0 6px 6px; }
+        .wp-playlist { max-height:180px; overflow:auto; border:1px solid #555; background:#181c25; }
+        .wp-playlist-item { display:flex; align-items:center; gap:6px; padding:5px 6px; border-bottom:1px solid #232834; }
+        .wp-playlist-item.active { background:#293246; }
+        .wp-track-info { flex:1; min-width:0; display:flex; justify-content:space-between; gap:8px; }
+        .wp-track-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; }
+        .wp-track-dur,.wp-track-num,.wp-label { font-size:11px; color:#aeb4bc; }
+        .wp-playlist-actions,.wp-stream-btns { display:flex; gap:5px; margin-top:6px; }
+        .wp-action-btn { flex:1; padding:5px 6px; font-size:11px; }
+        .wp-danger-btn { background:#8b2f2f; }
+        .wp-stream-panel { border:1px solid #555; background:#181c25; padding:8px; }
+        .wp-input { width:100%; padding:6px; background:#11151c; border:1px solid #4b5263; color:#dee2e6; margin:4px 0 6px; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3a3d41; border-radius: 3px; }
+        [x-cloak] { display: none !important; }
+
+        /* ── Light theme overrides ────────────────────────────────────────── */
+        .light-theme,
+        .light-theme body { background: #f8f9fa; color: #212529; }
+        .light-theme .title-bar { background: #e9ecef; border-bottom-color: #dee2e6; }
+        .light-theme .app-title { color: #495057; }
+        .light-theme .window-btn { color: #495057; }
+        .light-theme .window-btn:hover { background: rgba(0,0,0,0.06); color: #212529; }
+        .light-theme .window-btn.close:hover { background: #e81123; color: #fff; }
+        .light-theme .window-btn.active-btn { color: #0d6efd; }
+        .light-theme .toolbar-btn { color: #495057; }
+        .light-theme .toolbar-btn:hover,
+        .light-theme .toolbar-btn.active { background: rgba(0,0,0,0.06); color: #212529; }
+        .light-theme .profile-tabs { background: #e9ecef; border-bottom-color: #dee2e6; }
+        .light-theme .profile-tab { color: #495057; }
+        .light-theme .profile-tab:hover { background: #dee2e6; color: #212529; }
+        .light-theme .profile-tab.active { background: #0d6efd; color: #fff; }
+        .light-theme .add-tab-btn { color: #495057; }
+        .light-theme .add-tab-btn:hover { background: #dee2e6; color: #212529; }
+        .light-theme .quit-dialog { background: #fff; border-color: #dee2e6; }
+        .light-theme .quit-dialog h4 { color: #212529; }
+        .light-theme .quit-dialog p { color: #6c757d; }
+        .light-theme .quit-actions .btn-cancel { border-color: #ced4da; color: #495057; }
+        .light-theme .quit-actions .btn-cancel:hover { background: #f0f2f5; border-color: #adb5bd; }
+        .light-theme .server-dialog { background: #fff; border-color: #dee2e6; }
+        .light-theme .server-dialog h4 { color: #212529; }
+        .light-theme .server-dialog-tabs { background: #f0f2f5; }
+        .light-theme .server-dialog-tabs button { color: #6c757d; }
+        .light-theme .server-dialog-tabs button.active { background: #dee2e6; color: #212529; }
+        .light-theme .server-dialog-tabs button:hover:not(.active) { color: #495057; }
+        .light-theme .server-dialog input { background: #f8f9fa; border-color: #ced4da; color: #212529; }
+        .light-theme .server-dialog input::placeholder { color: #adb5bd; }
+        .light-theme .server-dialog-actions .btn-cancel { border-color: #ced4da; color: #495057; }
+        .light-theme .server-list-item { border-color: #dee2e6; }
+        .light-theme .server-list-item:hover { border-color: #0d6efd; background: #f0f6ff; }
+        .light-theme .server-list-item.selected { border-color: #0d6efd; background: #e7f1ff; }
+        .light-theme .server-list-item .server-name { color: #212529; }
+        .light-theme .server-list-item .server-desc { color: #6c757d; }
+        .light-theme #winamp-player { background: #e9ecef; border-color: #ced4da; color: #495057; }
+        .light-theme .wp-titlebar { background: #dee2e6; }
+        .light-theme .wp-logo { color: #0d6efd; }
+        .light-theme ::-webkit-scrollbar-thumb { background: #c1c1c1; }
+        .light-theme ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+    </style>
+</head>
+<body>
+<audio id="media-player" preload="auto"></audio>
+<audio id="stream-player" preload="none"></audio>
+<div x-data="app()" x-init="init()" class="d-flex flex-column h-100">
+
+    <!-- Title bar -->
+    <div class="title-bar">
+        <span class="app-title" x-text="version ? t('app_title') + '  v' + version : t('app_title')"></span>
+        <div class="window-controls">
+            <!-- Media Player -->
+            <button class="toolbar-btn"
+                    @click="playerVisible = !playerVisible"
+                    :class="{ active: playerVisible }"
+                    title="Media Player"><i class="bi bi-music-note-beamed"></i></button>
+            <!-- Manager -->
+            <button class="window-btn" @click="openConnections()" :title="t('titlebar_manager')">
+                <i class="bi bi-person-gear" style="font-size:14px;"></i>
+            </button>
+            <!-- Log Viewer -->
+            <button class="window-btn" @click="openLogs" :title="t('titlebar_log_viewer')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <line x1="10" y1="9"  x2="8" y2="9"/>
+                </svg>
+            </button>
+            <!-- Settings -->
+            <button class="window-btn" @click="openChatSettings()" :title="t('titlebar_settings')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
+            <!-- Separator -->
+            <div style="width:1px; background:#2c2f33; margin: 8px 2px;"></div>
+            <button class="window-btn" @click="minimize">
+                <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+            </button>
+            <button class="window-btn" @click="maximize">
+                <svg width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" fill="none" stroke="currentColor"/></svg>
+            </button>
+            <button class="window-btn close" @click="close">
+                <svg width="10" height="10" viewBox="0 0 10 10">
+                    <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.3"/>
+                    <line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Root body -->
+    <div class="root-body">
+
+        <!-- Main column -->
+        <div class="main-col">
+
+            <!-- Profile tabs -->
+            <!-- Update ready -->
+            <div class="update-banner" x-show="pendingUpdate && !updateBannerDismissed" x-cloak role="status">
+                <i class="bi bi-arrow-up-circle"></i>
+                <span class="update-banner-text">
+                    <span x-text="t('update_ready').replace(':version', pendingUpdate?.version || '')"></span>
+                    <small x-text="t('update_ready_hint')"></small>
+                </span>
+                <button type="button" @click="updateBannerDismissed = true" x-text="t('update_later')"></button>
+                <button type="button" class="is-primary" :disabled="updateInstalling" @click="restartForUpdate()" x-text="t('update_restart_now')"></button>
+            </div>
+
+            <div class="profile-tabs">
+                <template x-for="(profile, index) in profiles" :key="profile.hash">
+                    <div class="profile-tab"
+                         :class="{ active: activeProfile === profile.hash }"
+                         @click="switchProfile(profile.hash)">
+                        <span x-text="profileLabel(profile, index)"></span>
+                        <span class="unread-badge"
+                              x-show="activeProfile !== profile.hash && (unreadCounts[profile.hash] || 0) > 0"
+                              x-text="(unreadCounts[profile.hash] || 0) > 99 ? '99+' : unreadCounts[profile.hash]">
+                        </span>
+                        <button class="tab-close"
+                                x-show="profiles.length > 1"
+                                @click.stop="requestRemoveProfile(profile.hash)">×</button>
+                    </div>
+                </template>
+                <button class="add-tab-btn" @click="addProfile" :title="t('tabs_new_connection')">+</button>
+            </div>
+
+            <!-- iFrames -->
+            <div class="iframe-wrap">
+                <!-- No connection yet (editions without a primary server, first start) -->
+                <div class="no-connection" x-show="profiles.length === 0" x-cloak>
+                    <p x-text="t('no_connection_hint')"></p>
+                    <button class="btn-connect" @click="addProfile()" x-text="t('tabs_new_connection')"></button>
+                </div>
+                <template x-for="profile in profiles" :key="profile.hash">
+                    <iframe :id="'chatFrame-' + profile.hash"
+                            :class="{ active: activeProfile === profile.hash }"
+                            allow="clipboard-read; clipboard-write; microphone *; autoplay *"
+                            sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
+                    </iframe>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server dialog overlay -->
+    <div class="server-dialog-overlay" :class="{ active: showServerDialog }">
+        <div class="server-dialog">
+            <h4 x-text="t('server_dialog_title')"></h4>
+
+            <div class="server-dialog-tabs">
+                <button x-show="hasHomeServer" :class="{ active: serverDialogTab === 'home' }" @click="serverDialogTab = 'home'" x-text="t('server_dialog_tab_home')"></button>
+                <button :class="{ active: serverDialogTab === 'browse' }" @click="serverDialogTab = 'browse'; loadCuratedServers()" x-text="t('server_dialog_tab_browse')"></button>
+                <button :class="{ active: serverDialogTab === 'custom' }" @click="serverDialogTab = 'custom'" x-text="t('server_dialog_tab_custom')"></button>
+            </div>
+
+            <!-- Home server tab -->
+            <div x-show="hasHomeServer && serverDialogTab === 'home'" style="text-align: center; padding: 20px 0;">
+                <div style="font-size: 32px; margin-bottom: 8px;">🏠</div>
+                <div style="font-size: 14px; color: #ced4da; margin-bottom: 16px;" x-text="t('manager_new_home')"></div>
+                <button class="btn-connect" style="background: #0d6efd; color: #fff; border: none; border-radius: 7px; padding: 8px 24px; font-size: 13px; cursor: pointer;" @click="createHomeProfile()">
+                    <span x-text="t('server_dialog_connect')"></span>
+                </button>
+            </div>
+
+            <!-- Browse curated servers -->
+            <div x-show="serverDialogTab === 'browse'">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                    <button style="background: none; border: 1px solid #495057; color: #868e96; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+                            :disabled="curatedServersLoading"
+                            @click="loadCuratedServers(true)">
+                        <span :style="curatedServersLoading ? 'animation: spin 1s linear infinite; display: inline-block;' : ''">&#x21bb;</span>
+                        <span x-text="t('server_dialog_refresh')"></span>
+                    </button>
+                </div>
+                <div x-show="curatedServersLoading" style="text-align: center; padding: 20px; color: #868e96; font-size: 13px;" x-text="t('server_dialog_loading')"></div>
+                <div x-show="!curatedServersLoading && curatedServers.length === 0" style="text-align: center; padding: 20px; color: #868e96; font-size: 13px;" x-text="t('server_dialog_no_servers')"></div>
+                <div class="server-list" x-show="!curatedServersLoading && curatedServers.length > 0">
+                    <template x-for="server in curatedServers" :key="server.id">
+                        <div class="server-list-item" :class="{ selected: selectedCuratedServer?.id === server.id }" @click="selectCuratedServer(server)">
+                            <img :src="server.logo_url || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2228%22 height=%2228%22><rect width=%2228%22 height=%2228%22 fill=%22%23343a40%22 rx=%224%22/><text x=%2214%22 y=%2219%22 text-anchor=%22middle%22 fill=%22%23868e96%22 font-size=%2214%22>IRC</text></svg>'" alt="">
+                            <div class="server-info">
+                                <div class="server-name" x-text="server.name"></div>
+                                <div class="server-desc" x-text="server.description || server.host"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="selectedCuratedServer" style="margin-top: 12px;" @input="quickDialogTouched = true">
+                    <input type="text" :placeholder="t('server_dialog_nickname')" x-model="newServerNick">
+                    <input type="text" :placeholder="t('server_dialog_sasl_user')" x-model="newServerSaslUser">
+                    <input type="password" :placeholder="t('server_dialog_sasl_pass')" x-model="newServerSaslPass">
+                </div>
+            </div>
+
+            <!-- Custom server form -->
+            <div x-show="serverDialogTab === 'custom'" @input="quickDialogTouched = true">
+                <div style="font-size: 11px; color: #868e96; margin-bottom: 10px; line-height: 1.5;" x-text="t('server_dialog_transport')"></div>
+                <select x-model="newServerConnectionType">
+                    <option value="socket" x-text="t('server_dialog_transport_socket')"></option>
+                    <option value="websocket" x-text="t('server_dialog_transport_websocket')"></option>
+                </select>
+                <template x-if="newServerConnectionType === 'websocket'">
+                    <input type="text" :placeholder="t('server_dialog_ws_url')" x-model="newServerUrl">
+                </template>
+                <template x-if="newServerConnectionType === 'socket'">
+                    <div>
+                        <input type="text" :placeholder="t('server_dialog_host')" x-model="newServerHost">
+                        <input type="number" min="1" max="65535" :placeholder="t('server_dialog_port')" x-model.number="newServerPort">
+                        <label style="display:flex;align-items:center;gap:8px;color:#ced4da;font-size:12px;margin:6px 0 10px;">
+                            <input type="checkbox" x-model="newServerSsl"> <span x-text="t('server_dialog_tls')"></span>
+                        </label>
+                    </div>
+                </template>
+                <input type="text" :placeholder="t('server_dialog_nickname')" x-model="newServerNick">
+                <input type="text" :placeholder="t('server_dialog_default_channel')" x-model="newServerChannel">
+                <input type="text" :placeholder="t('server_dialog_sasl_user')" x-model="newServerSaslUser">
+                <input type="password" :placeholder="t('server_dialog_sasl_pass')" x-model="newServerSaslPass">
+            </div>
+
+            <div x-show="serverDialogTab !== 'home' && quickDialogTouched && quickDialogError()"
+                 style="margin-top: 8px; font-size: 12px; color: #f23f43;"
+                 x-text="quickDialogError()"></div>
+
+            <div class="server-dialog-actions" x-show="serverDialogTab !== 'home'">
+                <button class="btn-cancel" @click="showServerDialog = false" x-text="t('server_dialog_cancel')"></button>
+                <button class="btn-connect"
+                        :disabled="(serverDialogTab === 'browse' && !selectedCuratedServer) || Boolean(quickDialogError())"
+                        @click="createExternalProfile()" x-text="t('server_dialog_connect')"></button>
+            </div>
+            <div style="margin-top: 10px; text-align: center;" x-show="profiles.length > 0">
+                <button type="button" style="background:none;border:none;color:#868e96;font-size:11px;text-decoration:underline;cursor:pointer;"
+                        @click="showServerDialog = false; openConnections()" x-text="t('server_dialog_open_manager')"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quit confirmation overlay -->
+    <div class="quit-overlay" :class="{ active: showQuitConfirm }">
+        <div class="quit-dialog">
+            <h4 x-text="t('quit_title')"></h4>
+            <p x-text="t('quit_body')"></p>
+            <div class="quit-actions">
+                <button class="btn-cancel" @click="showQuitConfirm = false" x-text="t('quit_cancel')"></button>
+                <button class="btn-close-app" @click="confirmClose" x-text="t('quit_confirm')"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close tab confirmation: closing a tab deletes the profile and its credentials -->
+    <div class="quit-overlay" :class="{ active: tabCloseCandidate !== null }"
+         @click.self="cancelRemoveProfile()"
+         @keydown.escape.window="tabCloseCandidate !== null && cancelRemoveProfile()">
+        <div class="quit-dialog quit-dialog--wide">
+            <h4 x-text="t('tab_close_title').replace(':name', tabCloseCandidateLabel())"></h4>
+            <p x-text="t('tab_close_body')"></p>
+            <div class="quit-actions">
+                <button class="btn-cancel" x-ref="tabCloseCancel" @click="cancelRemoveProfile()" x-text="t('quit_cancel')"></button>
+                <button class="btn-close-app" @click="confirmRemoveProfile()" x-text="t('tab_close_confirm')"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SASL error dialog -->
+    <div class="quit-overlay" :class="{ active: showSaslError }">
+        <div class="quit-dialog" style="max-width:400px;">
+            <h4><i class="bi bi-shield-exclamation" style="color:#ffc107;margin-right:6px;"></i><span x-text="t('sasl_error_title')"></span></h4>
+            <p style="font-size:13px;color:#adb5bd;" x-text="t('sasl_error_body')"></p>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;font-weight:600;" x-text="t('sasl_error_username')"></label>
+                <input type="text" class="form-control form-control-sm"
+                       style="background:#2c2f33;border:1px solid #3a3d41;color:#e9ecef;border-radius:6px;padding:6px 10px;font-size:13px;"
+                       x-model="saslRetryUsername">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;font-weight:600;" x-text="t('sasl_error_password')"></label>
+                <input type="password" class="form-control form-control-sm"
+                       style="background:#2c2f33;border:1px solid #3a3d41;color:#e9ecef;border-radius:6px;padding:6px 10px;font-size:13px;"
+                       x-model="saslRetryPassword"
+                       @keydown.enter="retrySaslCredentials()">
+            </div>
+            <div class="quit-actions">
+                <button class="btn-cancel" @click="dismissSaslError()" x-text="t('sasl_error_guest')"></button>
+                <button class="btn-close-app" style="background:#0d6efd;" @click="retrySaslCredentials()" x-text="t('sasl_error_retry')"></button>
+            </div>
+        </div>
+    </div>
+
+
+<div id="winamp-player"
+     x-show="playerVisible"
+     x-transition:enter="wp-enter"
+     x-transition:enter-end="wp-enter-end"
+     x-transition:leave="wp-leave"
+     x-transition:leave-end="wp-leave-end"
+     @mousedown="playerStartDrag"
+     style="display:none">
+
+    <!-- ── Title bar ───────────────────────────────────────────────────── -->
+    <div class="wp-titlebar">
+        <span class="wp-logo" x-text="playerTitlebarText"></span>
+        <div class="wp-winbtns">
+            <button class="wp-winbtn wp-minimize" @click="playerVisible = false" title="Schließen">■</button>
+        </div>
+    </div>
+
+    <!-- ── LED Display ─────────────────────────────────────────────────── -->
+    <div class="wp-display">
+        <div class="wp-display-inner">
+            <div class="wp-ticker-wrap">
+                <div class="wp-ticker" x-text="playerTicker"></div>
+            </div>
+            <div class="wp-timecode">
+                <span class="wp-time" x-text="playerFormatTime(playerCurrentTime)"></span>
+                <span class="wp-time-sep">/</span>
+                <span class="wp-time" x-text="playerTab === 'stream' ? 'LIVE' : (playerDuration ? playerFormatTime(playerDuration) : '--:--')"></span>
+            </div>
+        </div>
+        <div class="wp-eq-bars">
+            <template x-for="i in 12">
+                <div class="wp-eq-bar"
+                     :style="`height: ${playerEqHeights[i - 1] || 4}px`">
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- ── Progress bar ────────────────────────────────────────────────── -->
+    <div class="wp-progress-wrap">
+        <div class="wp-progress" @click="playerSeek">
+            <div class="wp-progress-fill" :style="`width: ${playerProgress}%`"></div>
+            <div class="wp-progress-knob" :style="`left: ${playerProgress}%`"></div>
+        </div>
+    </div>
+
+    <!-- ── Transport controls ───────────────────────────────────────────── -->
+    <div class="wp-controls">
+        <button class="wp-btn" @click="playerPrev" title="Zurück">
+            <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.5 12.5a.5.5 0 0 1-.79.407L5.825 9.45a1 1 0 0 1 0-1.8l4.884-3.457A.5.5 0 0 1 11.5 4.6z"/><path d="M4.5 4a.5.5 0 0 0-1 0v8a.5.5 0 0 0 1 0z"/></svg>
+        </button>
+        <button class="wp-btn wp-btn-play"
+                @click="playerState === 'playing' ? playerPause() : playerPlay()"
+                :class="{ active: playerState === 'playing' }"
+                title="Play/Pause">
+            <template x-if="playerState !== 'playing'">
+                <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814z"/></svg>
+            </template>
+            <template x-if="playerState === 'playing'">
+                <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/></svg>
+            </template>
+        </button>
+        <button class="wp-btn" @click="playerStop" title="Stop">
+            <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.5 3.5h9v9h-9z"/></svg>
+        </button>
+        <button class="wp-btn" @click="playerNext" title="Weiter">
+            <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 4.6a.5.5 0 0 1 .79-.407l4.884 3.457a1 1 0 0 1 0 1.8l-4.884 3.457A.5.5 0 0 1 4.5 12.5z"/><path d="M11.5 4a.5.5 0 0 1 1 0v8a.5.5 0 0 1-1 0z"/></svg>
+        </button>
+
+        <!-- Shuffle / Repeat -->
+        <button class="wp-btn wp-mode-btn"
+                @click="playerShuffle = !playerShuffle; _saveSettings()"
+                :class="{ active: playerShuffle }"
+                title="Shuffle">SHF</button>
+        <button class="wp-btn wp-mode-btn"
+                @click="playerRepeat = playerRepeat === 'none' ? 'all' : playerRepeat === 'all' ? 'one' : 'none'; _saveSettings()"
+                :class="{ active: playerRepeat !== 'none' }"
+                title="Repeat">
+            <span x-text="playerRepeat === 'one' ? 'R1' : 'RPT'"></span>
+        </button>
+    </div>
+
+    <!-- ── Volume ───────────────────────────────────────────────────────── -->
+    <div class="wp-volume-row">
+        <button class="wp-mute-btn" @click="playerToggleMute" :class="{ muted: playerMuted }">
+            <template x-if="!playerMuted">
+                <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.536 14.01A8.47 8.47 0 0 0 14 8a8.47 8.47 0 0 0-2.464-6.01l-.708.708A7.47 7.47 0 0 1 13 8a7.47 7.47 0 0 1-2.172 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12 8a6.48 6.48 0 0 0-1.879-4.596l-.707.707A5.48 5.48 0 0 1 11 8a5.48 5.48 0 0 1-1.586 3.89z"/><path d="M8.707 11.182A4.49 4.49 0 0 0 10 8a4.49 4.49 0 0 0-1.293-3.182L8 5.525A3.49 3.49 0 0 1 9 8a3.49 3.49 0 0 1-1 2.475z"/><path d="M6.717 3.55A.5.5 0 0 1 7.5 3.96v8.08a.5.5 0 0 1-.783.41L3.825 10.4H1.5A.5.5 0 0 1 1 9.9V6.1a.5.5 0 0 1 .5-.5h2.325z"/></svg>
+            </template>
+            <template x-if="playerMuted">
+                <svg class="wp-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6.717 3.55A.5.5 0 0 1 7.5 3.96v8.08a.5.5 0 0 1-.783.41L3.825 10.4H1.5A.5.5 0 0 1 1 9.9V6.1a.5.5 0 0 1 .5-.5h2.325z"/><path d="m9.707 5.293-.707.707L10.999 8l-1.999 1.999.707.707L11.706 8z"/><path d="m12.707 5.293-.707.707L13.999 8l-1.999 1.999.707.707L14.706 8z"/></svg>
+            </template>
+        </button>
+        <input type="range" class="wp-vol-slider"
+               min="0" max="100" :value="playerVolume"
+               @input="playerSetVolume" />
+        <span class="wp-vol-label" x-text="playerMuted ? 'MUTE' : playerVolume + '%'"></span>
+    </div>
+
+    <!-- ── Tabs: Playlist | Stream ──────────────────────────────────────── -->
+    <div class="wp-tabs">
+        <button class="wp-tab" :class="{ active: playerTab === 'playlist' }"
+                @click="playerTab = 'playlist'">PLAYLIST</button>
+        <button class="wp-tab" :class="{ active: playerTab === 'stream' }"
+                @click="playerTab = 'stream'">STREAM</button>
+    </div>
+
+    <!-- ── Playlist tab ─────────────────────────────────────────────────── -->
+    <div class="wp-panel" x-show="playerTab === 'playlist'">
+        <div class="wp-playlist">
+            <template x-if="playerPlaylist.length === 0">
+                <div class="wp-empty">Keine Tracks. Dateien oder Ordner hinzufügen.</div>
+            </template>
+            <template x-for="(track, i) in playerPlaylist" :key="track.path">
+                <div class="wp-playlist-item"
+                     :class="{ active: i === playerCurrentIndex }"
+                     @dblclick="playerPlayAt(i)">
+                    <span class="wp-track-num" x-text="(i+1).toString().padStart(2,'0')"></span>
+                    <span class="wp-track-info">
+                        <span class="wp-track-title"
+                              x-text="(track.artist ? track.artist + ' - ' : '') + track.title"></span>
+                        <span class="wp-track-dur" x-text="playerFormatTime(track.duration)"></span>
+                    </span>
+                    <button class="wp-remove-btn" @click.stop="playerRemoveTrack(i)">✕</button>
+                </div>
+            </template>
+        </div>
+        <div class="wp-playlist-actions">
+            <button class="wp-action-btn" @click="playerAddFiles">+ DATEI</button>
+            <button class="wp-action-btn" @click="playerAddFolder">+ ORDNER</button>
+            <button class="wp-action-btn wp-danger-btn" @click="playerClearPlaylist">LEEREN</button>
+        </div>
+    </div>
+
+    <!-- ── Stream tab ───────────────────────────────────────────────────── -->
+    <div class="wp-panel" x-show="playerTab === 'stream'">
+        <div class="wp-stream-panel">
+            <label class="wp-label">Stream URL (Shoutcast / Icecast / HLS)</label>
+            <input type="url" class="wp-input" placeholder="https://stream.laut.fm/isnradio"
+                   x-model="playerStreamUrlInput" @input="playerApplyStreamInput" @keydown.enter.prevent="playerPlay" />
+        </div>
+    </div>
+
+</div>
+
+</div>
+
+<script src="../vendor/alpine.js" defer></script>
+<script src="../vendor/bootstrap.min.js"></script>
+<script>
+    const PLAYER_TICKER_SEPARATOR = '          ';
+    function generateUUID() {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+    }
+
+    function app() {
+        return {
+            version: '',
+            strings: {},
+            profiles: [],
+            activeProfile: null,
+            loadedProfiles: new Set(),
+            unreadCounts: {},
+
+            logPath: '',
+            spotifyConnected: false,
+
+            pendingUpdate: null,          // { version } once an update is downloaded
+            updateBannerDismissed: false, // "later": the update then installs on the next quit
+            updateInstalling: false,
+            showQuitConfirm: false,
+            tabCloseCandidate: null, // profile hash waiting for the close confirmation
+
+            // Server dialog
+            showServerDialog: false,
+            serverDialogTab: 'home',
+            /** The edition has a primary server: "Home Server" tab, a first profile for it. */
+            hasHomeServer: false,
+            curatedServers: [],
+            curatedServersLoading: false,
+            selectedCuratedServer: null,
+            newServerConnectionType: 'socket',
+            newServerUrl: '',
+            newServerHost: '',
+            newServerPort: 6697,
+            newServerSsl: true,
+            newServerNick: '',
+            newServerChannel: '',
+            /** Network domain of a directory entry (discovery), empty for own servers. */
+            newServerDomain: '',
+            newServerSaslUser: '',
+            newServerSaslPass: '',
+            quickDialogTouched: false,
+
+            // SASL error dialog
+            showSaslError: false,
+            saslErrorProfileHash: null,
+            saslRetryUsername: '',
+            saslRetryPassword: '',
+
+            // Media player
+
+            playerVisible: false,
+            playerTab: 'playlist',
+            playerDragging: false,
+            playerDragOffset: { x: 0, y: 0 },
+            playerPos: { x: null, y: null },
+            playerState: 'stopped',
+            playerCurrentIndex: -1,
+            playerPlaylist: [],
+            playerStreamUrl: '',
+            playerStreamUrlInput: '',
+            playerVolume: 80,
+            playerMuted: false,
+            playerCurrentTime: 0,
+            playerDuration: 0,
+            playerShuffle: false,
+            playerRepeat: 'none',
+            playerRichPresence: false,
+            systemMediaRichPresence: false,
+            playerMetadataSent: '',
+            playerTicker: '',
+            playerTickerPos: 0,
+            playerTickerTimer: null,
+            playerTickerFull: '',
+            playerStreamStartedAt: null,
+            playerStreamElapsedBeforePause: 0,
+            playerStreamTimeTimer: null,
+            playerEqTimer: null,
+            playerEqHeights: Array(12).fill(4),
+            playerAudioCtx: null,
+            playerAnalyser: null,
+            playerAnalyserData: null,
+            playerEqAnimationFrame: null,
+            playerStreamStatus: '',
+            playerStreamMetaTimer: null,
+            playerStreamMeta: null,
+            playerLastLoadedFiles: [],
+            playerStreamAnalyser: null,
+            playerStreamAnalyserData: null,
+
+            notificationSettings: {
+                notifyDmPopup: true,
+                notifyMentionPopup: true,
+                notifyAnyWhenMinimized: false,
+            },
+
+            currentTheme: 'dark',
+
+            async init() {
+                // Load translations first: store as reactive Alpine data so
+                // Alpine re-renders automatically once strings arrive
+                this.strings = await i18n.load();
+
+                // Theme
+                this.currentTheme = await window.electronAPI.getTheme() || 'dark';
+                document.body.classList.toggle('light-theme', this.currentTheme === 'light');
+                window.electronAPI.on('theme-changed', (t) => {
+                    this.currentTheme = t;
+                    document.body.classList.toggle('light-theme', t === 'light');
+                    // Re-inject theme into all iframes
+                    this.profiles.forEach(p => {
+                        const iframe = document.getElementById('chatFrame-' + p.hash);
+                        if (iframe) this.injectTheme(iframe);
+                    });
+                    this.broadcastSettingsState();
+                });
+
+                this.version = await window.electronAPI.getVersion();
+                const editionInfo = await window.electronAPI.getEditionInfo();
+                this.hasHomeServer = Boolean(editionInfo?.primaryServer);
+                ConnectionForm.setHomeNetworkName(editionInfo?.networkName);
+
+                const savedProfiles = await window.electronAPI.getProfiles();
+                if (savedProfiles?.length) {
+                    this.profiles = savedProfiles;
+                } else if (this.hasHomeServer) {
+                    this.profiles = [{ hash: 'default', name: 'Default', loggingEnabled: true, showServerWindow: false }];
+                    this.saveProfiles();
+                } else {
+                    // No primary server: the user picks the first network, nothing is preset
+                    this.profiles = [];
+                }
+                this.activeProfile = this.profiles[0]?.hash || null;
+                if (this.activeProfile) window.electronAPI.sendActiveProfile(this.activeProfile);
+
+                // Connections changed (manager, settings page): take over the stored list and
+                // let every chat's connections page reload it
+                window.electronAPI.on('profiles-changed', () => {
+                    this.syncProfilesFromStore();
+                    this.broadcastToChats({ type: 'connections-changed' });
+                });
+
+                const savedNotif = await window.electronAPI.getNotificationSettings();
+                this.notificationSettings = { ...this.notificationSettings, ...(savedNotif || {}) };
+
+                // Register IPC handlers BEFORE loading profiles to avoid race condition
+                // (standalone mode sends set-iframe-src immediately, no server roundtrip)
+                window.electronAPI.on('set-iframe-src', ({ profileHash, src, isExternal, standalone, standaloneConfig }) => {
+                    const iframe = document.getElementById(`chatFrame-${profileHash}`);
+                    if (!iframe) return;
+                    iframe.src = src;
+                    this.loadedProfiles.add(profileHash);
+
+                    iframe.onload = () => {
+                        const cur = iframe.src;
+                        if (cur.includes('loading.html')) return;
+                        if (cur.includes('offline.html')) {
+                            if (profileHash === this.activeProfile)
+                                window.electronAPI.iframeLoaded(profileHash, false, cur);
+                            return;
+                        }
+
+                        // Standalone mode: inject chatConfig via postMessage
+                        if (standalone && standaloneConfig) {
+                            iframe.contentWindow.postMessage({
+                                type: 'init-chat-config',
+                                config: standaloneConfig
+                            }, '*');
+                            // Don't fire iframeLoaded yet: wait for chat-app-ready from Alpine
+                            // Safety timeout in case the chat JS fails to boot
+                            setTimeout(() => {
+                                if (profileHash === this.activeProfile)
+                                    window.electronAPI.iframeLoaded(profileHash, true, cur);
+                            }, 5000);
+                        } else {
+                            iframe.contentWindow.postMessage({ type: 'init-chat' }, '*');
+                            // Server mode: notify immediately
+                            if (profileHash === this.activeProfile && cur.startsWith('http'))
+                                window.electronAPI.iframeLoaded(profileHash, true, cur);
+                        }
+
+                        // SASL password is now included directly in standaloneConfig
+                        // Send theme to iframe (slight delay to ensure Alpine has initialized)
+                        setTimeout(() => this.injectTheme(iframe), 300);
+                    };
+
+                    iframe.onerror = () => {
+                        if (profileHash === this.activeProfile && (src.includes('http') || standalone))
+                            window.electronAPI.iframeLoaded(profileHash, false, src);
+                    };
+                });
+
+                if (this._messageListenerRegistered) return;
+                this._messageListenerRegistered = true;
+
+                window.electronAPI.on('logout', (profileHash) => {
+                    const iframe = document.getElementById(`chatFrame-${profileHash}`);
+                    if (iframe) iframe.contentWindow.postMessage({ type: 'logout' }, '*');
+                });
+
+                window.electronAPI.on('native-socket-event', (evt) => {
+                    const iframe = document.getElementById(`chatFrame-${evt.profileHash}`);
+                    if (!iframe?.contentWindow) return;
+                    iframe.contentWindow.postMessage({
+                        type: 'native-socket-event',
+                        connectionId: evt.connectionId,
+                        event: evt.type,
+                        data: evt.data,
+                        error: evt.error,
+                    }, '*');
+                });
+
+                // irc:// and ircs:// links, already matched to a profile by the main process
+                window.electronAPI.on('irc-link', (link) => this.openIrcLink(link));
+
+                // Updates load in the background; the banner offers the restart
+                window.electronAPI.on('update-ready', (update) => {
+                    this.pendingUpdate = update;
+                    this.updateBannerDismissed = false; // a newer version is worth a new hint
+                });
+                window.electronAPI.getPendingUpdate?.().then((update) => {
+                    if (update) this.pendingUpdate = update;
+                });
+
+                // Native window X button intercepted by main.js
+                window.electronAPI.on('confirm-close', () => {
+                    this.showQuitConfirm = true;
+                });
+
+                // iframe → parent bridge
+                window.addEventListener('message', (event) => {
+                    if (!event.data || typeof event.data !== 'object') return;
+                    // Only our own chat iframes may talk to the shell.
+                    const iframe = Array.from(document.querySelectorAll('iframe[id^="chatFrame-"]'))
+                        .find(f => f.contentWindow === event.source);
+                    if (!iframe) return;
+                    const profileHash = iframe.id.replace('chatFrame-', '');
+                    const profile = this.getProfile(profileHash);
+
+                    const needsProfileContext = [
+                        'get-token',
+                        'logout',
+                        'mention-update',
+                        'incoming-message',
+                        'unread-state-update',
+                        'unread-update',
+                        'log-chat',
+                        'save-credentials',
+                        'update-profile-name',
+                        'sasl-failure',
+                    ];
+                    if (needsProfileContext.includes(event.data.type) && !profileHash) {
+                        console.warn('[ipc-bridge] Ignoring iframe message without resolvable profile context:', event.data.type);
+                        return;
+                    }
+
+                    switch (event.data.type) {
+                        case 'open-external':
+                            window.electronAPI.openExternal(event.data.url); break;
+                        case 'get-token':
+                            window.electronAPI.getToken(profileHash)
+                                .then(t => event.source.postMessage({ type: 'token-response', token: t }, '*')); break;
+                        case 'get-app-version':
+                            window.electronAPI.getVersion()
+                                .then(v => event.source.postMessage({ type: 'app-version', version: v }, '*')); break;
+                        case 'logout':
+                            window.electronAPI.logout(profileHash); break;
+                        // profileHash always comes from the sending iframe, never from the payload
+                        case 'native-socket-connect':
+                            window.electronAPI.nativeSocketConnect({ ...(event.data.data || {}), profileHash }); break;
+                        case 'native-socket-send':
+                            window.electronAPI.nativeSocketSend({ ...(event.data.data || {}), profileHash }); break;
+                        case 'native-socket-close':
+                            window.electronAPI.nativeSocketClose({ ...(event.data.data || {}), profileHash }); break;
+                        case 'mention-update':
+                            window.electronAPI.sendMentionUpdate(event.data.hasMentions, event.data.mentionCount, profileHash); break;
+                        case 'incoming-message':
+                            window.electronAPI.sendIncomingMessage({
+                                sender: event.data.sender, channel: event.data.channel,
+                                text: event.data.text, isDm: !!event.data.isDm,
+                                isMention: !!event.data.isMention, profileHash }); break;
+                        case 'unread-state-update': {
+                            const nextUnread = Number.isFinite(Number(event.data.totalUnread))
+                                ? Math.max(0, Number(event.data.totalUnread))
+                                : 0;
+                            const prevUnread = Number(this.unreadCounts[profileHash] || 0);
+                            const isUnreadDecrease = nextUnread < prevUnread;
+                            const hasFocusedTabContext = document.hasFocus() && this.activeProfile === profileHash;
+
+                            if (isUnreadDecrease && !hasFocusedTabContext) break;
+
+                            window.electronAPI.sendUnreadStateUpdate(profileHash, nextUnread);
+                            this.unreadCounts[profileHash] = nextUnread;
+                            break;
+                        }
+
+                        case 'unread-update':
+                            window.electronAPI.sendUnreadUpdate(event.data.hasUnread, profileHash); break;
+                        case 'log-chat':
+                            if (profile?.loggingEnabled) {
+                                window.electronAPI.logChat(
+                                    event.data.channel,
+                                    event.data.message,
+                                    profileHash,
+                                    profile.loggingEnabled,
+                                );
+                            }
+                            break;
+                        case 'retry-connection':
+                            window.electronAPI.retryConnection(); break;
+                        case 'save-credentials':
+                            window.electronAPI.saveCredentials(event.data.token, event.data.remember, profileHash); break;
+                        case 'update-profile-name': {
+                            const p = this.getProfile(profileHash);
+                            if (p) {
+                                if (p.serverType === 'external' && p.externalServer) {
+                                    p.externalServer.nickname = event.data.nickname;
+                                } else {
+                                    p.name = event.data.nickname;
+                                }
+                                this.profiles = [...this.profiles];
+                                this.saveProfiles();
+                            }
+                            break;
+                        }
+                        case 'sasl-failure': {
+                            // Show SASL error dialog in the Electron shell
+                            const sfp = this.getProfile(profileHash);
+                            this.saslErrorProfileHash = profileHash;
+                            this.saslRetryUsername = sfp?.saslUsername || sfp?.externalServer?.saslUsername || '';
+                            this.saslRetryPassword = '';
+                            this.showSaslError = true;
+                            break;
+                        }
+                        case 'settings-get':
+                            // The first request of a starting chat: its script runs
+                            window.electronAPI.chatReady?.(profileHash);
+                            this.chatsWithSettings.add(profileHash);
+                            this.sendSettingsState(profileHash); break;
+                        case 'connections-request':
+                            this.handleConnectionsRequest(event.source, event.data, profileHash); break;
+                        case 'settings-set':
+                            if (['app', 'connection'].includes(event.data.scope) && typeof event.data.key === 'string') {
+                                this.applySettingFromChat(profileHash, event.data.scope, event.data.key, event.data.value);
+                            }
+                            break;
+                        case 'settings-action':
+                            this.runSettingsAction(profileHash, event.data.action); break;
+                        case 'renderer-error':
+                            if (event.data.error && typeof event.data.error === 'object') {
+                                window.electronAPI.reportRendererError?.({ ...event.data.error, source: 'chat' });
+                            }
+                            break;
+                        case 'chat-app-ready':
+                            this.readyChats.add(profileHash);
+                            // Standalone chat has booted Alpine: safe to show the window now
+                            if (profileHash === this.activeProfile)
+                                window.electronAPI.iframeLoaded(profileHash, true, '');
+                            // A (re)loaded chat starts without now-playing state: hand it the current one
+                            if (this._metadataSentPerIframe) delete this._metadataSentPerIframe[profileHash];
+                            // A channel of an irc:// link that came while this chat was loading
+                            if (this._pendingLinkChannels?.[profileHash]) {
+                                event.source?.postMessage({ type: 'open-channel', channel: this._pendingLinkChannels[profileHash] }, '*');
+                                delete this._pendingLinkChannels[profileHash];
+                            }
+                            if (this._lastPlayingCmd) {
+                                const readyFrame = document.getElementById('chatFrame-' + profileHash);
+                                readyFrame?.contentWindow?.postMessage(this.playingMessage(this._lastPlayingCmd), '*');
+                                if (this._metadataSentPerIframe) this._metadataSentPerIframe[profileHash] = this._lastPlayingCmd;
+                            }
+                            break;
+                    }
+                });
+
+                window.addEventListener('focus', () => {
+                    // Spotify may have been linked in the browser / profile manager meanwhile
+                    this.refreshSpotifyStatus();
+                    const iframe = document.getElementById('chatFrame-' + this.activeProfile);
+                    if (iframe?.contentWindow)
+                        iframe.contentWindow.postMessage({ type: 'tab-activated' }, '*');
+                });
+
+                window.addEventListener('player:metadata', (event) => {
+                    const cmd = event?.detail?.cmd;
+                    if (!cmd) return;
+                    this._lastPlayingCmd = cmd;
+
+                    if (!this._metadataSentPerIframe) this._metadataSentPerIframe = {};
+
+                    let sent = 0;
+                    this.profiles.forEach((profile) => {
+                        const iframe = document.getElementById('chatFrame-' + profile.hash);
+                        if (iframe?.contentWindow) {
+                            if (this._metadataSentPerIframe[profile.hash] === cmd) return;
+                            this._metadataSentPerIframe[profile.hash] = cmd;
+                            iframe.contentWindow.postMessage(this.playingMessage(cmd), '*');
+                            sent++;
+                        }
+                    });
+
+                    console.debug(`[Player][METADATA] Forwarded command to ${sent} iframe(s):`, cmd);
+                    if (sent === 0) {
+                        console.debug('[Player][METADATA] No iframes available for command:', cmd);
+                    }
+                });
+
+                // Load profiles AFTER all IPC handlers are registered
+                for (const profile of this.profiles) {
+                    const token = await window.electronAPI.getToken(profile.hash);
+                    this.loadProfile(profile.hash, token);
+                }
+                if (!this.profiles.length) {
+                    // Nothing to wait for: show the window with the dialog for the first connection
+                    window.electronAPI.iframeLoaded('', true, '');
+                    this.addProfile();
+                }
+
+                this.loadLogPath();
+
+                await this.initPlayer();
+            },
+
+            t(key) {
+                return this.strings[key] ?? key;
+            },
+
+            getProfile(hash) {
+                return this.profiles.find(p => p.hash === hash)
+                    ?? { hash: '', name: '', loggingEnabled: false, showServerWindow: false };
+            },
+
+            /** METADATA command of the player as a set-playing message for the chat. */
+            playingMessage(cmd) {
+                const match = String(cmd || '').match(/^METADATA \* SET playing(?: :(.*))?$/);
+                return { type: 'set-playing', playing: match?.[1] || '' };
+            },
+
+            injectTheme(iframe) {
+                try {
+                    iframe.contentWindow.postMessage({
+                        type: 'set-theme',
+                        theme: this.currentTheme,
+                    }, '*');
+                } catch(e) {
+                    // iframe not ready yet: ignore
+                }
+            },
+
+            addProfile() {
+                this.showServerDialog = true;
+                this.serverDialogTab = this.hasHomeServer ? 'home' : 'browse';
+                if (!this.hasHomeServer) this.loadCuratedServers();
+                this.selectedCuratedServer = null;
+                this.newServerUrl = '';
+                this.newServerConnectionType = 'socket';
+                this.newServerHost = '';
+                this.newServerPort = 6697;
+                this.newServerSsl = true;
+                this.newServerNick = '';
+                this.newServerChannel = '';
+                this.newServerDomain = '';
+                this.newServerSaslUser = '';
+                this.newServerSaslPass = '';
+                this.quickDialogTouched = false;
+            },
+
+            /** The quick dialog's fields as an external server (shared/connection.js format). */
+            quickDialogServer() {
+                return {
+                    ...ConnectionForm.emptyExternalServer(),
+                    connectionType: this.newServerConnectionType,
+                    websocketUrl: this.newServerUrl,
+                    host: this.newServerHost,
+                    port: this.newServerPort,
+                    ssl: this.newServerSsl,
+                    nickname: this.newServerNick,
+                    saslUsername: this.newServerSaslUser,
+                    defaultChannel: this.newServerChannel,
+                    // Only while the entry from the directory is selected
+                    domain: this.serverDialogTab === 'browse' ? this.newServerDomain : '',
+                };
+            },
+
+            /** First validation problem of the quick dialog (same rules as the manager), or ''. */
+            quickDialogError() {
+                if (this.serverDialogTab === 'home') return '';
+                const errors = ConnectionForm.validateExternalServer(this.quickDialogServer(), {
+                    requireNickname: true,
+                    saslPassword: this.newServerSaslPass,
+                });
+                const first = Object.values(errors)[0];
+                return first ? this.t(first) : '';
+            },
+
+            createHomeProfile() {
+                const newHash = generateUUID();
+                this.profiles.push(ConnectionForm.buildHomeProfile({ hash: newHash }));
+                this.saveProfiles();
+                this.activeProfile = newHash;
+                this.showServerDialog = false;
+                window.electronAPI.sendActiveProfile(newHash);
+                this.$nextTick(() => this.loadProfile(newHash));
+            },
+
+            /**
+             * Server directory: the same cache as the profile manager (main process),
+             * refreshed from the website when empty or on request.
+             */
+            async loadCuratedServers(force = false) {
+                if (!force && this.curatedServers.length > 0) return;
+                this.curatedServersLoading = true;
+                try {
+                    const cached = await window.electronAPI.getCuratedServers();
+                    this.curatedServers = cached?.servers || [];
+                    if (force || !this.curatedServers.length) {
+                        const synced = await window.electronAPI.syncCuratedServers();
+                        this.curatedServers = synced?.servers || this.curatedServers;
+                    }
+                } catch (e) {
+                    console.error('Failed to load curated servers:', e);
+                } finally {
+                    this.curatedServersLoading = false;
+                }
+            },
+
+            selectCuratedServer(server) {
+                const fields = ConnectionForm.fromCuratedServer(server);
+                this.selectedCuratedServer = server;
+                this.newServerUrl = fields.websocketUrl;
+                this.newServerHost = fields.host;
+                this.newServerPort = fields.port;
+                this.newServerSsl = fields.ssl;
+                this.newServerConnectionType = fields.connectionType;
+                this.newServerChannel = fields.defaultChannel;
+                this.newServerDomain = fields.domain;
+            },
+
+            async createExternalProfile() {
+                if (this.quickDialogError()) {
+                    this.quickDialogTouched = true;
+                    return;
+                }
+                const profile = ConnectionForm.buildExternalProfile({
+                    name: this.selectedCuratedServer?.name || '',
+                    externalServer: this.quickDialogServer(),
+                    saslPassword: this.newServerSaslPass,
+                });
+                const newHash = profile.hash;
+                this.profiles.push(profile);
+                this.activeProfile = newHash;
+                this.showServerDialog = false;
+
+                // Save profiles first so the profile exists in the store,
+                // then encrypt the SASL password (needs to find the profile)
+                await this.saveProfiles();
+                if (this.newServerSaslPass) {
+                    window.electronAPI.encryptSaslPassword(newHash, this.newServerSaslPass);
+                }
+                window.electronAPI.sendActiveProfile(newHash);
+                // Small delay to ensure encrypt-sasl-password IPC completes
+                // before loadProfile tries to decrypt it
+                const loadDelay = this.newServerSaslPass ? 200 : 0;
+                setTimeout(() => this.loadProfile(newHash), loadDelay);
+            },
+
+            /**
+             * An irc:// link: the tab of its server with the channel, or the dialog for a new
+             * connection with the server filled in (the user confirms before connecting).
+             */
+            openIrcLink(link) {
+                if (link?.profileHash && this.getProfile(link.profileHash)) {
+                    const hash = link.profileHash;
+                    const ready = this.readyChats.has(hash);
+                    this.switchProfile(hash);
+                    if (!link.channel) return;
+                    if (ready) {
+                        document.getElementById('chatFrame-' + hash)?.contentWindow?.postMessage({ type: 'open-channel', channel: link.channel }, '*');
+                    } else {
+                        this._pendingLinkChannels = { ...(this._pendingLinkChannels || {}), [hash]: link.channel };
+                    }
+                    return;
+                }
+                const server = link?.server;
+                if (!server?.host) return;
+                this.addProfile();
+                this.serverDialogTab = 'custom';
+                this.newServerConnectionType = 'socket';
+                this.newServerHost = server.host;
+                this.newServerPort = server.port;
+                this.newServerSsl = server.tls;
+                this.newServerChannel = server.channel || '';
+            },
+
+            switchProfile(hash) {
+                this.activeProfile = hash;
+                window.electronAPI.sendActiveProfile(hash);
+                this.loadLogPath();
+                this.refreshSpotifyStatus();
+                if (!this.loadedProfiles.has(hash)) this.loadProfile(hash);
+                this.$nextTick(() => {
+                    const iframe = document.getElementById('chatFrame-' + hash);
+                    if (iframe?.contentWindow)
+                        iframe.contentWindow.postMessage({ type: 'tab-activated' }, '*');
+                });
+            },
+
+            /**
+             * Re-read the stored profiles after another window changed them. New
+             * connections appear as tabs (connected when opened), deleted ones close,
+             * renamed ones update their label. Changed server settings apply on the next
+             * connect, as the manager says.
+             */
+            async syncProfilesFromStore() {
+                const stored = await window.electronAPI.getProfiles();
+                if (!Array.isArray(stored) || !stored.length) return;
+                const removed = this.profiles.filter(p => !stored.some(s => s.hash === p.hash)).map(p => p.hash);
+                this.profiles = stored;
+                removed.forEach(hash => {
+                    this.loadedProfiles.delete(hash);
+                    delete this.unreadCounts[hash];
+                });
+                if (!stored.some(p => p.hash === this.activeProfile)) this.switchProfile(stored[0].hash);
+            },
+
+            /** "Obi_Wan", or "Obi_Wan · Libera" once tabs to several networks are open. */
+            profileLabel(profile, index) {
+                return ConnectionForm.tabLabel(profile, index, this.profiles);
+            },
+
+            /** Closing a tab deletes the profile with its credentials: ask first. */
+            requestRemoveProfile(hash) {
+                if (this.profiles.length === 1) return;
+                this.tabCloseCandidate = hash;
+                // Cancel is focused, so Enter never deletes a profile by accident
+                this.$nextTick(() => this.$refs.tabCloseCancel?.focus());
+            },
+
+            tabCloseCandidateLabel() {
+                const index = this.profiles.findIndex(p => p.hash === this.tabCloseCandidate);
+                return index === -1 ? '' : this.profileLabel(this.profiles[index], index);
+            },
+
+            cancelRemoveProfile() {
+                this.tabCloseCandidate = null;
+            },
+
+            confirmRemoveProfile() {
+                const hash = this.tabCloseCandidate;
+                this.tabCloseCandidate = null;
+                if (hash) this.removeProfile(hash);
+            },
+
+            removeProfile(hash) {
+                if (this.profiles.length === 1) return;
+                let nextActive = this.activeProfile;
+                if (this.activeProfile === hash) {
+                    const idx = this.profiles.findIndex(p => p.hash === hash);
+                    nextActive = (this.profiles[idx + 1] || this.profiles[idx - 1]).hash;
+                }
+                this.profiles = this.profiles.filter(p => p.hash !== hash);
+                this.activeProfile = nextActive;
+                window.electronAPI.sendActiveProfile(nextActive);
+                this.saveProfiles();
+                window.electronAPI.deleteProfile(hash);
+            },
+
+            loadProfile(hash, token = null) {
+                window.electronAPI.loadProfile(hash, token);
+            },
+
+            async retrySaslCredentials() {
+                const username = this.saslRetryUsername.trim();
+                const password = this.saslRetryPassword.trim();
+                if (!username || !password) return;
+
+                const hash = this.saslErrorProfileHash;
+                this.showSaslError = false;
+
+                const profile = this.getProfile(hash);
+                if (!profile) return;
+
+                // Update profile with new credentials
+                if (profile.serverType === 'external') {
+                    if (!profile.externalServer) profile.externalServer = {};
+                    profile.externalServer.saslUsername = username;
+                    profile.externalServer.authMethod = 'sasl_plain';
+                } else {
+                    profile.saslUsername = username;
+                    profile.authMethod = 'sasl_plain';
+                }
+                this.profiles = [...this.profiles];
+
+                // Save profile, then encrypt password
+                await this.saveProfiles();
+                if (profile.serverType === 'external') {
+                    window.electronAPI.encryptSaslPassword(hash, password);
+                } else {
+                    window.electronAPI.encryptHomeSaslPassword(hash, password);
+                }
+
+                // Reload the profile (this triggers a full reconnect with new credentials + fresh API token)
+                // Small delay to ensure password encryption completes
+                setTimeout(() => {
+                    // Remove existing iframe to force full reload
+                    this.loadedProfiles.delete(hash);
+                    const iframe = document.getElementById('chatFrame-' + hash);
+                    if (iframe) iframe.src = 'about:blank';
+                    this.loadProfile(hash);
+                }, 200);
+            },
+
+            dismissSaslError() {
+                this.showSaslError = false;
+            },
+
+            saveProfiles() {
+                return window.electronAPI.saveProfiles(JSON.parse(JSON.stringify(this.profiles)))
+                    .catch(e => {
+                        console.error('save-profiles:', e);
+                        throw e;
+                    });
+            },
+
+            // Begin player methods
+
+            async initPlayer() {
+                // Load persisted settings
+                const s = await window.electronAPI.getPlayerSettings?.() ?? {};
+                this.playerVolume        = s.volume        ?? 80;
+                this.playerMuted         = s.muted         ?? false;
+                this.playerShuffle       = s.shuffle       ?? false;
+                this.playerRepeat        = s.repeat        ?? 'none';
+                this.playerRichPresence       = s.richPresence            ?? false;
+                this.systemMediaRichPresence  = s.systemMediaRichPresence ?? false;
+                this.playerStreamUrl     = s.streamUrl     ?? '';
+                this.playerStreamUrl     = this.playerStreamUrl || (s.lastStreamUrl ?? '');
+                this.playerStreamUrlInput = this.playerStreamUrl;
+                this.playerPlaylist      = s.playlist      ?? [];
+                this.playerLastLoadedFiles = s.lastLoadedFiles ?? [];
+                this.playerCurrentIndex  = s.currentIndex  ?? -1;
+                this.playerTicker = this.playerDisplayTitle;
+
+                this._applyVolume();
+
+                // Wire up audio element events
+                const audio = this._audio();
+                const streamAudio = this._streamAudio();
+                if (!audio) return;
+
+                audio.addEventListener('timeupdate',  () => {
+                    this.playerCurrentTime = audio.currentTime;
+                });
+                audio.addEventListener('durationchange', () => {
+                    this.playerDuration = isFinite(audio.duration) ? audio.duration : 0;
+                });
+                audio.addEventListener('ended', () => {
+                    this._onTrackEnd();
+                });
+                // in initPlayer(): replace the existing play listener:
+                audio.addEventListener('play', async () => {
+                    this.playerState = 'playing';
+                    this._startTicker();
+                    // AudioContext nach jedem play-Event sicherstellen
+                    if (this.playerAudioCtx && this.playerAudioCtx.state !== 'running') {
+                        try { await this.playerAudioCtx.resume(); } catch (e) {}
+                    }
+                    this._startEq();
+                });
+                audio.addEventListener('pause', () => { this.playerState = 'paused';   this._stopTicker();  });
+                audio.addEventListener('error', () => {
+                    const mediaError = audio.error;
+                    const message = mediaError?.message || 'Stream/Audio konnte nicht abgespielt werden';
+                    this.playerStreamStatus = message;
+                    this.playerState = 'stopped';
+                    this._stopTicker();
+                    this._stopEq();
+                });
+
+                if (streamAudio) {
+                    streamAudio.addEventListener('play', async () => {
+                        this.playerState = 'playing';
+                        if (this.playerTab !== 'stream') this.playerTab = 'stream';
+                        this.playerStreamStartedAt = Date.now();
+                        this._startStreamTimeCounter();
+                        this._startTicker();
+                        if (this.playerAudioCtx && this.playerAudioCtx.state !== 'running') {
+                            try { await this.playerAudioCtx.resume(); } catch (e) {}
+                        }
+                        this._startEq();
+                    });
+                    streamAudio.addEventListener('pause', () => {
+                        if (this.playerTab === 'stream') {
+                            this.playerState = 'paused';
+                            this.playerStreamElapsedBeforePause = this.playerCurrentTime;
+                            this._stopStreamTimeCounter();
+                            this._stopTicker();
+                            this._stopEq();
+                        }
+                    });
+                    streamAudio.addEventListener('error', () => {
+                        const mediaError = streamAudio.error;
+                        const message = mediaError?.message || 'Stream konnte nicht abgespielt werden';
+                        this.playerStreamStatus = message;
+                        this.playerState = 'stopped';
+                        this.playerStreamElapsedBeforePause = 0;
+                        this.playerCurrentTime = 0;
+                        this._stopTicker();
+                        this._stopEq();
+                        this._stopStreamTimeCounter();
+                        this._stopStreamMetadataPolling();
+                    });
+                }
+
+                this._setupAudioAnalyser(audio);
+                this._setupStreamAnalyser(this._streamAudio());
+
+                // Start system media polling if enabled
+                this._startSystemMediaPolling();
+            },
+
+            _setupStreamAnalyser(streamAudio) {
+                if (!streamAudio || this.playerStreamAnalyser) return;
+                // AudioContext muss schon existieren (von _setupAudioAnalyser)
+                if (!this.playerAudioCtx) return;
+                try {
+                    // crossOrigin nötig damit AudioContext den Stream anfassen darf
+                    streamAudio.crossOrigin = 'anonymous';
+                    const source = this.playerAudioCtx.createMediaElementSource(streamAudio);
+                    this.playerStreamAnalyser = this.playerAudioCtx.createAnalyser();
+                    this.playerStreamAnalyser.fftSize = 256;
+                    this.playerStreamAnalyser.smoothingTimeConstant = 0.75;
+                    source.connect(this.playerStreamAnalyser);
+                    this.playerStreamAnalyser.connect(this.playerAudioCtx.destination);
+                    this.playerStreamAnalyserData = new Uint8Array(this.playerStreamAnalyser.frequencyBinCount);
+                } catch (err) {
+                    console.warn('[Player] Stream analyser init failed:', err);
+                    this.playerStreamAnalyser = null;
+                }
+            },
+
+            // ─── Transport controls ───────────────────────────────────────────────
+            playerPlay() {
+                if (this.playerTab === 'stream') {
+                    this.playerApplyStreamInput();
+                    this._playStream();
+                    return;
+                }
+                if (this.playerPlaylist.length === 0) return;
+                if (this.playerCurrentIndex < 0) this.playerCurrentIndex = 0;
+                this._loadAndPlay(this.playerCurrentIndex);
+            },
+
+            playerPause() {
+                const a = this.playerTab === 'stream' ? this._streamAudio() : this._audio();
+                if (!a) return;
+                if (this.playerState === 'playing') {
+                    a.pause();
+                    this.playerState = 'paused';
+                    this._stopEq();
+                    this._sendMetadata(null);
+                    this._pollSystemMedia();
+                } else if (this.playerState === 'paused') {
+                    a.play().then(() => {
+                        this.playerState = 'playing';
+                        this._startEq();
+                        this._sendMetadata(this.playerCurrentTrack);
+                    }).catch(() => {});
+                }
+            },
+
+            playerStop() {
+                const a = this._audio();
+                const s = this._streamAudio();
+
+                [a, s].forEach(el => {
+                    if (!el) return;
+                    el.pause();
+                    if (el.getAttribute('src')) {
+                        el.removeAttribute('src');
+                    }
+                });
+
+                this.playerState       = 'stopped';
+                this.playerCurrentTime = 0;
+                this.playerDuration    = 0;
+                this.playerStreamElapsedBeforePause = 0;
+                this._stopTicker();
+                this._stopEq();
+                this._stopStreamTimeCounter();
+                this.playerStreamStartedAt = null;
+                this._stopStreamMetadataPolling();
+                if (this.playerTab === 'stream') {
+                    this.playerStreamStatus = 'Stream gestoppt';
+                }
+                this._sendMetadata(null);
+                this._pollSystemMedia();
+            },
+
+            playerNext() {
+                if (this.playerPlaylist.length === 0) return;
+                let next;
+                if (this.playerShuffle) {
+                    next = Math.floor(Math.random() * this.playerPlaylist.length);
+                } else {
+                    next = (this.playerCurrentIndex + 1) % this.playerPlaylist.length;
+                }
+                this.playerCurrentIndex = next;
+                this._loadAndPlay(next);
+            },
+
+            playerPrev() {
+                if (this.playerPlaylist.length === 0) return;
+                const prev = this.playerCurrentIndex <= 0
+                    ? this.playerPlaylist.length - 1
+                    : this.playerCurrentIndex - 1;
+                this.playerCurrentIndex = prev;
+                this._loadAndPlay(prev);
+            },
+
+            playerPlayAt(index) {
+                this.playerCurrentIndex = index;
+                if (this.playerTab === 'stream') {
+                    this.playerTab = 'playlist';
+                }
+                this._loadAndPlay(index);
+            },
+
+            playerSeek(e) {
+                const a = this._audio();
+                if (!a || !this.playerDuration) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = (e.clientX - rect.left) / rect.width;
+                a.currentTime = ratio * this.playerDuration;
+            },
+
+            // ─── Volume ───────────────────────────────────────────────────────────
+            playerSetVolume(e) {
+                this.playerVolume = parseInt(e.target.value, 10);
+                this._applyVolume();
+                this._saveSettings();
+            },
+
+            playerToggleMute() {
+                this.playerMuted = !this.playerMuted;
+                this._applyVolume();
+                this._saveSettings();
+            },
+
+            // ─── Playlist management ──────────────────────────────────────────────
+            async playerAddFiles() {
+                const files = await window.electronAPI.playerOpenFiles();
+                if (!files || files.length === 0) return;
+
+                for (const f of files) {
+                    // Avoid duplicates
+                    if (this.playerPlaylist.some(t => t.path === f.path)) continue;
+                    this.playerPlaylist.push(f);
+                }
+                this.playerLastLoadedFiles = files.map(f => f.path).slice(-50);
+                this._saveSettings();
+            },
+
+            async playerAddFolder() {
+                const tracks = await window.electronAPI.playerScanFolder();
+                if (!tracks || tracks.length === 0) return;
+                let added = 0;
+                for (const t of tracks) {
+                    if (this.playerPlaylist.some(x => x.path === t.path)) continue;
+                    this.playerPlaylist.push(t);
+                    added++;
+                }
+                this.playerLastLoadedFiles = tracks.map(t => t.path).slice(-200);
+                this._saveSettings();
+            },
+
+            playerRemoveTrack(index) {
+                this.playerPlaylist.splice(index, 1);
+                if (this.playerCurrentIndex === index) {
+                    this.playerStop();
+                    this.playerCurrentIndex = -1;
+                } else if (this.playerCurrentIndex > index) {
+                    this.playerCurrentIndex--;
+                }
+                this._saveSettings();
+            },
+
+            playerClearPlaylist() {
+                this.playerStop();
+                this.playerPlaylist      = [];
+                this.playerCurrentIndex  = -1;
+                this._saveSettings();
+            },
+
+            // ─── Stream ───────────────────────────────────────────────────────────
+            playerApplyStreamInput() {
+                this.playerStreamUrl = this._normalizeStreamUrl(this.playerStreamUrlInput);
+                this._saveSettings();
+            },
+
+            // ─── Rich presence toggle ─────────────────────────────────────────────
+            playerToggleRichPresence() {
+                this.playerRichPresence = !this.playerRichPresence;
+                if (!this.playerRichPresence) {
+                    this._sendMetadata(null); // clear on disable
+                }
+                this._saveSettings();
+                this.broadcastSettingsState();
+            },
+
+            // ─── Computed helpers (getters, safe in Alpine $data context) ────────
+            get playerProgress() {
+                if (!this.playerDuration) return 0;
+                return (this.playerCurrentTime / this.playerDuration) * 100;
+            },
+
+            get playerCurrentTrack() {
+                if (this.playerTab === 'stream' && this.playerState !== 'stopped') {
+                    return {
+                        title: this.playerStreamMeta?.title || this.playerStreamUrl,
+                        artist: this.playerStreamMeta?.artist || 'Stream',
+                        duration: 0,
+                        type: 'stream',
+                    };
+                }
+                return this.playerPlaylist[this.playerCurrentIndex] ?? null;
+            },
+
+            _streamAudio() {
+                return document.getElementById('stream-player');
+            },
+
+            get playerDisplayTitle() {
+                const t = this.playerCurrentTrack;
+                if (!t) return 'ST-CITY CHAT  //  READY';
+                if (t.type === 'stream') {
+                    if (t.title && t.artist) return `${t.artist} - ${t.title}`;
+                    return (t.title || this.playerStreamUrl || 'RADIO');
+                }
+                const parts = [];
+                if (t.artist) parts.push(t.artist);
+                parts.push(t.title || t.path?.split(/[\\/]/).pop() || 'Unknown');
+                return parts.join(' - ');
+            },
+
+            get playerTitlebarText() {
+                if (this.playerTab === 'stream' && this.playerStreamStatus) {
+                    return `Mediaplayer - ${this.playerStreamStatus}`;
+                }
+                return 'Mediaplayer';
+            },
+
+            playerFormatTime(sec) {
+                if (!sec || isNaN(sec)) return '0:00';
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            },
+
+            // ─── Drag support ─────────────────────────────────────────────────────
+            playerStartDrag(e) {
+                if (e.target.closest('button, input, .wp-playlist-item')) return;
+                this.playerDragging = true;
+                const panel = document.getElementById('winamp-player');
+                const rect  = panel.getBoundingClientRect();
+                this.playerDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+                const onMove = (ev) => {
+                    if (!this.playerDragging) return;
+                    this.playerPos = {
+                        x: ev.clientX - this.playerDragOffset.x,
+                        y: ev.clientY - this.playerDragOffset.y,
+                    };
+                    panel.style.left = this.playerPos.x + 'px';
+                    panel.style.top  = this.playerPos.y + 'px';
+                    panel.style.right = 'auto';
+                };
+                const onUp = () => {
+                    this.playerDragging = false;
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            },
+
+            // ─── Private helpers ──────────────────────────────────────────────────
+            _audio() {
+                return document.getElementById('media-player');
+            },
+
+            _applyVolume() {
+                const vol = this.playerMuted ? 0 : this.playerVolume / 100;
+                [this._audio(), this._streamAudio()].forEach(a => {
+                    if (a) a.volume = vol;
+                });
+            },
+
+            _loadAndPlay(index) {
+                const track = this.playerPlaylist[index];
+                if (!track) return;
+                const a = this._audio();
+                if (!a) return;
+
+                // Stream stoppen wenn lokaler Track gestartet wird
+                const streamAudio = this._streamAudio();
+                if (streamAudio && !streamAudio.paused) {
+                    streamAudio.pause();
+                    streamAudio.removeAttribute('src');
+                    this._stopStreamTimeCounter();
+                    this._stopStreamMetadataPolling();
+                }
+
+                a.src = track.path.startsWith('file://') ? track.path : `file://${track.path}`;
+                this._ensureAudioOutputReady().finally(() => a.play().then(() => {
+                    this.playerState = 'playing';
+                    this._startTicker();
+                    this._startEq();
+                }).catch(err => {
+                    console.warn('[Player] Play error:', err);
+                    this.playerState = 'stopped';
+                }));
+                this._sendMetadata(track);
+            },
+
+            _playStream() {
+                const normalizedInput = this._normalizeStreamUrl(this.playerStreamUrlInput);
+                const nextStreamUrl = normalizedInput || this.playerStreamUrl;
+                if (!nextStreamUrl) {
+                    this.playerStreamStatus = 'Fehler: Bitte gültige Stream-URL eingeben';
+                    return;
+                }
+                this.playerStreamUrl = nextStreamUrl;
+                this.playerStreamUrlInput = nextStreamUrl;
+                this._saveSettings();
+
+                // Lokalen Player stoppen
+                const local = this._audio();
+                if (local) {
+                    local.pause();
+                    if (local.getAttribute('src')) local.removeAttribute('src');
+                }
+
+                const a = this._streamAudio();
+                if (!a) return;
+
+                this.playerStreamStatus = 'Verbinde Stream...';
+                this.playerStreamMeta = null;
+                this._metadataSentPerIframe = {};  // ← Rich Presence neu senden erzwingen
+                this._stopTicker();               // ← alten Ticker stoppen
+                this.playerTicker = 'VERBINDE STREAM...';  // ← sofortiges Feedback
+
+                a.pause();
+                if (a.getAttribute('src')) a.removeAttribute('src');
+                a.volume = this.playerMuted ? 0 : this.playerVolume / 100;
+                a.src = nextStreamUrl;
+                this.playerCurrentTime = 0;
+                this.playerDuration = 0;
+                this.playerStreamElapsedBeforePause = 0;
+                this.playerStreamStartedAt = null;
+
+                this._ensureAudioOutputReady().finally(() => a.play().then(() => {
+                    this.playerState = 'playing';
+                    this.playerTab = 'stream';
+                    this.playerStreamStatus = 'Stream läuft';
+                    this._startTicker();
+                    this._startEq();
+                    this._startStreamMetadataPolling();
+                    this._sendMetadata({ title: nextStreamUrl, artist: 'Radio Stream', type: 'stream' });
+                }).catch(err => {
+                    this.playerState = 'stopped';
+                    this.playerStreamStatus = `Fehler: ${err?.message || err}`;
+                }));
+
+                this.$nextTick(() => this._sendMetadata(this.playerCurrentTrack));
+            },
+
+            _onTrackEnd() {
+                if (this.playerRepeat === 'one') {
+                    this._loadAndPlay(this.playerCurrentIndex);
+                    return;
+                }
+                const isLast = this.playerCurrentIndex >= this.playerPlaylist.length - 1;
+                if (isLast && this.playerRepeat !== 'all') {
+                    this.playerStop();
+                    return;
+                }
+                this.playerNext();
+            },
+
+            _startTicker() {
+                this._stopTicker();
+                const newFull = this.playerDisplayTitle + PLAYER_TICKER_SEPARATOR;
+
+                // Position nur resetten wenn es ein komplett neuer Text ist
+                if (this.playerTickerFull !== newFull) {
+                    this.playerTickerFull = newFull;
+                    this.playerTickerPos = 0;
+                }
+
+                const el = document.querySelector('.wp-ticker');
+                if (!el) return;
+
+                let lastTime = null;
+                let accumulated = 0;
+                const MS_PER_CHAR = 120;
+
+                const step = (timestamp) => {
+                    if (!lastTime) lastTime = timestamp;
+                    accumulated += timestamp - lastTime;
+                    lastTime = timestamp;
+
+                    const advance = Math.floor(accumulated / MS_PER_CHAR);
+                    if (advance > 0) {
+                        this.playerTickerPos = (this.playerTickerPos + advance) % this.playerTickerFull.length;
+                        accumulated -= advance * MS_PER_CHAR;
+                        const full = this.playerTickerFull;
+                        // Straight into the DOM, no Alpine update
+                        el.textContent = full.substring(this.playerTickerPos) + full.substring(0, this.playerTickerPos);
+                    }
+
+                    this.playerTickerTimer = requestAnimationFrame(step);
+                };
+
+                this.playerTickerTimer = requestAnimationFrame(step);
+            },
+
+            _stopTicker() {
+                if (this.playerTickerTimer) {
+                    cancelAnimationFrame(this.playerTickerTimer);
+                    this.playerTickerTimer = null;
+                }
+                const el = document.querySelector('.wp-ticker');
+                if (el) el.textContent = this.playerDisplayTitle;
+            },
+
+            _startStreamTimeCounter() {
+                if (this.playerTab !== 'stream') return;
+                this._stopStreamTimeCounter();
+                const tick = () => {
+                    if (this.playerState !== 'playing' || this.playerTab !== 'stream') return;
+                    if (this.playerStreamStartedAt) {
+                        this.playerCurrentTime = Math.max(
+                            this.playerStreamElapsedBeforePause,
+                            this.playerStreamElapsedBeforePause + ((Date.now() - this.playerStreamStartedAt) / 1000),
+                        );
+                    }
+                };
+                tick();
+                this.playerStreamTimeTimer = setInterval(tick, 1000);
+            },
+
+            _stopStreamTimeCounter() {
+                if (this.playerStreamTimeTimer) {
+                    clearInterval(this.playerStreamTimeTimer);
+                    this.playerStreamTimeTimer = null;
+                }
+            },
+
+            _startEq() {
+                this._stopEq();
+                // Je nach Modus den richtigen Analyser wählen
+                const analyser = this.playerTab === 'stream'
+                    ? this.playerStreamAnalyser
+                    : this.playerAnalyser;
+                const data = this.playerTab === 'stream'
+                    ? this.playerStreamAnalyserData
+                    : this.playerAnalyserData;
+
+                if (!analyser || !data) return;
+
+                const step = () => {
+                    if (this.playerState !== 'playing') {
+                        this.playerEqHeights = this.playerEqHeights.map(() => 4);
+                        return;
+                    }
+                    analyser.getByteFrequencyData(data);
+                    const bucketSize = Math.max(1, Math.floor(data.length / 12));
+                    const next = [];
+                    for (let i = 0; i < 12; i++) {
+                        const start = i * bucketSize;
+                        const end = Math.min(data.length, start + bucketSize);
+                        let sum = 0;
+                        for (let j = start; j < end; j++) sum += data[j];
+                        const avg = end > start ? sum / (end - start) : 0;
+                        next.push(4 + Math.min(12, Math.round((avg / 255) * 12)));
+                    }
+                    this.playerEqHeights = next;
+                    this.playerEqAnimationFrame = requestAnimationFrame(step);
+                };
+                this.playerEqAnimationFrame = requestAnimationFrame(step);
+            },
+
+            _stopEq() {
+                if (this.playerEqAnimationFrame) {
+                    cancelAnimationFrame(this.playerEqAnimationFrame);
+                    this.playerEqAnimationFrame = null;
+                }
+                this.playerEqHeights = this.playerEqHeights.map(() => 4);
+            },
+
+            _setupAudioAnalyser(audio) {
+                if (!audio || this.playerAnalyser) return;
+                const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextCtor) return;
+
+                try {
+                    this.playerAudioCtx = new AudioContextCtor();
+                    const source = this.playerAudioCtx.createMediaElementSource(audio);
+                    this.playerAnalyser = this.playerAudioCtx.createAnalyser();
+                    this.playerAnalyser.fftSize = 256;
+                    this.playerAnalyser.smoothingTimeConstant = 0.75;
+                    source.connect(this.playerAnalyser);
+                    this.playerAnalyser.connect(this.playerAudioCtx.destination);
+                    this.playerAudioCtx.addEventListener('statechange', () => {
+                        if (this.playerAudioCtx.state === 'suspended' && this.playerState === 'playing') {
+                            this.playerAudioCtx.resume().catch(() => {});
+                        }
+                    });
+                    this.playerAnalyserData = new Uint8Array(this.playerAnalyser.frequencyBinCount);
+                } catch (err) {
+                    console.warn('[Player] Audio analyser init failed:', err);
+                }
+            },
+
+            async _ensureAudioOutputReady() {
+                if (!this.playerAudioCtx) return;
+                try {
+                    if (this.playerAudioCtx.state === 'suspended') {
+                        await this.playerAudioCtx.resume();
+                    }
+                } catch (err) {
+                    console.warn('[Player] Audio context resume failed:', err);
+                }
+            },
+
+            _startStreamMetadataPolling() {
+                this._stopStreamMetadataPolling();
+                const run = async () => {
+                    const md = await window.electronAPI.playerFetchStreamMetadata?.(this.playerStreamUrl);
+                    if (!md) return;
+
+                    const newTitle = this.playerDisplayTitle;  // vor dem Update merken
+                    this.playerStreamMeta = md;
+                    const updatedTitle = this.playerDisplayTitle; // nach dem Update
+
+                    // Ticker nur neu starten wenn sich der Text geändert hat
+                    if (this.playerState === 'playing' && updatedTitle !== newTitle) {
+                        // Keep the position, blend the new text in
+                        this.playerTickerFull = updatedTitle + PLAYER_TICKER_SEPARATOR;
+                    }
+                    this._sendMetadata(this.playerCurrentTrack);
+                };
+                run();
+                this.playerStreamMetaTimer = setInterval(run, 15000);
+            },
+
+            _stopStreamMetadataPolling() {
+                if (this.playerStreamMetaTimer) {
+                    clearInterval(this.playerStreamMetaTimer);
+                    this.playerStreamMetaTimer = null;
+                }
+            },
+
+            _normalizeStreamUrl(url) {
+                const value = (url || '').trim();
+                if (!value) return '';
+                if (/^https?:\/\//i.test(value)) return value;
+                return `https://${value}`;
+            },
+
+            /**
+             * Sends IRC METADATA to broadcast now-playing status.
+             * fromSystem=false → built-in player (requires playerRichPresence)
+             * fromSystem=true  → OS media session (requires systemMediaRichPresence, skipped when player is playing)
+             */
+            _sendMetadata(track, fromSystem = false) {
+                if (fromSystem) {
+                    if (!this.systemMediaRichPresence) return;
+                    if (this.playerState === 'playing') return; // player takes priority
+                } else {
+                    if (!this.playerRichPresence) return;
+                }
+
+                const value = track?.title
+                    ? (track.artist ? `${track.artist} - ${track.title}` : track.title)
+                    : '';
+                const cmd = `METADATA * SET playing :${value}`;
+                console.debug('[Player][METADATA] Dispatching command:', cmd);
+                window.dispatchEvent(new CustomEvent('player:metadata', { detail: { cmd } }));
+            },
+
+            // ─── System Media (Spotify / OS Media Session) ────────────────────────
+            async _pollSystemMedia() {
+                if (!this.systemMediaRichPresence) return;
+                if (!this.spotifyConnected) return;
+                if (this.playerState === 'playing') return;
+                const track = await window.electronAPI.getSystemMediaTrack?.(this.activeProfile);
+                console.debug('[SystemMedia] Poll result:', track);
+                const key = track ? `${track.artist}|${track.title}` : '';
+                if (key !== (this._systemMediaCurrentKey ?? '')) {
+                    console.debug('[SystemMedia] Track changed:', key || '(none)');
+                    this._systemMediaCurrentKey = key;
+                    this._sendMetadata(track || null, true);
+                }
+            },
+
+            _startSystemMediaPolling() {
+                this._stopSystemMediaPolling();
+                if (!this.systemMediaRichPresence) {
+                    console.debug('[SystemMedia] Polling not started: feature disabled');
+                    return;
+                }
+                console.debug('[SystemMedia] Starting polling (5s interval)');
+                this._pollSystemMedia();
+                this._systemMediaTimer = setInterval(() => this._pollSystemMedia(), 5000);
+            },
+
+            _stopSystemMediaPolling() {
+                if (this._systemMediaTimer) {
+                    clearInterval(this._systemMediaTimer);
+                    this._systemMediaTimer = null;
+                }
+            },
+
+            playerToggleSystemMediaRichPresence() {
+                this.systemMediaRichPresence = !this.systemMediaRichPresence;
+                if (this.systemMediaRichPresence) {
+                    this._startSystemMediaPolling();
+                } else {
+                    this._stopSystemMediaPolling();
+                    this._systemMediaCurrentKey = '';
+                    // Clear status if player is not currently broadcasting
+                    if (this.playerState !== 'playing') {
+                        window.dispatchEvent(new CustomEvent('player:metadata', { detail: { cmd: 'METADATA * SET playing :' } }));
+                    }
+                }
+                this._saveSettings();
+                this.broadcastSettingsState();
+            },
+
+            _saveSettings() {
+                window.electronAPI.savePlayerSettings?.({
+                    volume:          this.playerVolume,
+                    muted:           this.playerMuted,
+                    shuffle:         this.playerShuffle,
+                    repeat:          this.playerRepeat,
+                    richPresence:            this.playerRichPresence,
+                    systemMediaRichPresence: this.systemMediaRichPresence,
+                    streamUrl:       this.playerStreamUrl,
+                    lastStreamUrl:   this.playerStreamUrl,
+                    playlist:        JSON.parse(JSON.stringify(this.playerPlaylist)),
+                    lastLoadedFiles: JSON.parse(JSON.stringify(this.playerLastLoadedFiles)),
+                    currentIndex:    this.playerCurrentIndex,
+                });
+            },
+
+            // End Player methods
+
+            // ─── Settings bridge ──────────────────────────────────────────────
+            // The settings window lives in the chat (one implementation for web and
+            // desktop). The shell owns app-wide values (shared by all tabs) and the
+            // per-connection desktop values (logging) and pushes every change to the tabs.
+
+            /** Title bar gear: open the settings window of the active tab. */
+            openChatSettings() {
+                const iframe = document.getElementById('chatFrame-' + this.activeProfile);
+                iframe?.contentWindow?.postMessage({ type: 'open-settings' }, '*');
+            },
+
+            /** Tabs whose chat is mounted and takes messages (chat-app-ready). */
+            readyChats: new Set(),
+
+            /** Tabs whose chat has asked for its settings: their settings window is available. */
+            chatsWithSettings: new Set(),
+
+            broadcastToChats(message) {
+                document.querySelectorAll('iframe[id^="chatFrame-"]').forEach((frame) => {
+                    frame.contentWindow?.postMessage(message, '*');
+                });
+            },
+
+            /**
+             * Connections page of the chat settings. The chat is untrusted: it only reaches the
+             * main process's connections API (public profile views, validated changes, a rate
+             * limited connection test): never the raw profile store.
+             */
+            async handleConnectionsRequest(source, data, profileHash = '') {
+                const id = typeof data.id === 'string' ? data.id.slice(0, 64) : '';
+                const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+                let result;
+                try {
+                    switch (data.action) {
+                        case 'list': {
+                            // The tab that asks and the edition's primary server, for titles and "current"
+                            const info = await window.electronAPI.getEditionInfo();
+                            result = { ...(await window.electronAPI.connectionsList()), current: profileHash, homeName: info?.networkName || '' };
+                            break;
+                        }
+                        case 'save': result = await window.electronAPI.connectionsSave(payload); break;
+                        case 'delete': result = await window.electronAPI.connectionsDelete(String(payload.hash || '')); break;
+                        case 'test': result = await window.electronAPI.connectionsTest(payload); break;
+                        case 'directory': result = { ok: true, ...(await window.electronAPI.getCuratedServers()) }; break;
+                        case 'directory-sync': result = { ok: true, ...(await window.electronAPI.syncCuratedServers()) }; break;
+                        case 'open': {
+                            // Switch to the tab of that connection
+                            const hash = String(payload.hash || '');
+                            if (this.getProfile(hash)) this.switchProfile(hash);
+                            result = { ok: true };
+                            break;
+                        }
+                        default: result = { ok: false, reason: 'unknown_action' };
+                    }
+                } catch (error) {
+                    console.error('[connections] request failed:', error);
+                    result = { ok: false, reason: 'failed' };
+                }
+                source?.postMessage({ type: 'connections-response', id, result }, '*');
+            },
+
+            appSettingsState() {
+                return {
+                    // The connections page of the chat settings is available (see handleConnectionsRequest)
+                    connectionsApi: 1,
+                    theme: this.currentTheme,
+                    notifyDmPopup: !!this.notificationSettings.notifyDmPopup,
+                    notifyMentionPopup: !!this.notificationSettings.notifyMentionPopup,
+                    notifyAnyWhenMinimized: !!this.notificationSettings.notifyAnyWhenMinimized,
+                    playerRichPresence: !!this.playerRichPresence,
+                    systemMediaRichPresence: !!this.systemMediaRichPresence,
+                };
+            },
+
+            async sendSettingsState(profileHash, extraAppState = {}) {
+                const iframe = document.getElementById('chatFrame-' + profileHash);
+                if (!iframe?.contentWindow) return;
+                const profile = this.getProfile(profileHash);
+                const logPath = await window.electronAPI.getLogPath(profileHash) || '';
+                // Spotify is linked to the account on the primary server (discovery feature "spotify")
+                const spotify = profile.serverType !== 'external'
+                    ? await window.electronAPI.spotifyStatus?.(profileHash)
+                    : null;
+                const spotifyAvailable = Boolean(spotify?.available);
+                const spotifyConnected = Boolean(spotify?.connected);
+                iframe.contentWindow.postMessage({
+                    type: 'settings-state',
+                    app: {
+                        ...this.appSettingsState(),
+                        errorReportCount: Number(await window.electronAPI.getErrorReportCount?.()) || 0,
+                        errorReportCopied: false,
+                        ...extraAppState,
+                    },
+                    connection: { loggingEnabled: !!profile.loggingEnabled, logPath, spotifyAvailable, spotifyConnected },
+                }, '*');
+            },
+
+            /**
+             * The Spotify OAuth flow runs in the system browser: poll the link status
+             * until it is connected (max. 3 minutes), then update the tab.
+             */
+            watchSpotifyLink(profileHash) {
+                clearInterval(this._spotifyWatchTimer);
+                const startedAt = Date.now();
+                this._spotifyWatchTimer = setInterval(async () => {
+                    const result = await window.electronAPI.spotifyStatus?.(profileHash);
+                    if (result?.connected || Date.now() - startedAt > 180000) {
+                        clearInterval(this._spotifyWatchTimer);
+                        if (profileHash === this.activeProfile) this.spotifyConnected = Boolean(result?.connected);
+                        this.sendSettingsState(profileHash);
+                    }
+                }, 3000);
+            },
+
+            /** App-wide values changed: every tab follows. */
+            broadcastSettingsState() {
+                this.profiles.forEach(profile => this.sendSettingsState(profile.hash));
+            },
+
+            async applySettingFromChat(profileHash, scope, key, value) {
+                if (scope === 'app') {
+                    if (key === 'theme') {
+                        // main broadcasts theme-changed → applied and re-sent to all tabs there
+                        await window.electronAPI.saveTheme(value === 'light' ? 'light' : 'dark');
+                        return;
+                    }
+                    if (['notifyDmPopup', 'notifyMentionPopup', 'notifyAnyWhenMinimized'].includes(key)) {
+                        this.notificationSettings[key] = !!value;
+                        await this.saveNotificationSettings();
+                    } else if (key === 'playerRichPresence') {
+                        if (this.playerRichPresence !== !!value) this.playerToggleRichPresence();
+                    } else if (key === 'systemMediaRichPresence') {
+                        if (this.systemMediaRichPresence !== !!value) this.playerToggleSystemMediaRichPresence();
+                    } else {
+                        return;
+                    }
+                    this.broadcastSettingsState();
+                    return;
+                }
+                if (scope === 'connection' && key === 'loggingEnabled') {
+                    this.setProfileFlag(profileHash, 'loggingEnabled', !!value);
+                    this.saveProfiles();
+                    this.sendSettingsState(profileHash);
+                }
+            },
+
+            async runSettingsAction(profileHash, action) {
+                if (action === 'change-log-path') {
+                    await window.electronAPI.changeLogPath(profileHash);
+                    if (profileHash === this.activeProfile) this.loadLogPath();
+                    this.sendSettingsState(profileHash);
+                } else if (action === 'open-log-viewer') {
+                    window.electronAPI.openLogViewer(profileHash);
+                } else if (action === 'open-manager') {
+                    this.openConnections();
+                } else if (action === 'copy-error-report') {
+                    await window.electronAPI.copyErrorReport?.();
+                    this.sendSettingsState(profileHash, { errorReportCopied: true });
+                } else if (action === 'clear-error-report') {
+                    await window.electronAPI.clearErrorReport?.();
+                    this.sendSettingsState(profileHash);
+                } else if (action === 'spotify-connect') {
+                    if (this.getProfile(profileHash).serverType === 'external') return;
+                    // Signed link from the API: no website login needed in the browser
+                    let url = await window.electronAPI.spotifyAuthUrl?.(profileHash);
+                    if (!url) {
+                        const appUrl = await window.electronAPI.getAppUrl?.();
+                        if (!appUrl) return;
+                        url = `${appUrl}/spotify/connect`;
+                    }
+                    window.electronAPI.openExternal(url);
+                    this.watchSpotifyLink(profileHash);
+                } else if (action === 'spotify-disconnect') {
+                    await window.electronAPI.spotifyDisconnect?.(profileHash);
+                    if (profileHash === this.activeProfile) {
+                        this.spotifyConnected = false;
+                        // System media status needs the Spotify link
+                        if (this.systemMediaRichPresence) this.playerToggleSystemMediaRichPresence();
+                    }
+                    this.sendSettingsState(profileHash);
+                }
+            },
+
+            async refreshSpotifyStatus() {
+                const profile = this.profiles.find(p => p.hash === this.activeProfile);
+                if (profile?.serverType === 'external') { this.spotifyConnected = false; return; }
+                const result = await window.electronAPI.spotifyStatus?.(this.activeProfile);
+                this.spotifyConnected = result?.connected ?? false;
+            },
+
+            async spotifyConnect() {
+                const url = await window.electronAPI.spotifyAuthUrl?.(this.activeProfile);
+                if (url) window.electronAPI.openExternal(url);
+            },
+
+            async spotifyUnlink() {
+                await window.electronAPI.spotifyDisconnect?.(this.activeProfile);
+                this.spotifyConnected = false;
+                if (this.systemMediaRichPresence) {
+                    this.systemMediaRichPresence = false;
+                    this._stopSystemMediaPolling();
+                    this._saveSettings();
+                }
+            },
+
+            openLogs() {
+                window.electronAPI.openLogViewer(this.activeProfile);
+            },
+
+            /**
+             * Connections live in the chat settings. When the active tab has no running chat
+             * (offline, still loading), the dialog for a new connection opens instead.
+             */
+            openConnections() {
+                const iframe = document.getElementById('chatFrame-' + this.activeProfile);
+                if (iframe?.contentWindow && this.chatsWithSettings.has(this.activeProfile)) {
+                    iframe.contentWindow.postMessage({ type: 'open-settings', section: 'connections' }, '*');
+                    return;
+                }
+                this.showServerDialog = true;
+            },
+
+            updateLogging() {
+                this.saveProfiles();
+            },
+
+            // Schreibt einen Boolean-Flag direkt per Array-Index in this.profiles,
+            // umgeht Probleme mit Alpine x-model auf Methodenaufruf-Chains.
+            setProfileFlag(hash, key, value) {
+                const idx = this.profiles.findIndex(p => p.hash === hash);
+                if (idx !== -1) this.profiles[idx][key] = !!value;
+            },
+
+            async saveNotificationSettings() {
+                await window.electronAPI.saveNotificationSettings(
+                    JSON.parse(JSON.stringify(this.notificationSettings))
+                );
+            },
+
+            async loadLogPath() {
+                this.logPath = await window.electronAPI.getLogPath(this.activeProfile) || '';
+            },
+
+            async changeLogPath() {
+                const newPath = await window.electronAPI.changeLogPath(this.activeProfile);
+                if (newPath) this.logPath = newPath;
+            },
+
+            minimize() { window.electronAPI.minimize(); },
+            maximize() { window.electronAPI.maximize(); },
+            close()    { this.showQuitConfirm = true; },
+            confirmClose() {
+                this.clearPlayingStatusThen(() => window.electronAPI.forceClose());
+            },
+
+            /** "Restart now": leaves cleanly like a normal quit, then installs the update. */
+            restartForUpdate() {
+                if (!this.pendingUpdate || this.updateInstalling) return;
+                this.updateInstalling = true;
+                this.clearPlayingStatusThen(() => window.electronAPI.installUpdate());
+            },
+
+            /** Others must not keep seeing a "now playing" status of a client that is gone. */
+            clearPlayingStatusThen(next) {
+                if ((this.playerRichPresence || this.systemMediaRichPresence) && this._metadataSentPerIframe && Object.keys(this._metadataSentPerIframe).length) {
+                    window.dispatchEvent(new CustomEvent('player:metadata', { detail: { cmd: 'METADATA * SET playing :' } }));
+                    setTimeout(next, 250);
+                } else {
+                    next();
+                }
+            },
+        };
+    }
+</script>
+
+
+</body>
+</html>

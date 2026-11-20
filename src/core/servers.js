@@ -65,7 +65,7 @@ export function hostOf(value, protocol) {
  * @param {Object} entry
  * @return {ServerEntry|null}
  */
-export function normalizeServer(entry) {
+export function normalizeServer(entry, { allowInsecureWebsocket = false } = {}) {
     if (!entry || typeof entry !== 'object') {
         return null;
     }
@@ -89,7 +89,7 @@ export function normalizeServer(entry) {
     if (entry.description && typeof entry.description === 'object') {
         server.description = { ...entry.description };
     }
-    if (hostOf(entry.websocket, 'wss:')) {
+    if (hostOf(entry.websocket, 'wss:') || (allowInsecureWebsocket && hostOf(entry.websocket, 'ws:'))) {
         server.websocket = entry.websocket;
     }
     const irc = entry.irc;
@@ -222,7 +222,10 @@ export async function loadServerList({
  */
 export function findServer(primary, servers) {
     if (primary && typeof primary === 'object') {
-        return normalizeServer(primary) ?? (DOMAIN.test(primary.domain ?? '') ? bareServer(primary.domain) : null);
+        // ws:// only when the page or app that mounts the chat asks for it for its own entry,
+        // never from a server list
+        const options = { allowInsecureWebsocket: primary.allowInsecureWebsocket === true };
+        return normalizeServer(primary, options) ?? (DOMAIN.test(primary.domain ?? '') ? bareServer(primary.domain) : null);
     }
     if (typeof primary !== 'string' || primary === '') {
         return null;

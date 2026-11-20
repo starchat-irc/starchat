@@ -1,7 +1,7 @@
 /**
  * Feature modules. A module is only active when it is loaded here and the server
  * offers the feature of the same name in its discovery file (hasFeature()). Client
- * modules without a server feature (share) are checked with hasModule().
+ * modules without a server feature (share, connections) are checked with hasModule().
  */
 import { profilesModule } from './profiles.js';
 import { friendsModule } from './friends.js';
@@ -17,6 +17,7 @@ import { pushModule } from './push.js';
 import { voiceModule } from './voice.js';
 import { callsModule } from './calls.js';
 import { communitiesModule } from './communities.js';
+import { connectionsModule } from './connections.js';
 
 /**
  * @typedef {Object} ChatModule
@@ -34,10 +35,12 @@ import { communitiesModule } from './communities.js';
 export {
     profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
     chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
+    connectionsModule,
 };
 
 /** Loaded by mountChat() unless the edition passes its own list. */
 export const defaultModules = [
     profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
     chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
+    connectionsModule,
 ];

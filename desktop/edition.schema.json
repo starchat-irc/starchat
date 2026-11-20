@@ -1,0 +1,127 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://getstarchat.net/schemas/desktop-edition.schema.json",
+    "title": "StarChat desktop edition",
+    "description": "Build time settings of a desktop app built from StarChat. See docs/desktop.md.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["appName", "appId", "executableName", "icon", "chat"],
+    "properties": {
+        "$schema": { "type": "string" },
+        "appName": {
+            "description": "Name in window titles, the installer, the start menu and in chat texts (:app).",
+            "type": "string", "minLength": 1, "maxLength": 40
+        },
+        "appId": {
+            "description": "Reverse domain id of the app (Windows AppUserModelId, macOS bundle id).",
+            "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9-]*(\\.[a-zA-Z0-9-]+)+$"
+        },
+        "executableName": {
+            "description": "Name of the installers, the install folder and the Linux program, lower case. On Windows and macOS the program is named after appName.",
+            "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+        },
+        "dataDir": {
+            "description": "Folder in the user's app data. Defaults to executableName. Keep it when an older app of yours used another folder, so profiles and logs stay.",
+            "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]{0,59}$"
+        },
+        "formerDataDirs": {
+            "description": "Data folders of older versions of your app. When dataDir does not exist yet, the first of these that exists is used, so nothing has to be copied.",
+            "type": "array",
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]{0,59}$" }
+        },
+        "publisher": {
+            "description": "Shown as copyright and vendor in the installers.",
+            "type": "string", "maxLength": 80
+        },
+        "icon": {
+            "description": "PNG with at least 512x512 pixels, path relative to the edition folder. The Windows icon is made from it.",
+            "type": "string", "pattern": "\\.png$"
+        },
+        "splashImage": {
+            "description": "Image on the start screen, relative to the edition folder. Defaults to the icon.",
+            "type": "string", "pattern": "\\.(png|svg|jpg|jpeg|webp)$"
+        },
+        "chat": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "primaryServer": {
+                    "description": "Domain of the network of your edition: a \"Home Server\" tab, the first connection and the API for login and features come from it. Leave it out for a client without a preset network.",
+                    "type": "string", "pattern": "^[a-z0-9.-]+$"
+                },
+                "networkName": {
+                    "description": "Name of the primary network in tabs and the connections list (:network in texts). Defaults to primaryServer.",
+                    "type": "string", "minLength": 1, "maxLength": 40
+                },
+                "serverList": {
+                    "description": "'default', an https URL of an own list, or false for the primary server only.",
+                    "oneOf": [
+                        { "const": "default" },
+                        { "const": false },
+                        { "type": "string", "pattern": "^https://" }
+                    ]
+                },
+                "defaultChannel": { "type": "string", "pattern": "^[#&]" },
+                "theme": { "enum": ["auto", "dark", "light"] },
+                "themeCss": {
+                    "description": "CSS file loaded after the bundled theme, relative to the edition folder.",
+                    "type": "string", "pattern": "\\.css$"
+                },
+                "modules": {
+                    "description": "Names of the feature modules to ship. All bundled ones when left out.",
+                    "type": "array", "items": { "type": "string" }, "uniqueItems": true
+                },
+                "ctcpVersion": { "type": "string", "maxLength": 100 },
+                "defaultQuitMessage": { "type": "string", "maxLength": 200 }
+            }
+        },
+        "texts": {
+            "description": "Texts that replace bundled ones, per language and key. Keys of the chat (src/i18n) and of the app (desktop/locales).",
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z]{2}$" },
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+            }
+        },
+        "updates": {
+            "description": "Where the app looks for new versions. Without it the app does not update itself.",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["provider", "owner", "repo"],
+                    "properties": {
+                        "provider": { "const": "github" },
+                        "owner": { "type": "string", "minLength": 1 },
+                        "repo": { "type": "string", "minLength": 1 }
+                    }
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["provider", "url"],
+                    "properties": {
+                        "provider": { "const": "generic" },
+                        "url": { "type": "string", "pattern": "^https://" }
+                    }
+                }
+            ]
+        },
+        "chatBundles": {
+            "description": "Signed chat updates without a new installer. Off when left out.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["manifestUrl", "publicKey"],
+            "properties": {
+                "manifestUrl": { "type": "string", "pattern": "^https://" },
+                "publicKey": {
+                    "description": "PEM file with the ECDSA P-256 public key, relative to the edition folder.",
+                    "type": "string", "pattern": "\\.pem$"
+                }
+            }
+        }
+    }
+}

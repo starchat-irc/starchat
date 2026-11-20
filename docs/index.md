@@ -8,6 +8,7 @@ StarChat is not released yet. The web client is available as a [development buil
 
 - [Features](features.md): what works on every network and what a network can add
 - [Hosting the web client](hosting.md): the ready-made page, configured with `config.json`
+- [Desktop app](desktop.md): building the Electron app, also as your own edition
 - [mountChat() options](options.md): starting the chat in a page and configuring it
 - [Embedding with login](embedding.md): logging in users of your site with a token
 - [Server list](servers.md): the public list of networks and how to use your own

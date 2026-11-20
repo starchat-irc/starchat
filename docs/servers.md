@@ -10,6 +10,8 @@ With `serverList: 'https://example.org/servers.json'` the client loads your own 
 
 With `serverList: false` only the primary server is offered.
 
+The [desktop app](desktop.md) works the same way for its directory of networks: the list is bundled at build time, the app loads newer versions itself and keeps them for 24 hours.
+
 ## Format
 
 ```json

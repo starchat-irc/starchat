@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' file: 'unsafe-inline'; img-src * data: blob: file:; media-src * data: blob: file:; font-src 'self' file: data:; connect-src 'self' file: https: http: wss: ws:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; worker-src 'self' file: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        html, body { height: 100%; margin: 0; }
+        body { display: flex; flex-direction: column; background: var(--chat-bg, #313338); }
+        #chat { flex: 1 1 auto; min-height: 0; display: flex; }
+        #chat > .chat-container { flex: 1 1 auto; }
+        .page-error { margin: 2rem auto; max-width: 32rem; padding: 0 16px; color: #f2f3f5; font-family: system-ui, sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="chat"></div>
+    <script type="module" src="./main.mjs"></script>
+</body>
+</html>

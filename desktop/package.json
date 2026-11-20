@@ -1,0 +1,114 @@
+{
+    "name": "starchat-desktop",
+    "version": "0.1.0",
+    "description": "Desktop app of StarChat (Electron)",
+    "license": "AGPL-3.0-only",
+    "private": true,
+    "type": "commonjs",
+    "main": "main.js",
+    "starchat": {
+        "nativeApi": 1
+    },
+    "scripts": {
+        "prepare:app": "node scripts/build.mjs prepare",
+        "start": "node scripts/build.mjs prepare && cross-env NODE_ENV=development electron .",
+        "dist": "node scripts/build.mjs dist",
+        "pack": "node scripts/build.mjs dist --dir",
+        "chat-bundle": "node scripts/chat-bundle.mjs",
+        "test": "node --test test/*.test.mjs"
+    },
+    "build": {
+        "files": [
+            "main.js",
+            "preload.js",
+            "edition.js",
+            "security.js",
+            "updates.js",
+            "chat-bundles.js",
+            "connections.js",
+            "error-report.js",
+            "irc-links.js",
+            "locales/**/*",
+            "html/**",
+            "vendor/**",
+            "generated/edition.json",
+            "generated/servers.json",
+            "generated/icon.png",
+            "generated/splash.*",
+            "generated/chat-bundle-key.pem",
+            "generated/chat/**",
+            "node_modules/bootstrap-icons/font/**"
+        ],
+        "directories": {
+            "output": "dist"
+        },
+        "protocols": [
+            {
+                "name": "IRC",
+                "schemes": [
+                    "irc",
+                    "ircs"
+                ]
+            }
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        },
+        "linux": {
+            "target": [
+                {
+                    "target": "AppImage",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "category": "Chat"
+        },
+        "mac": {
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "x64",
+                        "arm64"
+                    ]
+                },
+                {
+                    "target": "zip",
+                    "arch": [
+                        "x64",
+                        "arm64"
+                    ]
+                }
+            ],
+            "category": "public.app-category.social-networking"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true
+        }
+    },
+    "devDependencies": {
+        "cross-env": "^7.0.3",
+        "electron": "^40.0.0",
+        "electron-builder": "^26.8.1"
+    },
+    "dependencies": {
+        "bootstrap-icons": "^1.13.1",
+        "electron-log": "^5.3.1",
+        "electron-store": "^8.1.0",
+        "electron-updater": "^6.3.9",
+        "music-metadata": "^11.12.1",
+        "uuid": "^11.1.0"
+    }
+}

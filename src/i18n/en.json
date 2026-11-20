@@ -205,7 +205,7 @@
     "connections_current": "This tab",
     "connections_add": "New connection",
     "connections_new_home": ":app",
-    "connections_new_home_hint": "With your :app account, including communities, friends and profile.",
+    "connections_new_home_hint": "With your account on the main network of :app.",
     "connections_new_directory": "From the directory",
     "connections_new_directory_hint": "Well-known IRC networks with ready-made settings.",
     "connections_new_custom": "Own server",

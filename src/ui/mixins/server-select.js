@@ -25,9 +25,14 @@ export function domainFromInput(input) {
         .replace(/:\d+$/, '');
 }
 
-function readLastLogin() {
+/** Key of the remembered login; apps with several connections keep one per connection. */
+function loginKey(scope) {
+    return scope ? `${LOGIN_STORAGE_KEY}:${scope}` : LOGIN_STORAGE_KEY;
+}
+
+function readLastLogin(scope = '') {
     try {
-        const data = JSON.parse(localStorage.getItem(LOGIN_STORAGE_KEY) || 'null');
+        const data = JSON.parse(localStorage.getItem(loginKey(scope)) || 'null');
         return data && typeof data === 'object' ? data : {};
     } catch {
         return {};
@@ -40,9 +45,10 @@ function readLastLogin() {
  * @param {string} [options.primaryServerId]
  * @param {string} [options.defaultChannel] Preset of the start channel field.
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection]
+ * @param {string} [options.loginScope] Own remembered login per connection (mountChat storageScope).
  */
-export function serverSelectMixin({ servers = [], primaryServerId = '', defaultChannel = '', openServerConnection = null } = {}) {
-    const last = readLastLogin();
+export function serverSelectMixin({ servers = [], primaryServerId = '', defaultChannel = '', openServerConnection = null, loginScope = '' } = {}) {
+    const last = readLastLogin(loginScope);
     const lastIsListed = servers.some(server => server.id === last.serverId);
     const selectedServerId = last.serverId === OTHER_SERVER || lastIsListed ? last.serverId : primaryServerId;
 
@@ -51,10 +57,12 @@ export function serverSelectMixin({ servers = [], primaryServerId = '', defaultC
         selectedServerId,
         customServerDomain: selectedServerId === OTHER_SERVER ? String(last.domain || '') : '',
         customWebsocketUrl: selectedServerId === OTHER_SERVER ? String(last.websocket || '') : '',
-        startChannel: typeof last.channel === 'string' ? last.channel : defaultChannel,
+        // The last start channel belongs to the last server, another server starts with its own
+        startChannel: last.serverId === selectedServerId && typeof last.channel === 'string' ? last.channel : defaultChannel,
         loginNickPreset: typeof last.nick === 'string' ? last.nick : '',
         showAdvancedLogin: false,
         _openServerConnection: openServerConnection,
+        _loginScope: loginScope,
 
         serverOptionLabel(server) {
             const languages = (server.languages || []).join(', ');
@@ -125,7 +133,7 @@ export function serverSelectMixin({ servers = [], primaryServerId = '', defaultC
 
         rememberLogin() {
             try {
-                localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({
+                localStorage.setItem(loginKey(this._loginScope), JSON.stringify({
                     serverId: this.selectedServerId,
                     domain: this.selectedServerId === OTHER_SERVER ? domainFromInput(this.customServerDomain) : '',
                     websocket: this.selectedServerId === OTHER_SERVER ? this.customWebsocketUrl.trim() : '',

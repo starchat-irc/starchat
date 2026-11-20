@@ -42,6 +42,7 @@ The pages in [`docs/`](docs/) are published at [getstarchat.net/docs](https://ge
 
 - [Features](docs/features.md): what works on every network and what a network can add
 - [Hosting the web client](docs/hosting.md)
+- [Desktop app](docs/desktop.md)
 - [mountChat() options](docs/options.md)
 - [Embedding with login](docs/embedding.md)
 - [Server list](docs/servers.md)

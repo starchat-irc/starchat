@@ -170,6 +170,7 @@ const COMMAND_HANDLERS = {
 
         this.syncFriendMonitor?.();
         this.callModuleHook?.('registered');
+        this.joinPendingShellChannel?.();
         this.notifyHost('update-profile-name', { nickname: this.nickname });
         this.privateMessageKeys.forEach(nick => this.requestHistoryLatest(nick));
         if (this.supportsMetadata) {

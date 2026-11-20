@@ -29,9 +29,9 @@
             <div class="connections-add">
                 <div class="settings-item-label">{{ t('connections_add') }}</div>
                 <div class="connections-choices">
-                    <button type="button" class="connections-choice" @click="startNewConnection('home')">
+                    <button type="button" class="connections-choice" x-show="connectionsPage.homeName" @click="startNewConnection('home')">
                         <i class="bi bi-house-door"></i>
-                        <span class="connections-choice-title">{{ t('connections_new_home') }}</span>
+                        <span class="connections-choice-title" x-text="connectionsPage.homeName || t('connections_new_home')"></span>
                         <span class="connections-choice-sub">{{ t('connections_new_home_hint') }}</span>
                     </button>
                     <button type="button" class="connections-choice" @click="showConnectionDirectory()">
@@ -101,7 +101,7 @@
                 <label class="connections-field">
                     <span>{{ t('connections_field_name') }}</span>
                     <input type="text" class="form-control form-control-sm" maxlength="60" x-model="connectionsPage.draft.name"
-                           :placeholder="connectionsPage.draft.serverType === 'external' ? t('connections_type_external') : t('connections_new_home')">
+                           :placeholder="connectionsPage.draft.serverType === 'external' ? t('connections_type_external') : (connectionsPage.homeName || t('connections_new_home'))">
                 </label>
                 <label class="connections-field">
                     <span>{{ t('connections_field_nickname') }}</span>

@@ -26,6 +26,8 @@ The returned promise resolves with the connection of the primary server and the 
 | `serverList` | `'default'` | `'default'` loads the public list, a URL loads your own list in the same format, `false` offers only the primary server. |
 | `defaultChannel` | | Channel joined and shown after login. Only used on the primary server. |
 | `nickname` | | Connect right away with this nick instead of showing the login dialog. |
+| `password` | | SASL PLAIN password used with `nickname`. |
+| `saslAccount` | the nick | Account name for SASL PLAIN when it differs from the nick. |
 | `bearer` | | Function that returns a login token, see [Embedding with login](embedding.md). |
 | `modules` | all bundled | Feature modules, for example `[profilesModule]` (exported by the package). A module only runs on servers that list its feature in the [discovery file](discovery.md#features). Pass `[]` for a plain IRC client. |
 | `locale` | browser languages | Language code or list of codes, for example `'de-DE'`. The first one with bundled texts wins, English otherwise. |
@@ -36,6 +38,11 @@ The returned promise resolves with the connection of the primary server and the 
 | `defaultQuitMessage` | | Quit message until the user sets one. |
 | `Alpine` | bundled | An Alpine.js instance your page already runs, for example from Livewire. Without it StarChat starts its own. Never run two. |
 | `onHostMessage` | | `(type, data) => {}`. Messages from the chat for the page around it, for example unread counts. |
+| `shellMessages` | | `(listener) => {}`. Called once with a `listener(type, data)` for messages from the app around the chat: `settings-state`, `set-theme`, `open-settings`, `tab-activated`, `set-playing`, `app-resumed`. Other types go to the modules (hook `shellMessage`). Used by the [desktop app](desktop.md). |
+| `shell` | | `'desktop'` or `'mobile'` when the chat runs inside an app that keeps some settings itself. |
+| `allowInsecureWebsocket` | `false` | Only inside a `primaryServer` entry: accept a `ws://` address (no TLS) for this server. Server lists cannot switch it on. The desktop app sets it for servers the user set up with `ws://`. |
+| `storageScope` | server id | Suffix of the keys under which settings and drafts of this connection are stored in the browser. The desktop app passes the id of the connection profile, so two connections to one server keep their own settings. |
+| `nativeSocket` | | IRC over TCP for apps that can open sockets: `nativeSocketConnector({ send, listen })`, see `src/core/native-socket.js`. Used for servers that have `irc` but no `websocket` in their entry. |
 | `pushWorker` | | URL of the push service worker on your origin, see [Push notifications](#push-notifications). Without it there is no push in the browser. |
 
 ## Theme

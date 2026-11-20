@@ -136,3 +136,11 @@ test('resolveServers puts the primary server first', async () => {
     const only = await resolveServers({ primaryServer: 'irc.example.org', serverList: false });
     assert.deepEqual(only.servers.map((s) => s.domain), ['irc.example.org']);
 });
+
+test('ws:// only for an entry the embedding app passes itself, never from a list', async () => {
+    const own = { id: 'lan', name: 'LAN', domain: 'lan.example', languages: [], websocket: 'ws://irc.lan.example/' };
+    assert.equal(findServer({ ...own, allowInsecureWebsocket: true }, []).websocket, 'ws://irc.lan.example/');
+    assert.equal(findServer(own, []).websocket, undefined, 'without the flag the insecure address is dropped');
+    const list = normalizeServerList({ schemaVersion: 1, servers: [{ ...own, allowInsecureWebsocket: true }] });
+    assert.deepEqual(list, [], 'a list cannot switch it on');
+});

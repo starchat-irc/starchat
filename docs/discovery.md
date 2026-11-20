@@ -77,6 +77,7 @@ Every connection has its own features and its own token. A token is only sent to
 | `events` | Community events in the chat. |
 | `gifs` | GIF search in the message input. |
 | `communities` | Groups of channels the user belongs to, with their own view in the sidebar. |
+| `spotify` | The track playing on the user's linked Spotify account as now-playing status (desktop app). |
 
 ## API
 
@@ -391,6 +392,17 @@ Needs a token and the features `voice` and `friends`. Voice calls between two fr
 | `POST chat/voice/call-ring` | Body `{ "peer": "bob", "call_id": "…", "nick": "alice", "action": "invite" \| "cancel" }`. Rings the app builds of the other side (for example through FCM) or takes the notification back. Answer `{ "pushed": 1 }`, the number of installs reached; `0` without a push service. |
 
 An app build that receives the ring opens the chat with `openPushTarget('call:id=…&nick=…&account=…&answer=accept|decline')` (`answer` optional, without it the chat rings). In the background a browser or desktop chat shows a system notification and sends `call-incoming` with `{ nick }` to `onHostMessage`, so a desktop shell can flash its window.
+
+### `spotify`
+
+Used by the [desktop app](desktop.md). The network keeps the Spotify link of the account (OAuth with its own Spotify app) and asks Spotify for the user. All requests need the token.
+
+| Request | Answer |
+|---------|--------|
+| `GET spotify/auth-url` | `{ "url": "https://…" }`, a one-time link the app opens in the browser to link the account. |
+| `GET spotify/status` | `{ "connected": true }` |
+| `GET spotify/current-track` | `{ "title": "…", "artist": "…" }`, or `null` when nothing plays. |
+| `DELETE spotify/disconnect` | `{ "ok": true }` |
 
 ### `communities`
 

@@ -21,6 +21,11 @@
                        x-model="loginPassword" :disabled="isLoading">
                 <div class="form-text text-secondary">{{ t('login_account_password_hint') }}</div>
             </div>
+            <!-- Desktop app: keep the login (the app stores the token encrypted) -->
+            <div class="mb-3 form-check" x-show="shell === 'desktop' && loginPassword" x-cloak>
+                <input type="checkbox" class="form-check-input" id="starchat-remember" x-model="rememberMe" :disabled="isLoading">
+                <label class="form-check-label" for="starchat-remember">{{ t('login_remember') }}</label>
+            </div>
 
             <!-- Advanced settings: server and start channel -->
             <div class="mb-3">

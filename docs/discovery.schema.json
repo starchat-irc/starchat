@@ -20,7 +20,7 @@
             "type": "array",
             "uniqueItems": true,
             "items": {
-                "enum": ["profiles", "friends", "uploads", "push", "voice", "calls", "reports", "explore", "chatState", "alwaysOn", "events", "gifs", "communities"]
+                "enum": ["profiles", "friends", "uploads", "push", "voice", "calls", "reports", "explore", "chatState", "alwaysOn", "events", "gifs", "communities", "spotify"]
             }
         },
         "branding": {

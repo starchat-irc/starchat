@@ -1,6 +1,7 @@
 export * from './core/irc-parser.js';
 export * from './core/irc-protocol.js';
 export * from './core/websocket.js';
+export * from './core/native-socket.js';
 export * from './core/formatting.js';
 export * from './core/store.js';
 export * from './core/messages.js';
@@ -21,6 +22,7 @@ export { applyColorScheme } from './ui/color-scheme.js';
 export {
     defaultModules, profilesModule, friendsModule, uploadsModule, gifsModule, reportsModule, exploreModule, shareModule,
     chatStateModule, alwaysOnModule, eventsModule, pushModule, voiceModule, callsModule, communitiesModule,
+    connectionsModule,
 } from './modules/index.js';
 export { copyText } from './ui/clipboard.js';
 export { settingsRegistry } from './ui/settings/registry.js';

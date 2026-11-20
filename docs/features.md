@@ -48,6 +48,7 @@ Features below need `apiBaseUrl` and the feature name in `features`. Most also n
 | `push` | Push notifications in app builds, relayed by the network to Firebase Cloud Messaging. Browsers do not need it. | yes |
 | `voice` | Voice chat per channel (experimental, switched on in the settings). Push to talk or voice activation, mic test, volume per participant, optional noise filter. Needs a [LiveKit](https://livekit.io) server. | yes |
 | `calls` | Voice calls between friends from the direct message window (experimental). Needs `voice` and `friends`. | yes |
+| `spotify` | Desktop app: the track playing on the linked Spotify account becomes the now-playing status. | yes |
 
 ## Client only
 
