@@ -169,6 +169,8 @@ export function runGradle(task) {
         stdio: 'inherit',
         shell: isWindows,
     });
+    // A gradlew without execute bit (checked in on Windows) fails before printing anything
+    if (result.error) throw new Error(`Gradle ${task} could not start: ${result.error.message}`);
     if (result.status !== 0) throw new Error(`Gradle ${task} failed`);
 }
 
