@@ -2,6 +2,18 @@
      :class="{ 'is-mobile-open': mobileSidebarOpen }"
      x-show="sidebarMode != 'uploads' || isMobileLayout" x-cloak>
     <div class="icon-rail d-flex flex-column align-items-center py-3 px-1 gap-1">
+        <!-- Mobile app: connections of the app, it switches between them -->
+        <template x-if="shell === 'mobile'">
+            <div class="d-flex flex-column align-items-center gap-1 w-100">
+                <button class="icon-rail-button position-relative"
+                        title="{{ t('app_connections') }}"
+                        @click="showAppConnections()">
+                    <span class="icon-rail-icon"><i class="bi bi-hdd-network"></i></span>
+                </button>
+                <hr class="sidebar-rail-divider w-75 my-1">
+            </div>
+        </template>
+
         <!-- Home: every joined channel -->
         <button class="icon-rail-button position-relative"
                 :class="{

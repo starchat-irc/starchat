@@ -1,0 +1,13 @@
+{
+    "shell_connections": "Connections",
+    "shell_manage_connections": "Manage connections",
+    "shell_welcome_title": "Welcome to :app",
+    "shell_welcome_intro": "Pick a nickname and an IRC network to start. You can add more networks later.",
+    "shell_welcome_networks": "Networks",
+    "shell_welcome_custom": "Other server",
+    "shell_welcome_connect": "Connect",
+    "shell_welcome_loading": "Loading the server list...",
+    "shell_welcome_no_servers": "The server list could not be loaded. Check your internet connection or set up a server by hand.",
+    "shell_welcome_retry": "Try again",
+    "shell_welcome_nickname_first": "Choose a nickname first."
+}

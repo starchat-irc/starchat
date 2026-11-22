@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="push_channel_direct">Direct messages</string>
+    <string name="push_channel_direct_description">Private messages to you</string>
+    <string name="push_channel_mentions">Mentions</string>
+    <string name="push_channel_mentions_description">Your name in a channel, invitations</string>
+    <string name="push_channel_calls">Calls</string>
+    <string name="push_channel_calls_description">Voice calls from friends</string>
+    <string name="call_incoming_title">%1$s is calling</string>
+    <string name="call_incoming_text">Voice call</string>
+    <string name="call_accept">Answer</string>
+    <string name="call_decline">Decline</string>
+    <string name="share_label">Send in chat</string>
+</resources>

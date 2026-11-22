@@ -1,0 +1,12 @@
+node_modules/
+generated/
+www/
+dist/
+build.local.json
+capacitor.config.json
+
+# Signing keys and Firebase config, also when kept in an edition folder
+*.jks
+*.keystore
+keystore.properties
+google-services.json

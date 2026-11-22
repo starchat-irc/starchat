@@ -1,0 +1,89 @@
+apply plugin: 'com.android.application'
+
+// Written by `npm run prepare` (scripts/build.mjs) from the edition: ids, version, resources
+def generatedDir = file('../../generated')
+def editionFile = new File(generatedDir, 'android.json')
+if (!editionFile.exists()) {
+    throw new GradleException('mobile/generated/android.json is missing. Run "npm run prepare" in mobile/ first.')
+}
+def edition = new groovy.json.JsonSlurper().parse(editionFile)
+
+// Upload key for Google Play (android/keystore.properties, never in git)
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def hasUploadKey = keystoreProperties['storeFile'] != null
+
+android {
+    namespace = "net.getstarchat.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId edition.applicationId
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode edition.versionCode
+        versionName edition.versionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "int", "NATIVE_API", "${edition.nativeApi}"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    sourceSets {
+        // App name, launcher icon and colours of the edition
+        main.res.srcDirs += new File(generatedDir, 'android-res')
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    signingConfigs {
+        release {
+            if (hasUploadKey) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig hasUploadKey ? signingConfigs.release : null
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    // Push: the network relays IRC Web Push through FCM (needs google-services.json of the edition)
+    implementation "com.google.firebase:firebase-messaging:24.1.0"
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Copied from the edition by the build; without it the app runs without push
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+} else {
+    logger.info('No google-services.json in the edition: push is off')
+}

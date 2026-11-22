@@ -2,7 +2,7 @@
     "name": "starchat",
     "version": "0.0.0",
     "description": "IRCv3 web and desktop client",
-    "license": "AGPL-3.0-only",
+    "license": "MIT",
     "private": true,
     "type": "module",
     "repository": {
@@ -11,6 +11,7 @@
     },
     "scripts": {
         "validate:servers": "node scripts/validate-servers.mjs",
+        "validate:openapi": "node scripts/validate-openapi.mjs",
         "build": "vite build",
         "test": "vitest run",
         "test:watch": "vitest",
@@ -22,7 +23,8 @@
         "ajv": "^8.20.0",
         "marked": "^18.2.1",
         "vite": "^8.3.8",
-        "vitest": "^5.1.1"
+        "vitest": "^5.1.1",
+        "yaml": "^2.9.1"
     },
     "main": "./dist/starchat.js",
     "module": "./dist/starchat.js",

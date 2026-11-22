@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https:">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>StarChat</title>
+</head>
+<body>
+    <div id="splash"></div>
+
+    <div id="chatHost"></div>
+
+    <!-- First start without a connection: nickname and network -->
+    <main id="welcome" hidden>
+        <h1 id="welcomeTitle"></h1>
+        <p id="welcomeIntro" class="muted"></p>
+        <label class="field">
+            <span id="nicknameLabel"></span>
+            <input id="nickname" autocomplete="nickname" autocapitalize="off" spellcheck="false" maxlength="30">
+        </label>
+        <p id="welcomeError" class="error" hidden></p>
+
+        <h2 id="networksTitle"></h2>
+        <div id="networks" class="list"></div>
+        <p id="networksState" class="muted" hidden></p>
+        <button id="networksRetry" class="link" hidden></button>
+
+        <details id="custom">
+            <summary id="customTitle"></summary>
+            <label class="field"><span id="hostLabel"></span><input id="host" autocapitalize="off" spellcheck="false" inputmode="url"></label>
+            <div class="row">
+                <label class="field"><span id="portLabel"></span><input id="port" inputmode="numeric" value="6697"></label>
+                <label class="check"><input id="tls" type="checkbox" checked> <span id="tlsLabel"></span></label>
+            </div>
+            <button id="customConnect" class="primary"></button>
+        </details>
+    </main>
+
+    <!-- Connections of the app, opened from the chat's channel drawer -->
+    <div id="drawerBackdrop" hidden></div>
+    <aside id="drawer" aria-hidden="true">
+        <header>
+            <img id="drawerIcon" alt="">
+            <span id="drawerTitle"></span>
+        </header>
+        <nav id="connectionList" class="list"></nav>
+        <button id="manageConnections" class="link"></button>
+    </aside>
+
+    <script type="module" src="./main.mjs"></script>
+</body>
+</html>

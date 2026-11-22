@@ -51,6 +51,12 @@ export function mobileMixin() {
             this.mobileSidebarOpen  = !this.mobileSidebarOpen;
         },
 
+        /** Mobile app: the app shows its list of connections over the chat. */
+        showAppConnections() {
+            this.closeMobileDrawers();
+            this.notifyHost('show-connections');
+        },
+
         closeMobileDrawers() {
             this.mobileSidebarOpen  = false;
             this.mobileUserListOpen = false;

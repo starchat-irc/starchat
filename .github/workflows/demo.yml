@@ -17,6 +17,8 @@ on:
       - 'demo/**'
       - 'docs/**'
       - 'scripts/build-docs.mjs'
+      - 'scripts/render-openapi.mjs'
+      - 'scripts/validate-openapi.mjs'
       - 'servers/**'
       - 'package.json'
       - 'package-lock.json'

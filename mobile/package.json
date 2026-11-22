@@ -1,0 +1,27 @@
+{
+    "name": "starchat-mobile",
+    "version": "0.1.0",
+    "description": "Mobile app of StarChat (Capacitor)",
+    "license": "MIT",
+    "private": true,
+    "type": "module",
+    "starchat": {
+        "nativeApi": 1
+    },
+    "scripts": {
+        "prepare:app": "node scripts/build.mjs prepare",
+        "apk": "node scripts/build.mjs apk",
+        "aab": "node scripts/build.mjs aab",
+        "open": "cap open android",
+        "test": "node --test test/*.test.mjs",
+        "test:android": "node scripts/gradle.mjs testDebugUnitTest"
+    },
+    "dependencies": {
+        "@capacitor/android": "^8.6.2",
+        "@capacitor/app": "^8.1.2",
+        "@capacitor/core": "^8.6.2"
+    },
+    "devDependencies": {
+        "@capacitor/cli": "^8.6.2"
+    }
+}

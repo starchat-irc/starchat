@@ -38,7 +38,24 @@ export function shellMixin() {
                     this.openChannelFromShell(data.channel);
                     return;
                 case 'app-resumed':
-                    this.socket?.resume?.();
+                    if (this.handleAppResumed) this.handleAppResumed();
+                    else this.socket?.resume?.();
+                    return;
+                // Mobile app only
+                case 'app-paused':
+                    this.handleAppPaused?.();
+                    return;
+                case 'back-button':
+                    this.notifyHost('back-button-result', { handled: Boolean(this.handleBackButton?.()) });
+                    return;
+                case 'push-subscription':
+                    this.receivePushSubscription?.(data);
+                    return;
+                case 'open-target':
+                    if (typeof data.target === 'string') this.openPushTarget?.(data.target);
+                    return;
+                case 'share-received':
+                    this.receiveShare?.(data.share);
                     return;
                 default:
                     this.callModuleHook('shellMessage', type, data);

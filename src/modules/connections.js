@@ -1,7 +1,7 @@
 /**
- * Connections module (client only, desktop app)
+ * Connections module (client only, desktop and mobile app)
  * The connections page of the settings window: list, create, edit, test and delete the
- * connection profiles of the desktop app.
+ * connection profiles of the app.
  *
  * The profiles belong to the app around the chat. The chat only talks to its connections
  * API: it gets public views (no tokens, no passwords, only whether one is set) and sends
@@ -109,7 +109,7 @@ export function connectionsMixin() {
 
         /** Ask the app; resolves with its result, or { ok: false, reason: 'timeout' }. */
         connectionsRequest(action, payload = {}) {
-            if (this.shell !== 'desktop') return Promise.resolve({ ok: false, reason: 'unavailable' });
+            if (this.shell !== 'desktop' && this.shell !== 'mobile') return Promise.resolve({ ok: false, reason: 'unavailable' });
             requestCounter += 1;
             const id = `c${Date.now().toString(36)}${requestCounter.toString(36)}`;
             return new Promise((resolve) => {
@@ -325,7 +325,7 @@ export function registerConnectionsSettings(registry) {
         label: 'settings_section_connections',
         icon: 'bi-plug',
         order: 70,
-        when: env => env.shell === 'desktop',
+        when: env => env.shell === 'desktop' || env.shell === 'mobile',
     });
     registry.registerSetting({
         id: 'connections.page',

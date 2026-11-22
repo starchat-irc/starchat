@@ -1,0 +1,14 @@
+{
+    "$schema": "../edition.schema.json",
+    "appName": "StarChat",
+    "appId": "net.getstarchat.app",
+    "icon": "icon.png",
+    "adaptiveIcon": {
+        "foreground": "icon-foreground.xml",
+        "background": "#1b1e23"
+    },
+    "splashBackground": "#1b1e23",
+    "chat": {
+        "serverList": "default"
+    }
+}

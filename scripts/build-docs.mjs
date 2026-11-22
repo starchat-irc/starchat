@@ -4,12 +4,15 @@
  * output only looks right inside the site.
  *
  * Links between the Markdown files become links between the pages. Links to other
- * files of the repository point to GitHub.
+ * files of the repository point to GitHub. docs/openapi.yaml becomes the API reference
+ * (api.html) and is copied along.
  */
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Marked } from 'marked';
+import { parse as parseYaml } from 'yaml';
+import { renderOpenApi } from './render-openapi.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_URL = 'https://github.com/starchat-irc/starchat';
@@ -25,9 +28,15 @@ export const PAGES = [
     { file: 'embedding.md', title: 'Embedding with login' },
     { file: 'servers.md', title: 'Server list' },
     { file: 'discovery.md', title: 'Discovery file' },
+    { file: 'openapi.yaml', title: 'API reference' },
     { file: 'commands.md', title: 'Commands and shortcuts' },
     { file: 'ircv3.md', title: 'IRCv3 support' },
 ];
+
+/** File name of the page built from a file in docs/. */
+export function pageName(file) {
+    return file === 'openapi.yaml' ? 'api.html' : file.replace(/\.md$/, '.html');
+}
 
 export function escapeHtml(text) {
     return String(text)
@@ -60,8 +69,8 @@ export function rewriteHref(href) {
     const hash = anchor ? `#${anchor}` : '';
     const resolved = path.posix.normalize(path.posix.join('docs', target));
 
-    if (resolved.startsWith('docs/') && resolved.endsWith('.md')) {
-        return resolved.slice('docs/'.length).replace(/\.md$/, '.html') + hash;
+    if (resolved === 'docs/openapi.yaml' || (resolved.startsWith('docs/') && resolved.endsWith('.md'))) {
+        return pageName(resolved.slice('docs/'.length)) + hash;
     }
     if (resolved.startsWith('docs/') && resolved.endsWith('.json')) {
         return resolved.slice('docs/'.length);
@@ -107,7 +116,7 @@ export function describe(html, maxLength = 160) {
 
 /** Public address of a docs page. */
 export function pageUrl(file) {
-    return file === 'index.md' ? `${SITE_URL}/docs/` : `${SITE_URL}/docs/${file.replace(/\.md$/, '.html')}`;
+    return file === 'index.md' ? `${SITE_URL}/docs/` : `${SITE_URL}/docs/${pageName(file)}`;
 }
 
 /**
@@ -124,10 +133,20 @@ export function renderMarkdown(markdown) {
     return { title, html };
 }
 
+/**
+ * @param {string} yamlText Content of docs/openapi.yaml.
+ * @return {{ title: string, html: string }}
+ */
+export function renderApiReference(yamlText) {
+    const marked = createMarkdown();
+    const markdown = (text, block = false) => (block ? renderMarkdown(text).html : marked.parseInline(text));
+    return renderOpenApi(parseYaml(yamlText), markdown);
+}
+
 /** Full page in the layout of getstarchat.net. Paths are relative to /docs/. */
 export function renderPage({ title, html, file }) {
     const sidebar = PAGES.map((page) => {
-        const href = page.file.replace(/\.md$/, '.html');
+        const href = pageName(page.file);
         const current = page.file === file ? ' active" aria-current="page' : '';
         return `                <li class="nav-item"><a class="nav-link${current}" href="${href}">${escapeHtml(page.title)}</a></li>`;
     }).join('\n');
@@ -192,7 +211,7 @@ ${html}
 
 <footer class="border-top py-4 text-body-secondary small">
     <div class="container d-flex flex-wrap gap-3">
-        <span>StarChat is licensed under the <a href="${REPO_URL}/blob/main/LICENSE">AGPL-3.0</a>.</span>
+        <span>StarChat is licensed under the <a href="${REPO_URL}/blob/main/LICENSE">MIT License</a>.</span>
         <a href="${REPO_URL}">GitHub</a>
         <a href="https://st-city.net/impressum">Imprint</a>
     </div>
@@ -220,9 +239,9 @@ export async function buildDocs({ srcDir = path.join(ROOT, 'docs'), outDir = pat
     const written = [];
 
     for (const page of PAGES) {
-        const markdown = await readFile(path.join(srcDir, page.file), 'utf8');
-        const { title, html } = renderMarkdown(markdown);
-        const name = page.file.replace(/\.md$/, '.html');
+        const source = await readFile(path.join(srcDir, page.file), 'utf8');
+        const { title, html } = page.file === 'openapi.yaml' ? renderApiReference(source) : renderMarkdown(source);
+        const name = pageName(page.file);
         await writeFile(path.join(outDir, name), renderPage({ title: title || page.title, html, file: page.file }));
         written.push(name);
     }
@@ -234,7 +253,7 @@ ${sitemap}
 `);
     written.push('sitemap.xml');
 
-    for (const name of entries.filter((entry) => entry.endsWith('.json'))) {
+    for (const name of entries.filter((entry) => entry.endsWith('.json') || entry.endsWith('.yaml'))) {
         await cp(path.join(srcDir, name), path.join(outDir, name));
         written.push(name);
     }

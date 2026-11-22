@@ -38,4 +38,4 @@ A network without any setup works as a plain IRC server, as long as it offers IR
 
 ## License
 
-StarChat is licensed under the [AGPL-3.0](../LICENSE). If you run a modified version for others, you have to offer them its source code.
+StarChat is licensed under the [MIT License](../LICENSE).

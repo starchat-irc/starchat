@@ -2,13 +2,14 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildDocs, describe as describeText, PAGES, pageUrl, renderMarkdown, rewriteHref, slugify } from '../../scripts/build-docs.mjs';
+import { buildDocs, describe as describeText, pageName, PAGES, pageUrl, renderMarkdown, rewriteHref, slugify } from '../../scripts/build-docs.mjs';
 
 describe('rewriteHref', () => {
     it('turns links between docs into links between pages', () => {
         expect(rewriteHref('options.md')).toBe('options.html');
         expect(rewriteHref('options.md#own-commands')).toBe('options.html#own-commands');
         expect(rewriteHref('discovery.schema.json')).toBe('discovery.schema.json');
+        expect(rewriteHref('openapi.yaml#profiles')).toBe('api.html#profiles');
     });
 
     it('points other repository files to GitHub', () => {
@@ -81,9 +82,10 @@ describe('buildDocs', () => {
 
     it('writes one page per entry of PAGES plus the JSON files', async () => {
         for (const page of PAGES) {
-            expect(written).toContain(page.file.replace('.md', '.html'));
+            expect(written).toContain(pageName(page.file));
         }
         expect(written).toContain('discovery.schema.json');
+        expect(written).toContain('openapi.yaml');
         expect(written).toContain('sitemap.xml');
         expect((await readdir(outDir)).sort()).toEqual([...written].sort());
     });
@@ -92,7 +94,7 @@ describe('buildDocs', () => {
         const sitemap = await readFile(path.join(outDir, 'sitemap.xml'), 'utf8');
         for (const page of PAGES) {
             expect(sitemap).toContain(`<loc>${pageUrl(page.file)}</loc>`);
-            const html = await readFile(path.join(outDir, page.file.replace('.md', '.html')), 'utf8');
+            const html = await readFile(path.join(outDir, pageName(page.file)), 'utf8');
             expect(html).toMatch(/<meta name="description" content="[^"]{20,}">/);
         }
     });

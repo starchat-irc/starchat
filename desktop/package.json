@@ -2,7 +2,7 @@
     "name": "starchat-desktop",
     "version": "0.1.0",
     "description": "Desktop app of StarChat (Electron)",
-    "license": "AGPL-3.0-only",
+    "license": "MIT",
     "private": true,
     "type": "commonjs",
     "main": "main.js",

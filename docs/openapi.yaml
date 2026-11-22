@@ -1,0 +1,1485 @@
+openapi: 3.1.0
+info:
+  title: StarChat network API
+  version: 1.0.0
+  license:
+    name: MIT
+    identifier: MIT
+  description: |
+    Endpoints a network offers so StarChat can use the features it lists in its
+    [discovery file](discovery.md). Every feature is optional: a network leaves out the
+    endpoints of features it does not list, and the client hides them.
+
+    All paths are relative to `apiBaseUrl` from the discovery file. Requests and answers
+    are JSON unless noted. The client sends `Accept: application/json` and no cookies, so
+    the API has to answer cross-origin requests (`Access-Control-Allow-Origin: *` or the
+    calling origin, `Authorization` as allowed header).
+
+    Times are ISO 8601. Channel names start with `#` and are compared in lower case.
+
+    Errors with `422` carry Laravel style messages
+    (`{ "message": "…", "errors": { "field": ["…"] } }`), the client shows the first one.
+    A request with a missing or expired token is answered with `401`.
+
+servers:
+  - url: '{apiBaseUrl}'
+    description: The `apiBaseUrl` of the discovery file.
+    variables:
+      apiBaseUrl:
+        default: https://example.org/api
+
+security:
+  - bearer: []
+
+tags:
+  - name: login
+    description: |
+      Only with `bearer` in `auth`. The token is a string the IRC server accepts with SASL
+      `IRCV3BEARER` and the API accepts as `Authorization: Bearer <token>`. With
+      [Ergo](https://ergo.chat) this is a JWT signed with a key from `accounts.jwt-auth`,
+      the account name in `sub`.
+
+      A page that embeds the chat can also hand over a token itself
+      (`mountChat({ bearer })`), then this endpoint is not called. Guests have no token,
+      so features that need one stay hidden for them.
+  - name: profiles
+    description: |
+      Profile cards with avatar, status and member date. Avatar and status are also
+      published as IRCv3 metadata (`avatar`, `status`), so other clients see them without
+      the API.
+  - name: friends
+    description: |
+      Friend list and requests. Requests go to account names. Presence comes from IRC
+      (`MONITOR`, `JOIN`, `QUIT`, `AWAY`), not from the API. The client shows its own
+      texts after an action.
+  - name: uploads
+    description: |
+      Images and files in messages. Uploads happen when the message is sent, the message
+      then carries the link. Links ending in an image or video extension are shown inline,
+      for every user and client.
+  - name: gifs
+    description: |
+      GIF search in the message input. The token is sent if there is one. A network that
+      wants to limit guests answers them with `401`.
+  - name: reports
+    description: |
+      Reporting users and messages to the moderators of the network. Guests may report
+      too, the token is sent if there is one. `links.reportPolicy` in the discovery file
+      is linked in the report dialog.
+  - name: explore
+    description: |
+      A directory tab in the channel list: groups of channels the network lists, joined
+      together. The channel list of the IRC server (`LIST`) is shown on every network
+      without this feature.
+  - name: chatState
+    description: |
+      Open conversations, read positions and synced settings of an account, so another
+      device (or the next session) continues where the last one stopped.
+  - name: alwaysOn
+    description: |
+      Keeps the nick in its channels while no client is connected, for example Ergo's
+      `always-on`. After the first registration the client asks once per account whether
+      to turn it on.
+  - name: events
+    description: |
+      Upcoming events for the calendar button in the channel sidebar. The button only
+      shows when the list has an event that has not started yet, and is marked when one
+      starts within 24 hours. The client loads the list after every registration and
+      every 15 minutes.
+  - name: communities
+    description: |
+      Groups of channels the user belongs to, each with an icon in the rail. Creating
+      communities, members and roles are left to the network's website. With
+      `links.communityInvite` the client offers "Copy invite link".
+  - name: push
+    description: |
+      Only used by app builds (`shell: 'mobile'`): the app cannot receive Web Push itself,
+      so the network relays it to Firebase Cloud Messaging. Browsers register directly
+      with the IRC server (`draft/webpush`) and do not call these endpoints.
+
+      The client hands the endpoint to the IRC server with
+      `WEBPUSH REGISTER <endpoint> p256dh=…;auth=…`, using the keys the app created. The
+      IRC server sends encrypted pushes to the endpoint, the network forwards them
+      unchanged to FCM and the app decrypts them. How app and chat talk to each other is
+      described in [Features](features.md#push).
+  - name: voice
+    description: |
+      Voice chat per channel through a [LiveKit](https://livekit.io) server of the
+      network. Who is in a voice chat is published as IRC metadata `voice` (value: the
+      channel), so the nick list shows a speaker icon. Leaving the channel on IRC also
+      leaves its voice chat.
+  - name: calls
+    description: |
+      Voice calls between two friends from the DM window. Needs the features `voice` and
+      `friends`. Ringing runs over IRC (see [IRCv3 support](ircv3.md#client-tags)), the
+      API only hands out the room and rings app builds.
+  - name: spotify
+    description: |
+      Used by the [desktop app](desktop.md). The network keeps the Spotify link of the
+      account (OAuth with its own Spotify app) and asks Spotify for the user.
+
+paths:
+  /login:
+    post:
+      tags: [login]
+      operationId: login
+      summary: Token for an account
+      description: |
+        The client then logs in on IRC with `IRCV3BEARER` instead of `PLAIN`. Without
+        `bearer` in `auth` a password goes to the IRC server with SASL `PLAIN` and this
+        endpoint is not used.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+            example: { username: alice, password: secret }
+      responses:
+        '200':
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token:
+                    type: string
+                  nickname:
+                    type: string
+                    description: Nick to use on IRC. Without it the client keeps the one typed in.
+              example: { token: eyJhbGciOiJIUzI1NiJ9…, nickname: alice }
+        '401':
+          description: Wrong name or password.
+
+  /chat/profiles/{account}:
+    get:
+      tags: [profiles]
+      operationId: getProfile
+      summary: Profile of an IRC account
+      description: The account comes from WHOIS (`330`).
+      parameters:
+        - name: account
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The account has no profile.
+
+  /chat/profile:
+    get:
+      tags: [profiles]
+      operationId: getOwnProfile
+      summary: Own profile
+      description: Also loaded after every connect to publish avatar and status as metadata.
+      responses:
+        '200':
+          description: The own profile, with the fields only the owner sees.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /chat/profile/status:
+    put:
+      tags: [profiles]
+      operationId: setStatus
+      summary: Set or clear the status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: [string, 'null']
+                  maxLength: 128
+                  description: One line. `null` clears it.
+            example: { status: On the bridge }
+      responses:
+        '200':
+          description: The stored status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: [string, 'null']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /chat/profile/avatar:
+    post:
+      tags: [profiles]
+      operationId: uploadAvatar
+      summary: Upload an avatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  contentMediaType: application/octet-stream
+                  description: JPEG, PNG or GIF, max. 2 MB.
+      responses:
+        '200':
+          description: The new avatar.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [avatar_url]
+                properties:
+                  avatar_url:
+                    type: string
+                    format: uri
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [profiles]
+      operationId: deleteAvatar
+      summary: Remove the avatar
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [avatar_url]
+                properties:
+                  avatar_url:
+                    type: 'null'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /friends:
+    get:
+      tags: [friends]
+      operationId: getFriends
+      summary: Friends and requests
+      description: Polled every 10 seconds while the client is connected.
+      responses:
+        '200':
+          description: All lists, each possibly empty.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [friends, incoming_requests, outgoing_requests, blocked]
+                properties:
+                  friends:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Friendship'
+                  incoming_requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Friendship'
+                  outgoing_requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Friendship'
+                  blocked:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Friendship'
+              example:
+                friends:
+                  - { friendship_id: 7, user: { display: bob, name: bob }, status: accepted }
+                incoming_requests: []
+                outgoing_requests: []
+                blocked: []
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /friends/request:
+    post:
+      tags: [friends]
+      operationId: sendFriendRequest
+      summary: Send a friend request
+      description: A request to someone who already asked us accepts theirs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nick]
+              properties:
+                nick:
+                  type: string
+            example: { nick: bob }
+      responses:
+        '200':
+          description: Sent or accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auto_accepted:
+                    type: boolean
+                    description: '`true` when an incoming request of the other side was accepted instead.'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /friends/{friendship_id}/accept:
+    post:
+      tags: [friends]
+      operationId: acceptFriendRequest
+      summary: Accept an incoming request
+      parameters:
+        - $ref: '#/components/parameters/FriendshipId'
+      responses:
+        '200':
+          description: Accepted.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /friends/{friendship_id}/decline:
+    post:
+      tags: [friends]
+      operationId: declineFriendRequest
+      summary: Decline an incoming request
+      parameters:
+        - $ref: '#/components/parameters/FriendshipId'
+      responses:
+        '200':
+          description: Declined.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /friends/{friendship_id}/block:
+    post:
+      tags: [friends]
+      operationId: blockFriend
+      summary: Block the other side
+      parameters:
+        - $ref: '#/components/parameters/FriendshipId'
+      responses:
+        '200':
+          description: Blocked.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /friends/{friendship_id}:
+    delete:
+      tags: [friends]
+      operationId: removeFriend
+      summary: End a friendship or withdraw a request
+      parameters:
+        - $ref: '#/components/parameters/FriendshipId'
+      responses:
+        '200':
+          description: Removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /chat/media-upload:
+    post:
+      tags: [uploads]
+      operationId: upload
+      summary: Upload a file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [media]
+              properties:
+                media:
+                  type: string
+                  contentMediaType: application/octet-stream
+                caption:
+                  type: string
+                  description: Text of the message the file is sent with.
+      responses:
+        '200':
+          description: Uploaded. The client sends `url` with the message.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, url]
+                properties:
+                  id:
+                    type: [string, integer]
+                  url:
+                    type: string
+                    format: uri
+              example: { id: 12, url: 'https://example.org/u/abc.png' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '413':
+          description: The file is too large.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [uploads]
+      operationId: getUploads
+      summary: Own uploads
+      responses:
+        '200':
+          description: Newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploads]
+                properties:
+                  uploads:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Upload'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /chat/media-upload/{id}:
+    delete:
+      tags: [uploads]
+      operationId: deleteUpload
+      summary: Delete an own upload
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: No such upload of this account.
+
+  /gifs/search:
+    get:
+      tags: [gifs]
+      operationId: searchGifs
+      summary: Search or trending GIFs
+      security:
+        - bearer: []
+        - {}
+      parameters:
+        - name: q
+          in: query
+          description: Search words. Without it the network returns trending GIFs.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 20
+        - name: page
+          in: query
+          description: The `next` value of the previous answer.
+          schema:
+            type: [string, integer]
+      responses:
+        '200':
+          description: One page of results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, next]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Gif'
+                  next:
+                    type: [string, integer, 'null']
+                    description: '`null` on the last page.'
+                  provider:
+                    type: object
+                    description: Shown as "Powered by" under the results, as most GIF services require.
+                    required: [name]
+                    properties:
+                      name:
+                        type: string
+                      url:
+                        type: string
+                        format: uri
+              example:
+                results:
+                  - { id: abc, title: Cat, url: 'https://media.example.org/abc.gif', preview: 'https://media.example.org/abc.webp' }
+                next: 2
+                provider: { name: GIF service, url: 'https://gifs.example.org' }
+        '401':
+          description: The network does not serve guests.
+
+  /chat/reports:
+    post:
+      tags: [reports]
+      operationId: report
+      summary: Report a user or a message
+      security:
+        - bearer: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Report'
+      responses:
+        '201':
+          description: Received. The client shows its own text.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Too many reports, the client asks to wait.
+
+  /explore:
+    get:
+      tags: [explore]
+      operationId: explore
+      summary: Directory of channel groups
+      security:
+        - bearer: []
+        - {}
+      responses:
+        '200':
+          description: |
+            Groups in the order to show. Channel names without `#` and groups without
+            channels are dropped.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [communities]
+                properties:
+                  communities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExploreGroup'
+
+  /chat-state:
+    get:
+      tags: [chatState]
+      operationId: getChatState
+      summary: Saved state of the account
+      responses:
+        '200':
+          description: 'An account without a saved state gets empty lists and `"settings": null`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatState'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [chatState]
+      operationId: saveChatState
+      summary: Save the state
+      description: Sent at most every 5 seconds, after changes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatStateUpdate'
+      responses:
+        '200':
+          description: Saved.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /chat/always-on:
+    get:
+      tags: [alwaysOn]
+      operationId: getAlwaysOn
+      summary: Current setting
+      responses:
+        '200':
+          description: The setting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlwaysOn'
+              example: { enabled: false, ask: true }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/IrcServerUnavailable'
+    put:
+      tags: [alwaysOn]
+      operationId: setAlwaysOn
+      summary: Turn it on or off
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: The new setting, `ask` is now `false`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlwaysOn'
+              example: { enabled: true, ask: false }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/IrcServerUnavailable'
+
+  /chat/always-on/dismiss:
+    post:
+      tags: [alwaysOn]
+      operationId: dismissAlwaysOn
+      summary: Stop asking
+      description: '"No, thanks" in the question.'
+      responses:
+        '200':
+          description: The network will not ask again.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /chat/events:
+    get:
+      tags: [events]
+      operationId: getEvents
+      summary: Upcoming events
+      description: |
+        The network expands recurring events into single dates and decides how far ahead
+        the list goes. Entries without a valid `starts_at` are dropped.
+      parameters:
+        - name: community
+          in: query
+          description: |
+            Only events of this community (feature `communities`, sent while a community is
+            shown). `community_name` is then left out in the list.
+          schema:
+            type: [string, integer]
+      responses:
+        '200':
+          description: Sorted by start.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+              example:
+                events:
+                  - { event_id: 4, title: Bridge meeting, starts_at: '2026-11-20T19:00:00Z', recurrence: weekly, channel: '#bridge', community_name: Starfleet }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /my-communities:
+    get:
+      tags: [communities]
+      operationId: getCommunities
+      summary: Communities of the user
+      description: Loaded after every registration.
+      responses:
+        '200':
+          description: Empty for users without communities.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Community'
+              example:
+                - { id: 1, name: Starfleet, slug: starfleet, lobby_channel: '#bridge', channels: ['#bridge', '#engineering'] }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /chat/push-devices:
+    post:
+      tags: [push]
+      operationId: registerPushDevice
+      summary: Register an app install
+      description: |
+        A token belongs to one install: registering it again moves it to the current
+        account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDevice'
+      responses:
+        '200':
+          description: Known install.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushEndpoint'
+        '201':
+          description: New install.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushEndpoint'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [push]
+      operationId: removePushDevice
+      summary: Remove an app install
+      description: Sent on logout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDevice'
+      responses:
+        '204':
+          description: Removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /chat/voice/token:
+    post:
+      tags: [voice]
+      operationId: voiceToken
+      summary: Token for the voice room of a channel
+      description: |
+        The network checks that the nick belongs to the account of the token and is in the
+        channel, for example with a WHOIS through the IRC server's API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, nick]
+              properties:
+                channel:
+                  type: string
+                nick:
+                  type: string
+                  description: Own IRC nick.
+            example: { channel: '#bridge', nick: alice }
+      responses:
+        '200':
+          description: Token for the room.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceToken'
+              example: { url: 'wss://voice.example.org', token: eyJhbGciOiJIUzI1NiJ9…, is_moderator: false }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/VoiceRefused'
+        '404':
+          $ref: '#/components/responses/NoVoice'
+        '503':
+          description: The nick could not be checked right now (`reason` `whois_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceRefusal'
+
+  /chat/voice/filters:
+    get:
+      tags: [voice]
+      operationId: voiceFilters
+      summary: Microphone filters
+      description: |
+        Optional noise filters the client can load. The client ships the AudioWorklet of
+        each filter it knows, the network hosts the WebAssembly files with
+        `Access-Control-Allow-Origin: *` (the desktop app loads them from `file://`).
+        Unknown ids are ignored, so a new build of a filter gets a new id (`rnnoise-v2`)
+        and older clients keep loading theirs. `rnnoise-v1` pairs with the files of
+        [`@sapphi-red/web-noise-suppressor`](https://github.com/sapphi-red/web-noise-suppressor)
+        0.4.1. An empty list or an error leaves the browser's own noise suppression.
+      responses:
+        '200':
+          description: Offered filters, possibly none.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [filters]
+                properties:
+                  filters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VoiceFilter'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NoVoice'
+
+  /chat/voice/call-token:
+    post:
+      tags: [calls]
+      operationId: callToken
+      summary: Token for a call with a friend
+      description: |
+        Both sides have to get the same room, for example `dm:` plus both account names in
+        lower case and sorted (`dm:alice:bob`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peer, nick]
+              properties:
+                peer:
+                  type: string
+                  description: Account of the other side.
+                nick:
+                  type: string
+                  description: Own IRC nick, shown to the other side.
+            example: { peer: bob, nick: alice }
+      responses:
+        '200':
+          description: Token for the call room.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceToken'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Not friends (`reason` `not_friends`) or voice not allowed (`not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceRefusal'
+        '404':
+          $ref: '#/components/responses/NoVoice'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /chat/voice/call-ring:
+    post:
+      tags: [calls]
+      operationId: callRing
+      summary: Ring the app builds of a friend
+      description: |
+        Optional next to the ringing over IRC, so an app in the background rings too, for
+        example through FCM. `cancel` takes the notification back. The caller treats
+        `pushed` > 0 like a `ringing` answer. How the app opens the call is described in
+        [Features](features.md#calls).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peer, call_id, nick, action]
+              properties:
+                peer:
+                  type: string
+                  description: Account of the other side.
+                call_id:
+                  type: string
+                  pattern: '^[A-Za-z0-9]{1,32}$'
+                nick:
+                  type: string
+                  description: Own IRC nick, shown in the notification.
+                action:
+                  type: string
+                  enum: [invite, cancel]
+      responses:
+        '200':
+          description: Number of installs reached, `0` without a push service.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pushed]
+                properties:
+                  pushed:
+                    type: integer
+                    minimum: 0
+              example: { pushed: 1 }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Not friends.
+        '404':
+          $ref: '#/components/responses/NoVoice'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /spotify/auth-url:
+    get:
+      tags: [spotify]
+      operationId: spotifyAuthUrl
+      summary: Link to connect Spotify
+      responses:
+        '200':
+          description: A one-time link the app opens in the browser.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /spotify/status:
+    get:
+      tags: [spotify]
+      operationId: spotifyStatus
+      summary: Whether Spotify is linked
+      responses:
+        '200':
+          description: The link state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connected]
+                properties:
+                  connected:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /spotify/current-track:
+    get:
+      tags: [spotify]
+      operationId: spotifyCurrentTrack
+      summary: Track playing now
+      responses:
+        '200':
+          description: The track, or `null` when nothing plays.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: 'null'
+                  - type: object
+                    required: [title, artist]
+                    properties:
+                      title:
+                        type: string
+                      artist:
+                        type: string
+              example: { title: Clair de Lune, artist: Claude Debussy }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /spotify/disconnect:
+    delete:
+      tags: [spotify]
+      operationId: spotifyDisconnect
+      summary: Unlink Spotify
+      responses:
+        '200':
+          description: Unlinked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: |
+        The token from `login` or from the embedding page. Only sent to the `apiBaseUrl`
+        of the network it belongs to.
+
+  parameters:
+    FriendshipId:
+      name: friendship_id
+      in: path
+      required: true
+      description: '`friendship_id` of an entry in `GET friends`.'
+      schema:
+        type: string
+
+  responses:
+    Unauthenticated:
+      description: No token, or the token is invalid or expired.
+    ValidationError:
+      description: Invalid fields. The client shows the first message.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    IrcServerUnavailable:
+      description: The IRC server cannot be reached, the client shows the switch disabled.
+    NoVoice:
+      description: Voice is not set up on this network.
+    VoiceRefused:
+      description: |
+        The client shows its own text for each `reason`: `not_allowed` (voice is not
+        enabled for this account, for example while testing), `wrong_account` (the nick
+        belongs to another account), `not_in_channel`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoiceRefusal'
+
+  schemas:
+    ValidationError:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          description: Messages per field.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      example: { message: The avatar must be an image., errors: { avatar: [The avatar must be an image.] } }
+
+    Profile:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Account name.
+        avatar_url:
+          type: [string, 'null']
+          format: uri
+          description: Shown only if it is on the same origin as `apiBaseUrl`.
+        status:
+          type: [string, 'null']
+          description: Status text, one line.
+        member_since:
+          type: [string, 'null']
+          format: date-time
+        characters:
+          type: array
+          description: For example roleplay characters.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+              race:
+                type: [string, 'null']
+              character_class:
+                type: [string, 'null']
+              url:
+                type: [string, 'null']
+                format: uri
+        mutual_communities:
+          type: array
+          description: Groups the viewer and this account both belong to.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+              slug:
+                type: string
+      example: { name: alice, avatar_url: 'https://example.org/avatars/alice.png', status: On the bridge, member_since: '2024-03-01T00:00:00Z' }
+
+    OwnProfile:
+      allOf:
+        - $ref: '#/components/schemas/Profile'
+        - type: object
+          properties:
+            settings_url:
+              type: string
+              format: uri
+              description: Further account settings on the network's website.
+            delete_account_url:
+              type: string
+              format: uri
+
+    Friendship:
+      type: object
+      required: [friendship_id, user]
+      properties:
+        friendship_id:
+          type: [string, integer]
+        user:
+          type: object
+          required: [display]
+          properties:
+            display:
+              type: string
+              description: Nick of the other side on IRC. Entries without it are ignored.
+            name:
+              type: string
+              description: Account name.
+        status:
+          type: string
+          enum: [accepted, pending, blocked]
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+        requested_at:
+          type: string
+          format: date-time
+
+    Upload:
+      type: object
+      required: [id, url, mime_type]
+      properties:
+        id:
+          type: [string, integer]
+        url:
+          type: string
+          format: uri
+          description: Public link to the file.
+        mime_type:
+          type: string
+          description: Images and videos get a preview.
+        original_name:
+          type: string
+        caption:
+          type: [string, 'null']
+
+    Gif:
+      type: object
+      required: [id, url, preview]
+      description: Results without `https` URLs are dropped.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: Sent as the message.
+        preview:
+          type: string
+          format: uri
+          description: Shown in the picker.
+
+    Report:
+      type: object
+      required: [reported_nick, reporter_nick, reason]
+      properties:
+        reported_nick:
+          type: string
+        reported_account:
+          type: [string, 'null']
+          description: Account from WHOIS, if the profile card was open.
+        reporter_nick:
+          type: string
+          description: Own nick, `Guest` if unknown.
+        channel:
+          type: [string, 'null']
+          description: Channel the report was sent from, `null` in DMs.
+        message_text:
+          type: [string, 'null']
+          maxLength: 2000
+          description: The reported message.
+        message_sent_at:
+          type: [string, 'null']
+          format: date-time
+        reason:
+          type: string
+          enum: [child_safety, sexual_content, harassment, hate_speech, spam, other]
+        details:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Note of the reporter.
+      example: { reported_nick: troll, reported_account: null, reporter_nick: alice, channel: '#bridge', message_text: Buy cheap stuff, message_sent_at: '2026-11-20T18:02:11Z', reason: spam, details: null }
+
+    ExploreGroup:
+      type: object
+      required: [name, channel_names]
+      properties:
+        id:
+          type: [string, integer]
+        name:
+          type: string
+        description:
+          type: string
+        channel_names:
+          type: array
+          items:
+            type: string
+      example: { id: 1, name: Starfleet, description: Roleplay on the bridge, channel_names: ['#bridge', '#lounge'] }
+
+    ChatStateFields:
+      type: object
+      properties:
+        open_dms:
+          type: array
+          description: Nicks with an open DM.
+          items:
+            type: string
+        joined_channels:
+          type: array
+          description: Channels to join on the next connect, without the default channel.
+          items:
+            type: string
+        active_channel:
+          type: [string, 'null']
+          description: Shown after the next connect.
+        sidebar_mode:
+          type: string
+          enum: [channels, friends, uploads]
+        last_read:
+          type: object
+          description: Read position per channel or DM. Newer local values win.
+          additionalProperties:
+            type: string
+            format: date-time
+        unread_counts:
+          type: object
+          additionalProperties:
+            type: integer
+
+    ChatState:
+      allOf:
+        - $ref: '#/components/schemas/ChatStateFields'
+        - type: object
+          required: [settings]
+          properties:
+            settings:
+              description: '`null`: the account never synced, the client uploads its own values.'
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ChatSettings'
+
+    ChatStateUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ChatStateFields'
+        - type: object
+          properties:
+            settings_patch:
+              type: object
+              description: |
+                The settings changed on this device, keys as in `settings` of `GET chat-state`. `null` as
+                value removes a key. The network merges it into the stored document, so
+                changes from another device are kept.
+
+    ChatSettings:
+      type: object
+      description: |
+        Unknown keys are kept by the client and should be kept by the network, other
+        clients may use them.
+      properties:
+        highlight_words:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+        ignored_users:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+        channel_notifications:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [mentions, mute]
+        quit_message:
+          type: string
+          maxLength: 200
+          description: One line. Missing means the client's default.
+        nick_colors:
+          type: object
+          description: Hue per nick.
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 359
+        left_lobbies:
+          type: array
+          description: Channels the user left on purpose, they are not joined by default any more.
+          items:
+            type: string
+        autojoin_channels:
+          type: array
+          maxItems: 50
+          description: Joined on every connect.
+          items:
+            type: string
+      additionalProperties: true
+
+    AlwaysOn:
+      type: object
+      required: [enabled, ask]
+      properties:
+        enabled:
+          type: boolean
+        ask:
+          type: boolean
+          description: Show the question (not answered yet).
+
+    Event:
+      type: object
+      required: [event_id, title, starts_at]
+      properties:
+        event_id:
+          type: [string, integer]
+          description: Recurring events appear once per date with the same id.
+        title:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+          description: Shown in the local time zone.
+        recurrence:
+          type: string
+          enum: [none, weekly, biweekly, monthly]
+          description: Shown as a hint.
+        channel:
+          type: [string, 'null']
+          description: Channel of the event, opened or joined from the list.
+        community_name:
+          type: string
+          description: Group the event belongs to, shown next to it.
+
+    Community:
+      type: object
+      required: [id, name, channels]
+      properties:
+        id:
+          type: [string, integer]
+        name:
+          type: string
+          description: Shown in the rail (first letter) and as the group heading.
+        slug:
+          type: string
+          pattern: '^[A-Za-z0-9_-]+$'
+          description: Fills `{community}` in `links.communityInvite`.
+        lobby_channel:
+          type: [string, 'null']
+          description: Opened first. Must be one of `channels`, otherwise the first channel is used.
+        channels:
+          type: array
+          description: In the order the community wants them.
+          items:
+            type: string
+
+    PushDevice:
+      type: object
+      required: [fcm_token]
+      properties:
+        fcm_token:
+          type: string
+
+    PushEndpoint:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          description: Web Push endpoint the client registers with the IRC server.
+      example: { endpoint: 'https://example.org/api/push/3f9c…' }
+
+    VoiceToken:
+      type: object
+      required: [url, token]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: LiveKit server (`wss://`).
+        token:
+          type: string
+          description: |
+            LiveKit access token for the room. The participant identity should be the
+            account name, the participant name the nick.
+        is_moderator:
+          type: boolean
+          description: Channel operator, room admin in LiveKit.
+
+    VoiceRefusal:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          enum: [not_allowed, wrong_account, not_in_channel, not_friends, whois_failed]
+        message:
+          type: string
+
+    VoiceFilter:
+      type: object
+      required: [id, wasm]
+      description: Files of one build of a filter. Files of an id never change.
+      properties:
+        id:
+          type: string
+        wasm:
+          type: string
+          format: uri
+        wasm_simd:
+          type: string
+          format: uri
+          description: Build for CPUs with WebAssembly SIMD, used when available.
+      example: { id: rnnoise-v1, wasm: 'https://example.org/voice-filters/rnnoise-v1/rnnoise.wasm', wasm_simd: 'https://example.org/voice-filters/rnnoise-v1/rnnoise_simd.wasm' }

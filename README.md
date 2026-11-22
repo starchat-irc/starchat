@@ -76,4 +76,4 @@ The web client needs a WebSocket endpoint (`websocket`). Networks that only offe
 
 ## License
 
-[AGPL-3.0](LICENSE). If you run a modified version for others, you have to offer them its source code.
+[MIT License](LICENSE).

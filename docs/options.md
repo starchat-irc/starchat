@@ -93,7 +93,7 @@ The query string configures the worker:
 
 The user turns push on under Settings → Notifications, which also asks for the browser permission. Muted channels and ignored users stay silent, the chat sends that list to the worker. Logging out unregisters the device.
 
-No network API is needed for this. Only app builds (FCM) need the network's relay, the `push` feature of the [discovery file](discovery.md#push).
+No network API is needed for this. Only app builds (FCM) need the network's relay, the feature [`push`](features.md#push).
 
 ## Own commands
 

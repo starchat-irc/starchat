@@ -1,0 +1,99 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://getstarchat.net/schemas/mobile-edition.schema.json",
+    "title": "StarChat mobile edition",
+    "description": "Build time settings of a mobile app built from StarChat. See docs/mobile.md.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["appName", "appId", "icon", "chat"],
+    "properties": {
+        "$schema": { "type": "string" },
+        "appName": {
+            "description": "Name under the launcher icon, in the store and in chat texts (:app).",
+            "type": "string", "minLength": 1, "maxLength": 30
+        },
+        "appId": {
+            "description": "Android application id (package name). Never change it after the first release.",
+            "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$"
+        },
+        "icon": {
+            "description": "Square PNG with at least 512x512 pixels, path relative to the edition folder. Launcher icon on Android 7, splash screen.",
+            "type": "string", "pattern": "\\.png$"
+        },
+        "adaptiveIcon": {
+            "description": "Launcher icon from Android 8 on. Without it the icon is shown smaller on the background colour.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["foreground"],
+            "properties": {
+                "foreground": {
+                    "description": "PNG (432x432 or more, transparent) or Android vector drawable (.xml). Keep the motif inside the middle 66 percent.",
+                    "type": "string", "pattern": "\\.(png|xml)$"
+                },
+                "background": {
+                    "description": "Colour behind the foreground, #rrggbb.",
+                    "type": "string", "pattern": "^#[0-9a-fA-F]{6}$"
+                }
+            }
+        },
+        "splashBackground": {
+            "description": "Colour of the start screen, #rrggbb.",
+            "type": "string", "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "chat": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "primaryServer": {
+                    "description": "Domain of the network of your edition: the first connection goes there, login and features come from its discovery file. Leave it out for a client without a preset network.",
+                    "type": "string", "pattern": "^[a-z0-9.-]+$"
+                },
+                "networkName": {
+                    "description": "Name of the primary network in the connections list (:network in texts). Defaults to primaryServer.",
+                    "type": "string", "minLength": 1, "maxLength": 40
+                },
+                "serverList": {
+                    "description": "'default', an https URL of an own list, or false for the primary server only.",
+                    "oneOf": [
+                        { "const": "default" },
+                        { "const": false },
+                        { "type": "string", "pattern": "^https://" }
+                    ]
+                },
+                "defaultChannel": { "type": "string", "pattern": "^[#&]" },
+                "theme": { "enum": ["auto", "dark", "light"] },
+                "themeCss": {
+                    "description": "CSS file loaded after the bundled theme, relative to the edition folder.",
+                    "type": "string", "pattern": "\\.css$"
+                },
+                "modules": {
+                    "description": "Names of the feature modules to ship. All bundled ones when left out.",
+                    "type": "array", "items": { "type": "string" }, "uniqueItems": true
+                },
+                "ctcpVersion": { "type": "string", "maxLength": 100 },
+                "defaultQuitMessage": { "type": "string", "maxLength": 200 }
+            }
+        },
+        "texts": {
+            "description": "Texts that replace bundled ones, per language and key. Keys of the chat (src/i18n) and of the app (mobile/locales).",
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z]{2}$" },
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+            }
+        },
+        "push": {
+            "description": "Push notifications through Firebase Cloud Messaging. Off when left out.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["googleServices"],
+            "properties": {
+                "googleServices": {
+                    "description": "google-services.json of your Firebase project, relative to the edition folder. Its package name must be appId.",
+                    "type": "string", "pattern": "\\.json$"
+                }
+            }
+        }
+    }
+}

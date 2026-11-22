@@ -71,7 +71,7 @@ All file paths are relative to the edition folder and must stay inside it. The f
 
 ### Features of the primary server
 
-Only for editions with `chat.primaryServer`. Some parts of the app need an API on the primary server and turn on only when its discovery file offers them. The Spotify link, for example, needs the feature [`spotify`](discovery.md#spotify). Without a discovery file the app is a plain IRC client.
+Only for editions with `chat.primaryServer`. Some parts of the app need an API on the primary server and turn on only when its discovery file offers them. The Spotify link, for example, needs the feature [`spotify`](openapi.yaml#spotify). Without a discovery file the app is a plain IRC client.
 
 ## Connections
 
