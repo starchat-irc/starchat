@@ -211,6 +211,8 @@ export function createChatComponent(options) {
         _saslAccount: saslAccount,
         _bearer: null,
         _apiLogin: null,
+        // Password login from the dialog, handed to the mobile app once SASL worked
+        _formSaslLogin: null,
         // Mirrors connection.getToken() for Alpine, which does not see the token change
         hasApiToken: false,
 
@@ -354,6 +356,7 @@ export function createChatComponent(options) {
             this.nickname = nick;
             this._saslPassword = this.loginPassword || '';
             this._saslAccount = '';
+            this._formSaslLogin = this._saslPassword ? { account: nick, password: this._saslPassword } : null;
             this._bearer = null;
             this._apiLogin = null;
             return this.connect();
@@ -362,6 +365,7 @@ export function createChatComponent(options) {
         guestLogin() {
             this.nickname = String(this.loginUsername || '').trim() || guestNick();
             this._saslPassword = '';
+            this._formSaslLogin = null;
             this._bearer = null;
             this._apiLogin = null;
             return this.connect();
@@ -381,6 +385,7 @@ export function createChatComponent(options) {
             }
             this.selectedServerId = primaryServer?.id || this.selectedServerId;
             this._saslPassword = '';
+            this._formSaslLogin = null;
             this._apiLogin = null;
             this.nickname = this._bearer.nickname || this._bearer.account || this.nickname || guestNick();
             return this.connect();
@@ -460,12 +465,24 @@ export function createChatComponent(options) {
         },
 
         /**
-         * Desktop app: a password login got an API token. The app stores it (encrypted) when
-         * "remember me" is checked and starts the next session with it instead of the password.
+         * Apps: a password login got an API token. The app stores it (encrypted; the desktop
+         * app only with "remember me") and starts the next session with it instead of the password.
          */
         saveShellLogin() {
-            if (this.shell !== 'desktop' || !this._apiLogin?.token) return;
+            if (!['desktop', 'mobile'].includes(this.shell) || !this._apiLogin?.token) return;
             this.notifyHost('save-credentials', { token: this._apiLogin.token, remember: Boolean(this.rememberMe) });
+        },
+
+        /**
+         * Mobile app: a password from the login dialog worked over SASL PLAIN (the server has
+         * no token login). Sent once the server let us in, so a wrong password is never kept.
+         * On the desktop the connections page sets up SASL instead.
+         */
+        saveShellSaslLogin() {
+            const login = this._formSaslLogin;
+            this._formSaslLogin = null;
+            if (this.shell !== 'mobile' || !login || this._apiLogin || this.usesBearer()) return;
+            this.notifyHost('save-credentials', { saslAccount: login.account, saslPassword: login.password });
         },
 
         setApiToken(connection, token) {

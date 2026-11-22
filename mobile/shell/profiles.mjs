@@ -38,7 +38,7 @@ export function chatConfig(profile, { token = '', saslPassword = '', locale = ''
             socketHost: ext.host || null,
             socketPort: ext.port || null,
             socketSsl: ext.ssl !== false,
-            nickname: ext.nickname || 'Guest',
+            nickname: ext.nickname || '',
             password: token,
             authMethod: saslPassword ? (ext.authMethod || 'none') : 'none',
             saslUsername: ext.saslUsername || '',
@@ -53,7 +53,7 @@ export function chatConfig(profile, { token = '', saslPassword = '', locale = ''
         ...base,
         isExternalServer: false,
         connectionType: 'websocket',
-        nickname: profile.nickname || 'Guest',
+        nickname: profile.nickname || '',
         password: token,
         authMethod: sasl ? 'sasl_plain' : 'ircv3bearer',
         saslUsername: sasl ? profile.saslUsername : '',
@@ -232,6 +232,42 @@ export function createProfileStore({
             await saveProfiles(profiles.map(entry => (entry.hash === hash ? next : entry)));
         },
 
+        /**
+         * A SASL PLAIN login that worked in the chat's login dialog, kept for the next start.
+         * Only for other servers: the primary server of the edition logs in with a token.
+         */
+        async setSaslLogin(hash, account, password) {
+            const profile = find(hash);
+            const name = String(account || '').trim();
+            const secret = typeof password === 'string' ? password.slice(0, 512) : '';
+            if (profile?.serverType !== 'external' || !ConnectionForm.NICK_PATTERN.test(name) || !secret) return;
+            const ext = profile.externalServer || {};
+            if (ext.saslUsername === name && ext.encryptedSaslPassword && await decrypt(ext.encryptedSaslPassword) === secret) return;
+            const next = {
+                ...profile,
+                externalServer: {
+                    ...ext,
+                    saslUsername: name,
+                    encryptedSaslPassword: await secrets.encrypt(secret),
+                    authMethod: 'sasl_plain',
+                },
+            };
+            await saveProfiles(profiles.map(entry => (entry.hash === hash ? next : entry)));
+        },
+
+        /** Logout in the chat: token, SASL login and nick go, the next start shows the login dialog. */
+        async clearLogin(hash) {
+            const profile = find(hash);
+            if (!profile) return;
+            const next = { ...profile };
+            delete next.encryptedToken;
+            if (next.serverType === 'external') {
+                next.externalServer = { ...next.externalServer, saslUsername: '', authMethod: 'none', nickname: '' };
+                delete next.externalServer.encryptedSaslPassword;
+            }
+            await saveProfiles(profiles.map(entry => (entry.hash === hash ? next : entry)));
+        },
+
         /** Name shown for a connection, also in push notifications. */
         label(hash) {
             const profile = find(hash);
@@ -250,8 +286,11 @@ export function createProfileStore({
             await saveProfiles(profiles.map(entry => (entry.hash === hash ? next : entry)));
         },
 
-        /** First connection from the start screen. */
-        async addFromDirectory(entry, nickname) {
+        /**
+         * First connection from the start screen. Without a nickname the chat opens with its
+         * login dialog (account, guest, register link of the network).
+         */
+        async addFromDirectory(entry, nickname = '') {
             const result = profileFromDirectory(profiles, entry, nickname);
             if (!result.ok) return result;
             await saveProfiles(result.profiles);

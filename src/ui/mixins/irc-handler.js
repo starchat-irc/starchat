@@ -172,6 +172,7 @@ const COMMAND_HANDLERS = {
         this.callModuleHook?.('registered');
         this.joinPendingShellChannel?.();
         this.notifyHost('update-profile-name', { nickname: this.nickname });
+        this.saveShellSaslLogin?.();
         this.privateMessageKeys.forEach(nick => this.requestHistoryLatest(nick));
         if (this.supportsMetadata) {
             // Only apps with a player publish now-playing. Re-assert (or clear) it on every connect.

@@ -11,30 +11,32 @@
 
     <div id="chatHost"></div>
 
-    <!-- First start without a connection: nickname and network -->
+    <!-- First start without a connection: a network from the list or an own server. The
+         chat then shows its login dialog (account or guest). -->
     <main id="welcome" hidden>
         <h1 id="welcomeTitle"></h1>
         <p id="welcomeIntro" class="muted"></p>
-        <label class="field">
-            <span id="nicknameLabel"></span>
-            <input id="nickname" autocomplete="nickname" autocapitalize="off" spellcheck="false" maxlength="30">
-        </label>
-        <p id="welcomeError" class="error" hidden></p>
 
-        <h2 id="networksTitle"></h2>
-        <div id="networks" class="list"></div>
-        <p id="networksState" class="muted" hidden></p>
-        <button id="networksRetry" class="link" hidden></button>
+        <div class="tabs" role="tablist">
+            <button id="networksTab" type="button" role="tab" aria-controls="networksPanel" aria-selected="true"></button>
+            <button id="customTab" type="button" role="tab" aria-controls="customPanel" aria-selected="false"></button>
+        </div>
 
-        <details id="custom">
-            <summary id="customTitle"></summary>
-            <label class="field"><span id="hostLabel"></span><input id="host" autocapitalize="off" spellcheck="false" inputmode="url"></label>
+        <section id="networksPanel" role="tabpanel" aria-labelledby="networksTab">
+            <div id="networks" class="list"></div>
+            <p id="networksState" class="muted" hidden></p>
+            <button id="networksRetry" class="link" hidden></button>
+        </section>
+
+        <section id="customPanel" role="tabpanel" aria-labelledby="customTab" hidden>
+            <label class="field"><span id="hostLabel"></span><input id="host" autocapitalize="off" spellcheck="false" inputmode="url" placeholder="irc.example.org"></label>
             <div class="row">
                 <label class="field"><span id="portLabel"></span><input id="port" inputmode="numeric" value="6697"></label>
                 <label class="check"><input id="tls" type="checkbox" checked> <span id="tlsLabel"></span></label>
             </div>
             <button id="customConnect" class="primary"></button>
-        </details>
+        </section>
+        <p id="welcomeError" class="error" hidden></p>
     </main>
 
     <!-- Connections of the app, opened from the chat's channel drawer -->

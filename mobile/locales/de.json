@@ -2,12 +2,11 @@
     "shell_connections": "Verbindungen",
     "shell_manage_connections": "Verbindungen verwalten",
     "shell_welcome_title": "Willkommen bei :app",
-    "shell_welcome_intro": "Wähle einen Nickname und ein IRC-Netzwerk. Weitere Netzwerke kannst du später hinzufügen.",
+    "shell_welcome_intro": "Wähle ein Netzwerk aus der Liste oder trage deinen eigenen Server ein. Im nächsten Schritt meldest du dich mit deinem Account an oder machst als Gast weiter.",
     "shell_welcome_networks": "Netzwerke",
-    "shell_welcome_custom": "Anderer Server",
+    "shell_welcome_custom": "Eigener Server",
     "shell_welcome_connect": "Verbinden",
     "shell_welcome_loading": "Serverliste wird geladen...",
-    "shell_welcome_no_servers": "Die Serverliste konnte nicht geladen werden. Prüfe deine Internetverbindung oder richte einen Server von Hand ein.",
-    "shell_welcome_retry": "Erneut versuchen",
-    "shell_welcome_nickname_first": "Wähle zuerst einen Nickname."
+    "shell_welcome_no_servers": "Die Serverliste konnte nicht geladen werden. Prüfe deine Internetverbindung oder trage deinen eigenen Server ein.",
+    "shell_welcome_retry": "Erneut versuchen"
 }

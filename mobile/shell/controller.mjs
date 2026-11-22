@@ -170,10 +170,11 @@ export function createShell({ plugin, app, profiles, ui, locale = '', theme = ()
                 break;
             case 'save-credentials':
                 // On a phone a login always stays: "remember me" is a desktop choice
-                await profiles.setToken(hash, data.token);
+                if (typeof data.token === 'string' && data.token) await profiles.setToken(hash, data.token);
+                else if (typeof data.saslPassword === 'string') await profiles.setSaslLogin(hash, data.saslAccount, data.saslPassword);
                 break;
             case 'logout':
-                await profiles.setToken(hash, null);
+                await profiles.clearLogin(hash);
                 break;
             case 'update-profile-name':
                 await profiles.setNickname(hash, data.nickname);

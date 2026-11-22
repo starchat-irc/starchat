@@ -84,7 +84,7 @@ If you fork this repository, keep your edition in its own folder (for example `m
 | `icon` | yes | Square PNG with at least 512x512 pixels: launcher icon on Android 7, start screen, connection list. |
 | `adaptiveIcon` | no | Launcher icon from Android 8 on: `foreground` (transparent PNG of at least 432x432 pixels or an Android vector drawable `.xml`, motif inside the middle 66 percent) and `background` (`#rrggbb`). Without it the icon is shown smaller on a white background. |
 | `splashBackground` | no | Colour of the start screen, `#rrggbb`. |
-| `chat.primaryServer` | no | Domain of your network. The app then starts with a connection to it and takes login, API and features from its [discovery file](discovery.md). Without it (the StarChat app) the first start shows a nickname field and the server list. |
+| `chat.primaryServer` | no | Domain of your network. The app then starts with a connection to it and takes login, API and features from its [discovery file](discovery.md). Without it (the StarChat app) the first start offers the server list and a form for an own server; the chat then asks for the login (account or guest). |
 | `chat.networkName` | no | Name of the primary network in the connection list, the domain by default. |
 | `chat.serverList` | no | Directory of networks: `'default'` (the public list), an https URL of your own list, or `false`. The build bundles the list, the app loads newer versions once a day. Your own list must be served with `Access-Control-Allow-Origin: *`. |
 | `chat.defaultChannel`, `chat.theme`, `chat.themeCss`, `chat.modules`, `chat.ctcpVersion`, `chat.defaultQuitMessage` | no | As for the [desktop app](desktop.md#editionjson). |

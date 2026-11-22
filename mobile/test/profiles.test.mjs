@@ -186,3 +186,47 @@ test('home connections use the saved login or SASL', () => {
     assert.equal(sasl.authMethod, 'sasl_plain');
     assert.equal(sasl.saslUsername, 'ben');
 });
+
+test('a network picked without nick opens the login dialog, a login there stays', async () => {
+    const store = memoryStore();
+    const profiles = profileStore({ store });
+    await profiles.load();
+    const hash = (await profiles.addFromDirectory(profiles.directory()[0])).profile.hash;
+    const first = mountOptionsFor(await profiles.configFor(hash), { appName: 'StarChat', chat: {} }).options;
+    assert.equal(first.nickname, undefined, 'no nick: the chat shows its login dialog');
+    assert.equal(first.bearer, undefined);
+
+    // SASL login in the dialog, then the next start logs in right away
+    await profiles.setNickname(hash, 'kenobi');
+    await profiles.setSaslLogin(hash, 'kenobi', 'hunter2');
+    assert.ok(!store.data.get('profiles').includes('hunter2'), 'never stored in plain text');
+    const next = mountOptionsFor(await profiles.configFor(hash), { appName: 'StarChat', chat: {} }).options;
+    assert.equal(next.nickname, 'kenobi');
+    assert.equal(next.password, 'hunter2');
+
+    // The same login again changes nothing
+    const stored = store.data.get('profiles');
+    await profiles.setSaslLogin(hash, 'kenobi', 'hunter2');
+    assert.equal(store.data.get('profiles'), stored);
+
+    await profiles.setSaslLogin(hash, 'two words', 'x');
+    assert.equal(store.data.get('profiles'), stored, 'no account name, no change');
+
+    // Logout: login and nick go, the dialog comes back
+    await profiles.setToken(hash, 'tok');
+    await profiles.clearLogin(hash);
+    const after = await profiles.configFor(hash);
+    assert.equal(after.password, '');
+    assert.equal(after.saslPassword, '');
+    const options = mountOptionsFor(after, { appName: 'StarChat', chat: {} }).options;
+    assert.equal(options.nickname, undefined);
+    assert.equal(options.bearer, undefined);
+});
+
+test('the primary server of an edition keeps its login out of setSaslLogin', async () => {
+    const profiles = profileStore({ primaryServer: 'home.example.org' });
+    await profiles.load();
+    const before = JSON.stringify(profiles.profiles);
+    await profiles.setSaslLogin(profiles.active, 'kenobi', 'pw');
+    assert.equal(JSON.stringify(profiles.profiles), before);
+});

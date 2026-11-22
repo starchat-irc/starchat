@@ -42,6 +42,8 @@ function setUp({ profileList = ['a', 'b'], active = 'a' } = {}) {
         configFor: async hash => ({ profileHash: hash }),
         label: hash => `Net ${hash}`,
         setToken: async (hash, token) => { tokens[hash] = token; },
+        setSaslLogin: async (hash, account, password) => { tokens[hash] = { account, password }; },
+        clearLogin: async (hash) => { tokens[hash] = null; },
         setNickname: async () => {},
         request: async (action, payload) => {
             if (action === 'open') return { ok: true, open: payload.hash };
@@ -143,6 +145,9 @@ test('logins, push and links are kept per connection', async () => {
     const frame = env.current();
     await env.fromChat(frame, { type: 'save-credentials', token: 'tok', remember: false });
     assert.deepEqual(env.tokens, { a: 'tok' });
+    await env.fromChat(frame, { type: 'save-credentials', saslAccount: 'kenobi', saslPassword: 'pw' });
+    assert.deepEqual(env.tokens, { a: { account: 'kenobi', password: 'pw' } }, 'a SASL login on a server without token login');
+    await env.fromChat(frame, { type: 'save-credentials', token: 'tok', remember: false });
 
     await env.fromChat(frame, { type: 'push-subscribe' });
     assert.deepEqual(env.calls.find(([name]) => name === 'pushSubscribe'), ['pushSubscribe', { profile: 'a', name: 'Net a' }]);

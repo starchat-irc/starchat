@@ -88,14 +88,17 @@ function createUi({ t, onPickConnection }) {
     };
 }
 
-/** Start screen: nickname, then a network from the directory or an own server. */
+/**
+ * Start screen: a network from the directory or an own server, side by side as tabs. The
+ * profile gets no nick, so the chat opens with its login dialog: account login (with the
+ * network's register link) or guest.
+ */
 function setUpWelcome({ t, profiles, onCreated }) {
     $('welcomeTitle').textContent = t('shell_welcome_title');
     $('welcomeIntro').textContent = t('shell_welcome_intro');
-    $('nicknameLabel').textContent = t('connections_field_nickname');
-    $('networksTitle').textContent = t('shell_welcome_networks');
+    $('networksTab').textContent = t('shell_welcome_networks');
+    $('customTab').textContent = t('shell_welcome_custom');
     $('networksRetry').textContent = t('shell_welcome_retry');
-    $('customTitle').textContent = t('shell_welcome_custom');
     $('hostLabel').textContent = t('connections_field_host');
     $('portLabel').textContent = t('connections_field_port');
     $('tlsLabel').textContent = t('connections_field_tls');
@@ -107,15 +110,16 @@ function setUpWelcome({ t, profiles, onCreated }) {
         $('welcomeError').hidden = !message;
     };
 
-    const nickname = () => {
-        const value = $('nickname').value.trim();
-        if (!value) {
-            showErrors({ nickname: 'shell_welcome_nickname_first' });
-            $('nickname').focus();
-            return null;
-        }
-        return value;
-    };
+    function selectTab(custom) {
+        $('networksTab').setAttribute('aria-selected', String(!custom));
+        $('customTab').setAttribute('aria-selected', String(custom));
+        $('networksPanel').hidden = custom;
+        $('customPanel').hidden = !custom;
+        showErrors(null);
+        if (custom) $('host').focus();
+    }
+    $('networksTab').addEventListener('click', () => selectTab(false));
+    $('customTab').addEventListener('click', () => selectTab(true));
 
     async function finish(result) {
         if (!result.ok) {
@@ -130,10 +134,7 @@ function setUpWelcome({ t, profiles, onCreated }) {
         $('networks').replaceChildren(...servers.map(server => button(
             server.name,
             server.description || ConnectionForm.describeServer(ConnectionForm.fromCuratedServer(server)),
-            async () => {
-                const nick = nickname();
-                if (nick) await finish(await profiles.addFromDirectory(server, nick));
-            },
+            async () => finish(await profiles.addFromDirectory(server)),
         )));
         $('networksState').textContent = state;
         $('networksState').hidden = !state;
@@ -153,15 +154,18 @@ function setUpWelcome({ t, profiles, onCreated }) {
 
     $('networksRetry').addEventListener('click', loadNetworks);
     $('customConnect').addEventListener('click', async () => {
-        const nick = nickname();
-        if (!nick) return;
         await finish(await profiles.addCustom({
             connectionType: 'socket',
             host: $('host').value.trim(),
             port: Number($('port').value),
             ssl: $('tls').checked,
-            nickname: nick,
         }));
+    });
+    // TLS port and plain port go together, until the user sets the port by hand
+    let portTouched = false;
+    $('port').addEventListener('input', () => { portTouched = true; });
+    $('tls').addEventListener('change', () => {
+        if (!portTouched) $('port').value = $('tls').checked ? '6697' : '6667';
     });
     loadNetworks();
 }
