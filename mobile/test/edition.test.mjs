@@ -4,7 +4,7 @@ import { copyFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { androidResources, loadEdition, runtimeEdition, versionCode } from '../scripts/edition.mjs';
+import { androidResources, loadEdition, runtimeEdition, VERSION_PATTERN, versionCode } from '../scripts/edition.mjs';
 
 const bundledEdition = fileURLToPath(new URL('../edition', import.meta.url));
 const icon = path.join(bundledEdition, 'icon.png');
@@ -26,7 +26,8 @@ test('the bundled StarChat edition is valid and has no preset network', () => {
     const runtime = runtimeEdition(edition, '0.1.0');
     assert.equal(runtime.chat.primaryServer, '');
     assert.equal(runtime.chat.serverList, 'default');
-    assert.equal(runtime.push, false);
+    // Push only when a google-services.json lies in the folder (not in git)
+    assert.equal(runtime.push, Boolean(files['push.googleServices']));
 });
 
 test('invalid editions name the problem', () => {
@@ -46,11 +47,50 @@ test('google-services.json must belong to the app id', () => {
     assert.equal(runtimeEdition(edition, '1.0.0').push, true);
 });
 
+test('the development build gets its own id and name, google-services.json must know it', () => {
+    const services = (...packageNames) => JSON.stringify({
+        client: packageNames.map((name) => ({ client_info: { android_client_info: { package_name: name } } })),
+    });
+    const { edition } = loadEdition(editionDir(minimal), { dev: true });
+    assert.equal(edition.appId, 'org.example.chat.dev');
+    assert.equal(edition.appName, 'Example Chat Dev');
+
+    assert.equal(loadEdition(editionDir({ ...minimal, devAppId: 'org.example.dev' }), { dev: true }).edition.appId, 'org.example.dev');
+    assert.equal(loadEdition(editionDir({ ...minimal, devAppId: 'org.example.dev' })).edition.appId, 'org.example.chat');
+
+    const long = loadEdition(editionDir({ ...minimal, appName: 'A'.repeat(30) }), { dev: true }).edition;
+    assert.equal(long.appName.length, 30);
+
+    assert.throws(
+        () => loadEdition(editionDir(minimal, { 'google-services.json': services('org.example.chat') }), { dev: true }),
+        /package name org\.example\.chat\.dev/,
+    );
+    const both = loadEdition(editionDir(minimal, { 'google-services.json': services('org.example.chat', 'org.example.chat.dev') }), { dev: true });
+    assert.equal(runtimeEdition(both.edition, '0.0.0-dev.1').push, true);
+});
+
+test('a google-services.json in the edition folder is used without naming it', () => {
+    const services = JSON.stringify({ client: [{ client_info: { android_client_info: { package_name: 'org.example.chat' } } }] });
+    const { edition, files } = loadEdition(editionDir(minimal, { 'google-services.json': services }));
+    assert.ok(files['push.googleServices'].endsWith('google-services.json'));
+    assert.equal(runtimeEdition(edition, '1.0.0').push, true);
+
+    const without = loadEdition(editionDir(minimal));
+    assert.equal(without.files['push.googleServices'], undefined);
+    assert.equal(runtimeEdition(without.edition, '1.0.0').push, false);
+});
+
 test('version codes grow with every release', () => {
     assert.equal(versionCode('0.1.2'), 102);
     assert.equal(versionCode('1.2.3'), 10203);
     assert.ok(versionCode('1.10.0') > versionCode('1.9.99'));
     assert.throws(() => versionCode('1.100.0'), /below 100/);
+    // Development builds count with the build number
+    assert.equal(versionCode('0.0.0-dev.57'), 57);
+    assert.ok(VERSION_PATTERN.test('0.0.0-dev.57'));
+    assert.ok(VERSION_PATTERN.test('1.2.3'));
+    assert.ok(!VERSION_PATTERN.test('1.2'));
+    assert.ok(!VERSION_PATTERN.test('1.2.3-beta'));
 });
 
 test('android resources carry name, colours and icons of the edition', () => {

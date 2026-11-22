@@ -17,6 +17,8 @@ function readJson(file) {
     return JSON.parse(readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
 }
 
+const DEFAULT_GOOGLE_SERVICES = 'google-services.json';
+
 /** Files of an edition, relative to its folder. Paths must stay inside the folder. */
 function referencedFiles(edition) {
     return [
@@ -31,19 +33,26 @@ function referencedFiles(edition) {
  * Reads and checks an edition folder.
  *
  * @param {string} dir
+ * @param {{ dev?: boolean }} [options] dev: the development build, see devVariant()
  * @return {{ edition: Object, files: Object<string, string> }} files: key -> absolute path
  */
-export function loadEdition(dir) {
+export function loadEdition(dir, { dev = false } = {}) {
     const file = path.join(dir, 'edition.json');
     if (!existsSync(file)) {
         throw new Error(`No edition.json in ${dir}`);
     }
     const edition = readJson(file);
+    // The Firebase file is kept out of git: when it lies in the folder, it counts as named
+    if (!edition.push && existsSync(path.join(dir, DEFAULT_GOOGLE_SERVICES))) {
+        edition.push = { googleServices: DEFAULT_GOOGLE_SERVICES };
+    }
     const validate = new Ajv2020({ allErrors: true }).compile(readJson(schemaPath));
     if (!validate(edition)) {
         const problems = validate.errors.map(error => `  ${error.instancePath || '/'} ${error.message}`);
         throw new Error(`${file} is not valid:\n${problems.join('\n')}`);
     }
+
+    if (dev) Object.assign(edition, devVariant(edition));
 
     const root = path.resolve(dir);
     const files = {};
@@ -82,9 +91,28 @@ function checkGoogleServices(file, appId) {
     }
 }
 
-/** 1.2.3 -> 10203. Google Play takes every versionCode only once. */
+/**
+ * Id and name of the development build: it installs next to the released app instead of
+ * replacing it, and is told apart in the launcher.
+ */
+export function devVariant(edition) {
+    return {
+        appId: edition.devAppId || `${edition.appId}.dev`,
+        appName: `${edition.appName.slice(0, 26).trim()} Dev`,
+    };
+}
+
+/** Versions the build accepts: 1.2.3, or 0.0.0-dev.<build number> for development builds. */
+export const VERSION_PATTERN = /^\d+\.\d+\.\d+(-dev\.\d+)?$/;
+
+/**
+ * 1.2.3 -> 10203. Google Play takes every versionCode only once. Development builds count
+ * with their build number, so every new one installs over the one before.
+ */
 export function versionCode(version) {
-    const [major, minor, patch] = version.split(/[.-]/).map(Number);
+    const dev = /^\d+\.\d+\.\d+-dev\.(\d+)$/.exec(version);
+    if (dev) return Number(dev[1]);
+    const [major, minor, patch] = version.split('.').map(Number);
     if (minor > 99 || patch > 99) throw new Error(`Version ${version}: minor and patch must stay below 100`);
     return major * 10000 + minor * 100 + patch;
 }

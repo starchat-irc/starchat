@@ -7,13 +7,18 @@
  *       project (cap sync).
  *   node scripts/build.mjs apk [--edition <folder>]
  *       prepare, then a debug APK in dist/<appId>-debug.apk
+ *   node scripts/build.mjs apk-release [--edition <folder>]
+ *       prepare, then a signed APK to pass around in dist/<appId>-<version>.apk
  *   node scripts/build.mjs aab [--edition <folder>]
  *       prepare, then the signed App Bundle for Google Play in dist/<appId>-<version>.aab
- *       (needs android/keystore.properties, see docs/mobile.md)
+ *
+ * apk-release and aab need android/keystore.properties, see docs/mobile.md.
  *
  * The edition folder defaults to mobile/edition, STARCHAT_EDITION or --edition pick another
- * one. The version comes from STARCHAT_VERSION (a tag like v1.2.3 is fine) or
- * mobile/package.json. Paths to JDK, Android SDK and Gradle cache can be set in
+ * one. --dev (or STARCHAT_DEV=1) builds the development app: id <appId>.dev and name
+ * "<appName> Dev", so it installs next to the released one. The version comes from
+ * STARCHAT_VERSION (a tag like v1.2.3 is fine, development builds use 0.0.0-dev.<number>)
+ * or mobile/package.json. Paths to JDK, Android SDK and Gradle cache can be set in
  * build.local.json (not in git) instead of the environment.
  */
 import { spawnSync } from 'node:child_process';
@@ -21,7 +26,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
-import { androidResources, loadEdition, runtimeEdition, serverListForBuild, versionCode } from './edition.mjs';
+import { androidResources, loadEdition, runtimeEdition, serverListForBuild, VERSION_PATTERN, versionCode } from './edition.mjs';
 
 const mobileDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const generatedDir = path.join(mobileDir, 'generated');
@@ -32,18 +37,20 @@ const isWindows = process.platform === 'win32';
 function parseArgs(argv) {
     const [command = 'prepare', ...rest] = argv;
     let edition = process.env.STARCHAT_EDITION || '';
+    let dev = ['1', 'true'].includes(String(process.env.STARCHAT_DEV || '').toLowerCase());
     for (let i = 0; i < rest.length; i++) {
         if (rest[i] === '--edition') edition = rest[++i] || '';
         else if (rest[i].startsWith('--edition=')) edition = rest[i].slice('--edition='.length);
+        else if (rest[i] === '--dev') dev = true;
     }
-    return { command, editionDir: edition ? path.resolve(edition) : path.join(mobileDir, 'edition') };
+    return { command, dev, editionDir: edition ? path.resolve(edition) : path.join(mobileDir, 'edition') };
 }
 
 function appVersion(pkg) {
     const fromEnv = String(process.env.STARCHAT_VERSION || '').trim().replace(/^v/, '');
     const version = fromEnv || pkg.version;
-    if (!/^\d+\.\d+\.\d+$/.test(version)) {
-        throw new Error(`Version "${version}" must be x.y.z (Android needs a number for each release)`);
+    if (!VERSION_PATTERN.test(version)) {
+        throw new Error(`Version "${version}" must be x.y.z or x.y.z-dev.<number> (Android needs a number for each build)`);
     }
     return version;
 }
@@ -88,10 +95,10 @@ function runCapacitor(args) {
     if (result.status !== 0) throw new Error(`cap ${args.join(' ')} failed`);
 }
 
-async function prepare(editionDir) {
+async function prepare(editionDir, dev) {
     const pkg = JSON.parse(readFileSync(path.join(mobileDir, 'package.json'), 'utf8'));
     const version = appVersion(pkg);
-    const { edition, files } = loadEdition(editionDir);
+    const { edition, files } = loadEdition(editionDir, { dev });
     console.log(`Edition "${edition.appName}" (${edition.appId}) ${version} from ${editionDir}`);
 
     rmSync(generatedDir, { recursive: true, force: true });
@@ -165,31 +172,35 @@ export function runGradle(task) {
     if (result.status !== 0) throw new Error(`Gradle ${task} failed`);
 }
 
-function packageApp(release) {
-    if (release && !existsSync(path.join(androidDir, 'keystore.properties'))) {
-        throw new Error('Upload key missing: create mobile/android/keystore.properties (see docs/mobile.md).');
+const PACKAGES = {
+    apk: { task: 'assembleDebug', from: 'app/build/outputs/apk/debug/app-debug.apk', name: (android) => `${android.applicationId}-debug.apk` },
+    'apk-release': { task: 'assembleRelease', signed: true, from: 'app/build/outputs/apk/release/app-release.apk', name: (android) => `${android.applicationId}-${android.versionName}.apk` },
+    aab: { task: 'bundleRelease', signed: true, from: 'app/build/outputs/bundle/release/app-release.aab', name: (android) => `${android.applicationId}-${android.versionName}.aab` },
+};
+
+function packageApp(command) {
+    const output = PACKAGES[command];
+    if (output.signed && !existsSync(path.join(androidDir, 'keystore.properties'))) {
+        throw new Error('Signing key missing: create mobile/android/keystore.properties (see docs/mobile.md).');
     }
-    runGradle(release ? 'bundleRelease' : 'assembleDebug');
+    runGradle(output.task);
     const android = JSON.parse(readFileSync(path.join(generatedDir, 'android.json'), 'utf8'));
-    const output = release
-        ? { from: 'app/build/outputs/bundle/release/app-release.aab', to: `${android.applicationId}-${android.versionName}.aab` }
-        : { from: 'app/build/outputs/apk/debug/app-debug.apk', to: `${android.applicationId}-debug.apk` };
-    const target = path.join(mobileDir, 'dist', output.to);
+    const target = path.join(mobileDir, 'dist', output.name(android));
     mkdirSync(path.dirname(target), { recursive: true });
     copyFileSync(path.join(androidDir, output.from), target);
-    console.log(`\n${release ? 'App Bundle' : 'APK'} ${android.versionName}: ${target}`);
+    console.log(`\n${command === 'aab' ? 'App Bundle' : 'APK'} ${android.versionName}: ${target}`);
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-    const { command, editionDir } = parseArgs(process.argv.slice(2));
-    if (!['prepare', 'apk', 'aab'].includes(command)) {
-        console.error(`Unknown command "${command}". Use prepare, apk or aab.`);
+    const { command, dev, editionDir } = parseArgs(process.argv.slice(2));
+    if (command !== 'prepare' && !PACKAGES[command]) {
+        console.error(`Unknown command "${command}". Use prepare, apk, apk-release or aab.`);
         process.exit(1);
     }
     try {
-        await prepare(editionDir);
-        if (command !== 'prepare') packageApp(command === 'aab');
+        await prepare(editionDir, dev);
+        if (command !== 'prepare') packageApp(command);
     } catch (error) {
         console.error(error.message);
         process.exit(1);

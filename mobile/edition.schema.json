@@ -16,6 +16,10 @@
             "description": "Android application id (package name). Never change it after the first release.",
             "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$"
         },
+        "devAppId": {
+            "description": "Application id of the development build (build.mjs --dev), appId + \".dev\" by default.",
+            "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$"
+        },
         "icon": {
             "description": "Square PNG with at least 512x512 pixels, path relative to the edition folder. Launcher icon on Android 7, splash screen.",
             "type": "string", "pattern": "\\.png$"
@@ -90,7 +94,7 @@
             "required": ["googleServices"],
             "properties": {
                 "googleServices": {
-                    "description": "google-services.json of your Firebase project, relative to the edition folder. Its package name must be appId.",
+                    "description": "google-services.json of your Firebase project, relative to the edition folder. Its package name must be appId. A google-services.json in the edition folder is used without this entry.",
                     "type": "string", "pattern": "\\.json$"
                 }
             }
