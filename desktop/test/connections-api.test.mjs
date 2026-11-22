@@ -160,10 +160,11 @@ test('the server type of an existing connection cannot be switched by the page',
     assert.equal(result.profiles.find(profile => profile.hash === 'home-1').serverType, 'home');
 });
 
-test('only existing connections can be deleted, and the last one stays', () => {
+test('only existing connections can be deleted, the last one too', () => {
     assert.equal(canDeleteConnection(storedProfiles(), 'ext-1'), true);
     assert.equal(canDeleteConnection(storedProfiles(), 'nope'), false);
-    assert.equal(canDeleteConnection([storedProfiles()[0]], 'home-1'), false);
+    assert.equal(canDeleteConnection([storedProfiles()[0]], 'home-1'), true);
+    assert.equal(canDeleteConnection([], 'home-1'), false);
 });
 
 test('connection tests are limited: one at a time, a pause between, a cap per window', () => {

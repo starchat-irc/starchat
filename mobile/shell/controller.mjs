@@ -85,7 +85,16 @@ export function createShell({ plugin, app, profiles, ui, locale = '', theme = ()
         post({ type: 'connections-response', id, result: answer });
         if (deleted) {
             plugin.pushUnsubscribe({ profile: deleted }).catch(() => {});
-            if (deleted === frameHash) await open(profiles.active, { reload: true });
+            if (deleted === frameHash) {
+                if (profiles.profiles.length) {
+                    await open(profiles.active, { reload: true });
+                } else {
+                    // The last connection is gone: back to the start screen
+                    closeSockets();
+                    chatReady = false;
+                    await start();
+                }
+            }
         }
         if (action === 'save' || deleted) {
             post({ type: 'connections-changed' });

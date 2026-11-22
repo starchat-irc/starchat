@@ -332,8 +332,19 @@ export function createProfileStore({
                 case 'delete': {
                     const hash = payload?.hash;
                     if (!canDeleteConnection(profiles, hash)) return { ok: false, reason: 'not_allowed' };
-                    await saveProfiles(profiles.filter(profile => profile.hash !== hash));
-                    if (active === hash) await this.setActive(profiles[0].hash);
+                    let remaining = profiles.filter(profile => profile.hash !== hash);
+                    // The last one may go too, to start over: the StarChat app shows its start
+                    // screen, an edition gets a fresh connection to its network (login dialog)
+                    if (!remaining.length && primaryServer) remaining = [{ ...ConnectionForm.buildHomeProfile(), server: primaryServer }];
+                    await saveProfiles(remaining);
+                    if (!find(active)) {
+                        if (profiles.length) {
+                            await this.setActive(profiles[0].hash);
+                        } else {
+                            active = '';
+                            await store.set('activeProfile', null);
+                        }
+                    }
                     return { ok: true, profiles: list(), deleted: hash };
                 }
                 case 'test': {

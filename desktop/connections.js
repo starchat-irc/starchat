@@ -138,10 +138,13 @@ function applyConnectionUpdate(profiles, update, { newHash = () => crypto.random
     return { ok: true, profiles: list.map(entry => (entry.hash === profile.hash ? profile : entry)), profile, saslPassword };
 }
 
-/** Whether the chat page may delete this profile: it must exist, and one has to remain. */
+/**
+ * Whether the chat page may delete this profile: it must exist. The last one may go too,
+ * the apps then show their start (the only way to start over without deleting app data).
+ */
 function canDeleteConnection(profiles, hash) {
     const list = Array.isArray(profiles) ? profiles : [];
-    return list.length > 1 && list.some(profile => profile.hash === hash);
+    return list.some(profile => profile.hash === hash);
 }
 
 /**

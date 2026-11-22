@@ -138,7 +138,23 @@ test('connections page: list, delete and open', async () => {
     const deleted = await profiles.request('delete', { hash: second }, second);
     assert.equal(deleted.deleted, second);
     assert.equal(profiles.active, first, 'the remaining connection comes on screen');
-    assert.equal((await profiles.request('delete', { hash: first }, first)).reason, 'not_allowed', 'one connection stays');
+    const last = await profiles.request('delete', { hash: first }, first);
+    assert.equal(last.deleted, first);
+    assert.deepEqual(profiles.profiles, []);
+    assert.equal(profiles.active, '', 'the start screen comes next');
+});
+
+test('an edition starts over with a fresh connection to its network', async () => {
+    const profiles = profileStore({ primaryServer: 'home.example.org' });
+    await profiles.load();
+    const old = profiles.active;
+    await profiles.setToken(old, 'token-1');
+    const result = await profiles.request('delete', { hash: old }, old);
+    assert.equal(result.deleted, old);
+    assert.equal(profiles.profiles.length, 1);
+    assert.notEqual(profiles.active, old);
+    assert.equal(profiles.profiles[0].server, 'home.example.org');
+    assert.equal((await profiles.configFor(profiles.active)).password, '', 'the login is gone');
 });
 
 test('connection tests are rate limited', async () => {

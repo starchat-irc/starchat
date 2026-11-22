@@ -32,7 +32,7 @@ function setUp({ profileList = ['a', 'b'], active = 'a' } = {}) {
     let activeHash = active;
     const tokens = {};
     const profiles = {
-        profiles: profileList.map(hash => ({ hash })),
+        get profiles() { return profileList.map(hash => ({ hash })); },
         get active() { return activeHash; },
         setActive: async hash => {
             if (!profileList.includes(hash)) return false;
@@ -139,6 +139,17 @@ test('deleting the connection on screen opens the next one and drops its push ke
     await env.fromChat(env.current(), { type: 'connections-request', id: 'r2', action: 'delete', payload: { hash: 'a' } });
     assert.ok(env.calls.some(([name, args]) => name === 'pushUnsubscribe' && args.profile === 'a'));
     assert.equal(env.current().hash, 'b');
+});
+
+test('deleting the last connection goes back to the start screen', async () => {
+    const single = setUp({ profileList: ['a'], active: 'a' });
+    await single.shell.start();
+    await single.loaded();
+    await single.fromChat(single.current(), { type: 'native-socket-connect', data: { connectionId: 'n1', host: 'irc.libera.chat', port: 6697 } });
+    await single.fromChat(single.current(), { type: 'connections-request', id: 'r3', action: 'delete', payload: { hash: 'a' } });
+    assert.equal(single.ui.welcome, true);
+    assert.equal(single.frames.length, 1, 'no chat opened for a connection that is gone');
+    assert.ok(single.calls.some(([name, args]) => name === 'socketClose' && args.connectionId === 'n1'));
 });
 
 test('logins, push and links are kept per connection', async () => {

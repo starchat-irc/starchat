@@ -95,7 +95,7 @@ All file paths are relative to the edition folder and must stay inside it. The f
 
 ## Connections
 
-Like in the desktop app, every connection is a profile: the primary server of the edition or any other server, over TCP (with or without TLS) or a secure WebSocket. The chat on screen runs one connection; the icon at the top of its channel drawer opens the list of connections, where the user switches between them or opens Settings, Connections to add, edit and delete them. Switching closes the connection on screen. Push keeps notifying for every connection that has it on.
+Like in the desktop app, every connection is a profile: the primary server of the edition or any other server, over TCP (with or without TLS) or a secure WebSocket. The chat on screen runs one connection; the icon at the top of its channel drawer opens the list of connections, where the user switches between them or opens Settings, Connections to add, edit and delete them. Deleting the last one starts over: the StarChat app shows its start screen again, an edition a fresh connection to its network. Switching closes the connection on screen. Push keeps notifying for every connection that has it on.
 
 Passwords and API tokens are encrypted with a key in the Android Keystore and only go to the server they were stored for: changing the address of a connection drops them. A backup restored on another device cannot decrypt them, the user signs in again.
 

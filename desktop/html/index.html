@@ -554,7 +554,6 @@
                               x-text="(unreadCounts[profile.hash] || 0) > 99 ? '99+' : unreadCounts[profile.hash]">
                         </span>
                         <button class="tab-close"
-                                x-show="profiles.length > 1"
                                 @click.stop="requestRemoveProfile(profile.hash)">×</button>
                     </div>
                 </template>
@@ -1492,14 +1491,16 @@
              */
             async syncProfilesFromStore() {
                 const stored = await window.electronAPI.getProfiles();
-                if (!Array.isArray(stored) || !stored.length) return;
+                if (!Array.isArray(stored)) return;
                 const removed = this.profiles.filter(p => !stored.some(s => s.hash === p.hash)).map(p => p.hash);
                 this.profiles = stored;
                 removed.forEach(hash => {
                     this.loadedProfiles.delete(hash);
                     delete this.unreadCounts[hash];
                 });
-                if (!stored.some(p => p.hash === this.activeProfile)) this.switchProfile(stored[0].hash);
+                // The last connection was deleted (settings page): the window shows "new connection"
+                if (!stored.length) this.activeProfile = null;
+                else if (!stored.some(p => p.hash === this.activeProfile)) this.switchProfile(stored[0].hash);
             },
 
             /** "Obi_Wan", or "Obi_Wan · Libera" once tabs to several networks are open. */
@@ -1509,7 +1510,6 @@
 
             /** Closing a tab deletes the profile with its credentials: ask first. */
             requestRemoveProfile(hash) {
-                if (this.profiles.length === 1) return;
                 this.tabCloseCandidate = hash;
                 // Cancel is focused, so Enter never deletes a profile by accident
                 this.$nextTick(() => this.$refs.tabCloseCancel?.focus());
@@ -1531,15 +1531,15 @@
             },
 
             removeProfile(hash) {
-                if (this.profiles.length === 1) return;
                 let nextActive = this.activeProfile;
                 if (this.activeProfile === hash) {
                     const idx = this.profiles.findIndex(p => p.hash === hash);
-                    nextActive = (this.profiles[idx + 1] || this.profiles[idx - 1]).hash;
+                    // The last tab may go too: the window then shows "new connection"
+                    nextActive = (this.profiles[idx + 1] || this.profiles[idx - 1])?.hash || null;
                 }
                 this.profiles = this.profiles.filter(p => p.hash !== hash);
                 this.activeProfile = nextActive;
-                window.electronAPI.sendActiveProfile(nextActive);
+                if (nextActive) window.electronAPI.sendActiveProfile(nextActive);
                 this.saveProfiles();
                 window.electronAPI.deleteProfile(hash);
             },

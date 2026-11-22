@@ -87,7 +87,7 @@ function emptyPage() {
         profiles: [],
         current: '',        // hash of the connection this chat runs in
         homeName: '',       // primary server of the edition
-        view: 'list',       // 'list' | 'edit' | 'new' | 'directory'
+        view: 'list',      // 'list' | 'edit' | 'new' | 'directory'
         draft: null,
         original: '',
         password: '',
