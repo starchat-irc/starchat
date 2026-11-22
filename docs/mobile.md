@@ -87,7 +87,12 @@ If you fork this repository, keep your edition in its own folder (for example `m
 | `chat.primaryServer` | no | Domain of your network. The app then starts with a connection to it and takes login, API and features from its [discovery file](discovery.md). Without it (the StarChat app) the first start offers the server list and a form for an own server; the chat then asks for the login (account or guest). |
 | `chat.networkName` | no | Name of the primary network in the connection list, the domain by default. |
 | `chat.serverList` | no | Directory of networks: `'default'` (the public list), an https URL of your own list, or `false`. The build bundles the list, the app loads newer versions once a day. Your own list must be served with `Access-Control-Allow-Origin: *`. |
-| `chat.defaultChannel`, `chat.theme`, `chat.themeCss`, `chat.modules`, `chat.ctcpVersion`, `chat.defaultQuitMessage` | no | As for the [desktop app](desktop.md#editionjson). |
+| `chat.defaultChannel` | no | Channel joined after login on the primary server. |
+| `chat.theme` | no | `auto`, `dark` or `light`. |
+| `chat.themeCss` | no | CSS file loaded after the bundled theme, see [Theme](options.md#theme). |
+| `chat.modules` | no | Names of the feature modules to ship, all by default. |
+| `chat.ctcpVersion` | no | As in [mountChat()](options.md). |
+| `chat.defaultQuitMessage` | no | As in [mountChat()](options.md). |
 | `texts` | no | Texts that replace bundled ones, per language: `{ "de": { "key": "Text" } }`. Keys of the chat (`src/i18n/`) and of the shell (`mobile/locales/`). |
 | `push` | no | `googleServices`: the `google-services.json` of your Firebase project. Its Android app must have `appId` as package name, the build checks that. A file named `google-services.json` in the edition folder is used without this entry. Without the file the app has no push. |
 
