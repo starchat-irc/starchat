@@ -24,6 +24,7 @@ export const PAGES = [
     { file: 'features.md', title: 'Features' },
     { file: 'hosting.md', title: 'Hosting the web client' },
     { file: 'desktop.md', title: 'Desktop app' },
+    { file: 'mobile.md', title: 'Mobile app' },
     { file: 'options.md', title: 'mountChat() options' },
     { file: 'embedding.md', title: 'Embedding with login' },
     { file: 'servers.md', title: 'Server list' },
