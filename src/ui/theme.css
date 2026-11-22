@@ -111,6 +111,12 @@ body {
 .chat-main-content > .userlist {
     min-height: 0;
 }
+/* Flex items grow to their content by default: a long unbroken line (join summary, URL)
+   would push the header buttons and the input past the right edge on a phone */
+.chat-container,
+.chat-container > .d-flex.flex-column.flex-grow-1 {
+    min-width: 0;
+}
 .chat-main-content--no-input { padding-bottom: 0; }
 
 .login-overlay {

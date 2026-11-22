@@ -138,7 +138,8 @@ async function prepare(editionDir, dev) {
         appName: edition.appName,
         webDir: 'www',
         backgroundColor: edition.splashBackground || '#1e1f22',
-        android: { allowMixedContent: false, captureInput: false, webContentsDebuggingEnabled: false },
+        // WebView debugging stays at Capacitor's default: on in debug builds, off in release builds
+        android: { allowMixedContent: false, captureInput: false },
         plugins: { SystemBars: { insetsHandling: 'native' } },
     }, null, 4)}\n`);
 
