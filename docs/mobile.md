@@ -108,7 +108,7 @@ Passwords and API tokens are encrypted with a key in the Android Keystore and on
 
 The IRC server sends Web Push (`draft/webpush`) for the connection. Apps cannot receive Web Push directly, so the network relays it to Firebase Cloud Messaging, see the feature [`push`](features.md#push). The app creates its own Web Push keys per connection and decrypts the pushes itself; a push is matched to its connection by the keys that decrypt it.
 
-A network can only relay to apps of the Firebase project whose service account it holds. For all other networks with `draft/webpush` the app uses a push gateway (`push.gateway` in the edition, see [starchat-irc/push-gateway](https://github.com/starchat-irc/push-gateway)) that holds the service account of the edition's Firebase project. The network's own relay is preferred where it has one. Without a gateway, push only works where the network relays for your edition's project, typically your own network.
+A network can only relay to apps of the Firebase project whose service account it holds. FCM refuses tokens of other projects, so a network relaying for another app does not help yours. An edition with a push gateway (`push.gateway`, see [starchat-irc/push-gateway](https://github.com/starchat-irc/push-gateway)) that holds the service account of its own Firebase project therefore always uses the gateway, on every network with `draft/webpush`, even where the network has a relay. Without a gateway, push only works where the network relays for your edition's project, typically your own network.
 
 ## Releases
 

@@ -238,11 +238,14 @@ test('a refusal of the gateway shows its error code', async () => {
     assert.equal(chat._pushRegistration, null);
 });
 
-test('the network relay wins over the gateway, a gateway must be https', () => {
+test('the gateway of the edition wins over a network relay, a gateway must be https', () => {
+    // A network relay holds the key of its own Firebase project only, FCM refuses other tokens
     const chat = { hasFeature: name => name === 'push', hasApiToken: true, pushGateway: 'https://push.example.org' };
     const mixin = pushModule.mixin();
-    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat }), 'network');
+    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat }), 'gateway');
     assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat, hasFeature: () => false }), 'gateway');
+    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat, pushGateway: null }), 'network', 'editions without a gateway');
+    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat, pushGateway: 'http://push.example.org' }), 'network');
     assert.equal(normalizePushGateway('http://push.example.org'), '');
     assert.equal(normalizePushGateway('https://push.example.org/'), 'https://push.example.org');
 });

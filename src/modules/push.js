@@ -6,8 +6,10 @@
  *  - Browser: service worker (pushWorker option, a copy of push-sw.js on the page's origin)
  *    and the browser's push service. Works on any network with draft/webpush, no API needed.
  *  - App (shell 'mobile'): the app hands over its FCM token and keys (receivePushSubscription).
- *    The network's API relays to FCM (feature "push", see docs/discovery.md); networks without
- *    it go through the push gateway of the app (pushGateway option), if the edition has one.
+ *    An edition with a push gateway (pushGateway option) always uses it: the gateway holds the
+ *    key of the app's Firebase project, a network relay (feature "push", see docs/discovery.md)
+ *    only that of its own project, and FCM refuses tokens of other projects. Without a gateway
+ *    the network's relay is the only way.
  *  - Desktop: no push service, the app stays connected in the tray instead.
  */
 import { SCOPE } from '../ui/settings/registry.js';
@@ -79,10 +81,10 @@ export function pushMixin() {
             return this.hasFeature('push') && Boolean(this.hasApiToken);
         },
 
-        /** How the app reaches FCM: 'network', 'gateway' or null. */
+        /** How the app reaches FCM: 'gateway', 'network' or null. */
         appPushRoute() {
-            if (this.hasNetworkPushRelay()) return 'network';
-            return normalizePushGateway(this.pushGateway) ? 'gateway' : null;
+            if (normalizePushGateway(this.pushGateway)) return 'gateway';
+            return this.hasNetworkPushRelay() ? 'network' : null;
         },
 
         canUsePush() {
