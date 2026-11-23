@@ -173,7 +173,12 @@ const COMMAND_HANDLERS = {
         this.joinPendingShellChannel?.();
         this.notifyHost('update-profile-name', { nickname: this.nickname });
         this.saveShellSaslLogin?.();
-        this.privateMessageKeys.forEach(nick => this.requestHistoryLatest(nick));
+        // DMs get their read marker only on request (channels after JOIN): another session may
+        // have read them while this one was away
+        this.privateMessageKeys.forEach(nick => {
+            this.requestHistoryLatest(nick);
+            this.requestReadMarker(nick);
+        });
         if (this.supportsMetadata) {
             // Only apps with a player publish now-playing. Re-assert (or clear) it on every connect.
             if (this.publishesNowPlaying) this.syncOwnPlaying();

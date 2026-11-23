@@ -1,7 +1,9 @@
 package net.getstarchat.app;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -15,6 +17,29 @@ public class IrcPushMessageTest {
         assertEquals("klaas: Faszinierend", push.body);
         assertEquals("#Bridge", push.target);
         assertEquals("p1:#bridge", push.tag("p1"));
+    }
+
+    @Test
+    public void messagesCarryTheirServerTime() {
+        IrcPushMessage push = IrcPushMessage.parse("@msgid=abc;time=2026-11-23T10:00:00.250Z :Spock!s@h PRIVMSG klaas :hi");
+        assertEquals(1795428000250L, push.time);
+        assertFalse(push.isReadMarker());
+        assertEquals(1795428000000L, IrcPushMessage.parseTime("2026-11-23T10:00:00Z"));
+        assertEquals(0, IrcPushMessage.parse(":Spock!s@h PRIVMSG klaas :hi").time);
+        assertEquals(0, IrcPushMessage.parseTime("yesterday"));
+    }
+
+    @Test
+    public void readMarkerOfAnotherSessionTakesBackTheConversation() {
+        IrcPushMessage dm = IrcPushMessage.parse("@time=2026-11-23T10:00:05.000Z :ergo.test MARKREAD Spock timestamp=2026-11-23T10:00:00.250Z");
+        assertTrue(dm.isReadMarker());
+        assertEquals(1795428000250L, dm.time);
+        assertEquals("same tag as the notification of the DM", "p1:spock", dm.tag("p1"));
+
+        IrcPushMessage channel = IrcPushMessage.parse(":ergo.test MARKREAD #Bridge timestamp=2026-11-23T10:00:00.250Z");
+        assertEquals("p1:#bridge", channel.tag("p1"));
+
+        assertFalse("a query without timestamp is no marker", IrcPushMessage.parse(":ergo.test MARKREAD #Bridge *").isReadMarker());
     }
 
     @Test

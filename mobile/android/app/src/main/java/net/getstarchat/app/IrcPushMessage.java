@@ -1,13 +1,19 @@
 package net.getstarchat.app;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Notification content for one pushed IRC line (same rules as src/push-sw.js).
+ *
+ * Ergo also pushes MARKREAD when the user read a conversation in another session: that line
+ * gives no notification but takes back the one of the conversation ({@link #isReadMarker()}).
  */
 final class IrcPushMessage {
 
@@ -22,13 +28,26 @@ final class IrcPushMessage {
     final String sender;
     /** Channel the message was written in, null for DMs and server messages. */
     final String channel;
+    /**
+     * Server time in milliseconds: of the message, or for MARKREAD how far the conversation
+     * was read. 0 when unknown.
+     */
+    final long time;
+    private final boolean readMarker;
 
-    private IrcPushMessage(String title, String body, String target, String sender, String channel) {
+    private IrcPushMessage(String title, String body, String target, String sender, String channel, long time, boolean readMarker) {
         this.title = title;
         this.body = body;
         this.target = target;
         this.sender = sender;
         this.channel = channel;
+        this.time = time;
+        this.readMarker = readMarker;
+    }
+
+    /** MARKREAD: read in another session, the notification of {@link #target} goes away. */
+    boolean isReadMarker() {
+        return readMarker;
     }
 
     /** A private message to the user (own notification channel). */
@@ -48,8 +67,10 @@ final class IrcPushMessage {
     /** @param network title of server messages and invites: the name of the connection */
     static IrcPushMessage parse(String line, String network) {
         String rest = line == null ? "" : line.replaceAll("[\r\n]+$", "");
+        long time = 0;
         if (rest.startsWith("@")) {
             int end = rest.indexOf(' ');
+            time = parseTime(tagValue(end == -1 ? rest.substring(1) : rest.substring(1, end), "time"));
             rest = end == -1 ? "" : rest.substring(end + 1).trim();
         }
         String nick = "";
@@ -72,10 +93,14 @@ final class IrcPushMessage {
             params.add(rest.substring(trailingAt + 2));
         }
 
-        IrcPushMessage fallback = new IrcPushMessage(network, "", null, nick, null);
+        IrcPushMessage fallback = new IrcPushMessage(network, "", null, nick, null, time, false);
+        if (command.equals("MARKREAD") && params.size() > 1 && params.get(1).startsWith("timestamp=")) {
+            long readUpTo = parseTime(params.get(1).substring("timestamp=".length()));
+            return readUpTo == 0 ? fallback : new IrcPushMessage("", "", params.get(0), "", null, readUpTo, true);
+        }
         if (!command.equals("PRIVMSG") && !command.equals("NOTICE")) {
             if (command.equals("INVITE") && params.size() > 1) {
-                return new IrcPushMessage(network, nick + " → " + params.get(1), null, nick, null);
+                return new IrcPushMessage(network, nick + " → " + params.get(1), null, nick, null, time, false);
             }
             return fallback;
         }
@@ -99,6 +124,35 @@ final class IrcPushMessage {
             isAction ? "* " + nick + " " + text : text,
             isChannel ? recipient : nick,
             nick,
-            isChannel ? recipient : null);
+            isChannel ? recipient : null,
+            time,
+            false);
+    }
+
+    private static String tagValue(String tags, String name) {
+        for (String tag : tags.split(";")) {
+            if (tag.startsWith(name + "=")) {
+                return tag.substring(name.length() + 1);
+            }
+        }
+        return "";
+    }
+
+    /** IRCv3 server time ("2026-11-23T10:00:00.000Z"), 0 when missing or not valid. */
+    static long parseTime(String value) {
+        if (value == null || value.isEmpty()) {
+            return 0;
+        }
+        for (String pattern : new String[] {"yyyy-MM-dd'T'HH:mm:ss.SSSX", "yyyy-MM-dd'T'HH:mm:ssX"}) {
+            SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ROOT);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            format.setLenient(false);
+            try {
+                return format.parse(value).getTime();
+            } catch (ParseException ignored) {
+                // try the next pattern
+            }
+        }
+        return 0;
     }
 }

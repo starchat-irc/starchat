@@ -104,7 +104,11 @@ export function unreadMixin() {
             this._readMarkerSent[key.toLowerCase()] = Math.max(this._readMarkerSent[key.toLowerCase()] || 0, ts);
 
             const known = this.lastReadTs(key);
-            if (known !== null && known >= ts) return;
+            if (known !== null && known >= ts) {
+                // Nothing new, but a counter restored from the saved chat state may be stale
+                if (this.unreadMessages[key] > 0 && !this.isTargetVisible(key)) this.recountUnread(key);
+                return;
+            }
             this._lastRead = this._lastRead || {};
             this._lastRead[key] = new Date(ts).toISOString();
 

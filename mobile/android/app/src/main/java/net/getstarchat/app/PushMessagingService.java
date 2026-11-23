@@ -9,6 +9,7 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.service.notification.StatusBarNotification;
 import android.util.Base64;
 import android.util.Log;
 
@@ -40,6 +41,7 @@ public class PushMessagingService extends FirebaseMessagingService {
     static final String CHANNEL_DIRECT = "direct_messages";
     static final String CHANNEL_MENTIONS = "mentions";
     static final String CHANNEL_CALLS = "calls";
+    private static final int MESSAGE_NOTIFICATION_ID = 1;
     private static final int CALL_NOTIFICATION_ID = 2;
     /** The caller stops ringing after 40 seconds. */
     private static final long CALL_TIMEOUT_MS = 45000;
@@ -74,10 +76,14 @@ public class PushMessagingService extends FirebaseMessagingService {
                 continue;
             }
             String profile = entry.getKey();
+            IrcPushMessage push = IrcPushMessage.parse(line, PushSubscriptionStore.name(this, profile));
+            if (push.isReadMarker()) {
+                clearRead(profile, push);
+                return;
+            }
             if (MainActivity.isInForeground()) {
                 return;
             }
-            IrcPushMessage push = IrcPushMessage.parse(line, PushSubscriptionStore.name(this, profile));
             if (!PushFilter.load(this, profile).suppresses(push)) {
                 show(profile, push);
             }
@@ -143,6 +149,24 @@ public class PushMessagingService extends FirebaseMessagingService {
         // The chat registers the new token on its next connect; the old endpoint then answers 410.
     }
 
+    /**
+     * Read in another session (MARKREAD push of Ergo): the notification of the conversation
+     * goes, unless it already shows a newer message.
+     */
+    private void clearRead(String profile, IrcPushMessage push) {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null) {
+            return;
+        }
+        String tag = push.tag(profile);
+        for (StatusBarNotification active : manager.getActiveNotifications()) {
+            if (active.getId() == MESSAGE_NOTIFICATION_ID && tag.equals(active.getTag())
+                    && active.getNotification().when <= push.time) {
+                manager.cancel(tag, MESSAGE_NOTIFICATION_ID);
+            }
+        }
+    }
+
     private void show(String profile, IrcPushMessage push) {
         NotificationManagerCompat manager = NotificationManagerCompat.from(this);
         if (!manager.areNotificationsEnabled()) {
@@ -166,8 +190,12 @@ public class PushMessagingService extends FirebaseMessagingService {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(tap);
+        if (push.time > 0) {
+            // Message time, compared with the MARKREAD of other sessions in clearRead()
+            notification.setWhen(push.time).setShowWhen(true);
+        }
         try {
-            manager.notify(push.tag(profile), 1, notification.build());
+            manager.notify(push.tag(profile), MESSAGE_NOTIFICATION_ID, notification.build());
         } catch (SecurityException e) {
             Log.w(TAG, "notification permission missing", e);
         }
