@@ -4,7 +4,11 @@ name: Release
 #
 #  - Push to main: the pre-release "latest-dev" is moved to that commit. Its old archives
 #    are deleted first, so it always holds exactly one build.
-#  - Tag v*: a release of its own with starchat-web-<tag>.zip and .tar.gz.
+#  - Tag v*: a release of its own with starchat-web-<tag>.zip and .tar.gz. Its text is the
+#    section of the version in CHANGELOG.md (.github/scripts/changelog-section.sh). The job "npm"
+#    also stages the package on npm (latest, or next for versions like 1.2.0-beta.1).
+#    A maintainer approves it on npmjs.com with 2FA, only then is it published. It runs
+#    in the environment "npm" and signs in with trusted publishing (OIDC), no token.
 #
 # The archives contain one folder, starchat-web/, with index.html, config.json and the rest.
 
@@ -36,6 +40,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Changelog section for the tag
+        if: github.ref_type == 'tag'
+        run: sh .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > /dev/null
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -82,6 +89,44 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           # desktop.yml may create the release at the same time
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --latest \
+          sh .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" --latest \
             || gh release view "$GITHUB_REF_NAME" > /dev/null
           gh release upload "$GITHUB_REF_NAME" ${{ steps.pack.outputs.files }} --clobber
+
+  npm:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Changelog section for the tag
+        if: github.ref_type == 'tag'
+        run: sh .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > /dev/null
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      # Staged publishing needs npm 11.15 or later
+      - run: npm install -g npm@^11.15.0
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Stage on npm
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          package_version=$(node -p "require('./package.json').version")
+          if [ "$package_version" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $package_version in package.json"
+            exit 1
+          fi
+          case "$version" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          npm stage publish --tag "$dist_tag"

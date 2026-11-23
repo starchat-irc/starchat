@@ -62,6 +62,16 @@ test('guests, token logins and the browser hand over no password', async () => {
     token.chat.saveShellSaslLogin();
     assert.deepEqual(token.host, [{ type: 'save-credentials', token: 'jwt', remember: false }], 'the token, never the password');
 
+    const apiOnly = chatIn('mobile');
+    apiOnly.chat.loginUsername = 'kenobi';
+    apiOnly.chat.loginPassword = 'hunter2';
+    await apiOnly.chat.login();
+    apiOnly.chat._apiLogin = { token: 'api', apiOnly: true };
+    apiOnly.chat.saveShellLogin();
+    apiOnly.chat.saveShellSaslLogin();
+    assert.deepEqual(apiOnly.host, [{ type: 'save-credentials', saslAccount: 'kenobi', saslPassword: 'hunter2' }],
+        'api-login: the token cannot log in on IRC, so the app keeps the password');
+
     const web = chatIn(null);
     web.chat.loginUsername = 'kenobi';
     web.chat.loginPassword = 'hunter2';

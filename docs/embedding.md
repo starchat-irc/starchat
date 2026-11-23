@@ -1,10 +1,8 @@
 # Embedding with login
 
-A site that already knows its users can log them into the chat with a token instead of the login dialog. The chat sends the token to its primary server with SASL `IRCV3BEARER`, and the server checks it. For Ergo that is a JWT signed with the key from its config. The token is never sent to another server.
+A site that knows its users can log them into the chat with a token. The chat sends it to the primary server with SASL `IRCV3BEARER`, never to another server. For Ergo the token is a JWT, see [One login for IRC and the API](features.md#one-login-for-irc-and-the-api).
 
 ## On the same page
-
-Pass a function that returns a token:
 
 ```js
 mountChat('#chat', {
@@ -13,7 +11,7 @@ mountChat('#chat', {
 });
 ```
 
-It is called on start and before each reconnect, so short-lived tokens work. Return `null` to show the login dialog. If the function throws, the last token is used again.
+The function is called on start and before each reconnect. Return `null` to show the login dialog.
 
 ## In an iframe
 
@@ -28,9 +26,9 @@ mountChat('#chat', {
 });
 ```
 
-The chat posts `{ type: 'get-token' }` to the parent and only takes the answer from the direct parent window and from the listed origins (its own origin is always allowed). `allowedOrigins` is set by whoever serves the chat page, not by the embedding site. `*` and origins with a path are rejected. Without an answer within 10 seconds (option `timeout`, in milliseconds) the login dialog is shown.
+Only answers from the direct parent and the listed origins count. `*` is rejected. Without an answer within 10 seconds (`timeout`) the login dialog is shown.
 
-The embedding page answers with the token. Check the origin and send the answer to that origin only, never to `'*'`:
+The embedding page answers, to the chat's origin only:
 
 ```js
 const CHAT_ORIGIN = 'https://chat.example.org';
@@ -42,18 +40,13 @@ window.addEventListener('message', async (event) => {
 });
 ```
 
-Fetch a new token for every `get-token`. The chat asks again before each reconnect, and an old token may have expired by then.
+Fetch a new token each time, an old one may have expired. Limit who may frame the chat with `Content-Security-Policy: frame-ancestors`, using the same origins as `allowedOrigins`.
 
 ## Fields of the answer
 
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `token` | yes | The token. |
-| `account` | no | Authorization identity. Leave it out and the server takes the account from the token. |
-| `nickname` | no | Nick for the registration. Without it the account name is used. |
-| `tokenType` | no | Token type sent to the server, default `jwt`. |
-
-## Notes
-
-- The token only goes to the primary server. If the user picked another network in the login dialog before, the chat switches back to the primary server. Logging in as a guest or with a password drops the token.
-- The server of the chat page should limit who may frame it, with `Content-Security-Policy: frame-ancestors https://game.example.net`. Use the same list as `allowedOrigins`.
+| `account` | no | Authorization identity, otherwise taken from the token. |
+| `nickname` | no | Nick, the account name by default. |
+| `tokenType` | no | Default `jwt`. |

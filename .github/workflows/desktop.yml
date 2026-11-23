@@ -48,6 +48,10 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
+      - name: Changelog section for the tag
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: sh .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > /dev/null
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -122,6 +126,7 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           # release.yml may create the release at the same time
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --latest \
+          sh .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" --latest \
             || gh release view "$GITHUB_REF_NAME" > /dev/null
           gh release upload "$GITHUB_REF_NAME" assets/* --clobber

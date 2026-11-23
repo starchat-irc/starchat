@@ -21,7 +21,7 @@ export const CHANNEL_PLACEHOLDER = '{channel}';
 export const COMMUNITY_PLACEHOLDER = '{community}';
 
 /** Login methods defined in docs/discovery.md. */
-export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'guest']);
+export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'api-login', 'guest']);
 
 /**
  * @typedef {Object} Discovery

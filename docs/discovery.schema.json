@@ -14,7 +14,7 @@
         "auth": {
             "type": "array",
             "uniqueItems": true,
-            "items": { "enum": ["sasl-plain", "bearer", "guest"] }
+            "items": { "enum": ["sasl-plain", "bearer", "api-login", "guest"] }
         },
         "features": {
             "type": "array",

@@ -3,7 +3,6 @@
     "version": "0.1.0",
     "description": "IRCv3 web and desktop client",
     "license": "MIT",
-    "private": true,
     "type": "module",
     "repository": {
         "type": "git",
@@ -36,7 +35,8 @@
     "files": [
         "dist",
         "src",
-        "servers"
+        "servers",
+        "CHANGELOG.md"
     ],
     "engines": {
         "node": ">=22.12"

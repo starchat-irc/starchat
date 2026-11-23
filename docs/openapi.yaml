@@ -34,10 +34,12 @@ security:
 tags:
   - name: login
     description: |
-      Only with `bearer` in `auth`. The token is a string the IRC server accepts with SASL
-      `IRCV3BEARER` and the API accepts as `Authorization: Bearer <token>`. With
-      [Ergo](https://ergo.chat) this is a JWT signed with a key from `accounts.jwt-auth`,
-      the account name in `sub`.
+      Only with `bearer` or `api-login` in `auth`. The API accepts the token as
+      `Authorization: Bearer <token>`. With `bearer` the IRC server also accepts it with
+      SASL `IRCV3BEARER`. With [Ergo](https://ergo.chat) this is a JWT signed with a key
+      from `accounts.jwt-auth`, the account name in `sub`. With `api-login` the token is
+      only for the API and the client logs in on IRC with SASL `PLAIN`, so any string the
+      API recognizes works.
 
       A page that embeds the chat can also hand over a token itself
       (`mountChat({ bearer })`), then this endpoint is not called. Guests have no token,
@@ -125,9 +127,9 @@ paths:
       operationId: login
       summary: Token for an account
       description: |
-        The client then logs in on IRC with `IRCV3BEARER` instead of `PLAIN`. Without
-        `bearer` in `auth` a password goes to the IRC server with SASL `PLAIN` and this
-        endpoint is not used.
+        With `bearer` in `auth` the client then logs in on IRC with `IRCV3BEARER` instead
+        of `PLAIN`. With `api-login` it keeps `PLAIN` on IRC and uses the token only for
+        the API. Without either, this endpoint is not used.
       security: []
       requestBody:
         required: true

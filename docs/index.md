@@ -1,42 +1,21 @@
 # Documentation
 
-StarChat is an IRCv3 client for the web and the desktop. These pages describe how to put it into a page, how to configure it and what a network can do to work well with it.
+StarChat is an IRCv3 client for the web, the desktop and Android. Downloads are on the [releases page](https://github.com/starchat-irc/starchat/releases/latest), the library is on npm as `starchat`, changes are in the [changelog](https://github.com/starchat-irc/starchat/blob/main/CHANGELOG.md).
 
-StarChat is not released yet. The web client is available as a [development build](hosting.md), the npm package and desktop downloads come with the first release.
-
-## Pages
-
-- [Features](features.md): what works on every network and what a network can add
-- [Hosting the web client](hosting.md): the ready-made page, configured with `config.json`
-- [Desktop app](desktop.md): building the Electron app, also as your own edition
-- [Mobile app](mobile.md): building the Android app, also as your own edition
-- [mountChat() options](options.md): starting the chat in a page and configuring it
-- [Embedding with login](embedding.md): logging in users of your site with a token
-- [Server list](servers.md): the public list of networks and how to use your own
-- [Discovery file](discovery.md): how a network announces its WebSocket address and extra services
-- [Commands and shortcuts](commands.md): slash commands and keyboard shortcuts
-- [IRCv3 support](ircv3.md): capabilities and tags StarChat uses
+There is no central StarChat server. The client connects directly to the network the user picks. A network without any setup works as a plain IRC server, as long as it offers IRC over WebSocket. A network that wants to offer more serves a [discovery file](discovery.md).
 
 ## How it is built
 
-The package has two layers.
+`src/core/` is the IRC core without UI: parser, CAP and SASL, WebSocket transport, mIRC formatting, slash commands, server list, discovery and the state of messages, nick lists and topics. The state goes through a small store adapter, so another UI can plug in its own store.
 
-`src/core/` is the IRC core without any UI: line parser, CAP and SASL negotiation, WebSocket transport, mIRC formatting, slash commands and the state for messages, nick lists and topics. It also loads the server list, reads the discovery file of each server and keeps features, API access and token per connection. The state is written through a small store adapter, so another UI can plug in its own reactive store.
+`src/ui/` is the interface, built with Alpine.js and Bootstrap 5. Templates are in `src/ui/templates/`, texts in `src/i18n/`. [`mountChat()`](options.md) renders it into an element.
 
-`src/ui/` is the chat interface, built with Alpine.js and Bootstrap 5. HTML templates live in `src/ui/templates/`, texts in `src/i18n/` (English and German). [`mountChat()`](options.md) renders the templates into an element and starts everything.
-
-Both layers are exported from the package entry, so the core can be used on its own:
+Both are exported from the package, so the core can be used on its own:
 
 ```js
 import { connectWebSocket, parseIrcLine, saslPlain } from 'starchat';
 ```
 
-## Connections and networks
-
-There is no central StarChat server. The client connects directly to the IRC network the user picks. Every connection has its own features and its own token, and a token is only sent to the network it belongs to.
-
-A network without any setup works as a plain IRC server, as long as it offers IRC over WebSocket (the web build cannot open TCP connections). A network that wants to offer more serves a [discovery file](discovery.md).
-
-## License
+`desktop/` and `mobile/` are the [desktop](desktop.md) and [Android](mobile.md) apps around the same chat.
 
 StarChat is licensed under the [MIT License](../LICENSE).

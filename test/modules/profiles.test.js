@@ -22,7 +22,7 @@ test('login stores the token and sends it with later API calls', async () => {
     const fetch = apiStub({ 'POST login': json({ token: 'jwt-1', nickname: 'Alice' }), 'GET chat/profile': json({}) });
     const connection = connectionWith(fetch);
 
-    assert.equal(connection.supportsTokenLogin(), true);
+    assert.equal(connection.tokenLogin(), 'bearer');
     assert.deepEqual(await connection.login('alice', 'secret'), { token: 'jwt-1', nickname: 'Alice' });
     assert.deepEqual(JSON.parse(fetch.calls[0].init.body), { username: 'alice', password: 'secret' });
     assert.equal(fetch.calls[0].init.credentials, 'omit');
@@ -37,9 +37,11 @@ test('wrong credentials give null, server errors throw', async () => {
     await assert.rejects(connectionWith(apiStub({ 'POST login': json({ nickname: 'x' }) })).login('a', 'b'));
 });
 
-test('token login needs bearer in auth and an API', () => {
-    assert.equal(connectionWith(apiStub({}), { auth: ['sasl-plain'] }).supportsTokenLogin(), false);
-    assert.equal(createConnection({ server: SERVER, discovery: { schemaVersion: 1, auth: ['bearer'] } }).supportsTokenLogin(), false);
+test('token login needs bearer or api-login in auth and an API', () => {
+    assert.equal(connectionWith(apiStub({}), { auth: ['sasl-plain'] }).tokenLogin(), null);
+    assert.equal(connectionWith(apiStub({}), { auth: ['sasl-plain', 'api-login'] }).tokenLogin(), 'api');
+    assert.equal(connectionWith(apiStub({}), { auth: ['api-login', 'bearer'] }).tokenLogin(), 'bearer', 'bearer wins');
+    assert.equal(createConnection({ server: SERVER, discovery: { schemaVersion: 1, auth: ['bearer'] } }).tokenLogin(), null);
 });
 
 // Component login
@@ -94,6 +96,36 @@ test('guests and servers without bearer get no token', async () => {
     const guest = chatWith(connectionWith(apiStub({}))).chat;
     await guest.guestLogin();
     assert.equal(guest.canUseProfiles(), false);
+});
+
+test('api-login: the token is only for the API, IRC keeps SASL PLAIN with the typed name', async () => {
+    const fetch = apiStub({ 'POST login': json({ token: 'tok-1', nickname: 'Alice' }) });
+    const { chat, sockets } = chatWith(connectionWith(fetch, { auth: ['sasl-plain', 'api-login'] }));
+    chat.loginUsername = 'alice';
+    chat.loginPassword = 'secret';
+
+    await chat.login();
+
+    assert.deepEqual(JSON.parse(fetch.calls[0].init.body), { username: 'alice', password: 'secret' });
+    assert.equal(chat.nickname, 'alice');
+    assert.equal(chat.hasApiToken, true);
+    assert.equal(chat.canUseProfiles(), true);
+    assert.equal(sockets[0].options.sasl.mechanism, 'PLAIN');
+    assert.equal(chat.connection.getToken(), 'tok-1');
+});
+
+test('api-login: a refused or unreachable API leaves the decision to the IRC server', async () => {
+    for (const answer of [json({}, 401), new Error('offline')]) {
+        const { chat, sockets } = chatWith(connectionWith(apiStub({ 'POST login': answer }), { auth: ['sasl-plain', 'api-login'] }));
+        chat.loginUsername = 'alice';
+        chat.loginPassword = 'secret';
+
+        await chat.login();
+
+        assert.equal(sockets[0].options.sasl.mechanism, 'PLAIN');
+        assert.equal(chat.hasApiToken, false);
+        assert.equal(chat.canUseProfiles(), false);
+    }
 });
 
 // Profiles

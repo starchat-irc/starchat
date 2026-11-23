@@ -423,7 +423,7 @@ export function createChatComponent(options) {
             if (this.usesBearer()) {
                 return saslBearer(() => this._bearer.account || '', () => this._bearer.token, this._bearer.tokenType || 'jwt');
             }
-            if (this._apiLogin) {
+            if (this._apiLogin && !this._apiLogin.apiOnly) {
                 return saslBearer(() => '', () => this._apiLogin.token, 'jwt');
             }
             return this._saslPassword ? saslPlain(this._saslAccount || this.nickname, this._saslPassword) : null;
@@ -478,7 +478,8 @@ export function createChatComponent(options) {
          * app only with "remember me") and starts the next session with it instead of the password.
          */
         saveShellLogin() {
-            if (!['desktop', 'mobile'].includes(this.shell) || !this._apiLogin?.token) return;
+            // A token only for the API cannot log in on IRC, the app keeps the password instead
+            if (!['desktop', 'mobile'].includes(this.shell) || !this._apiLogin?.token || this._apiLogin.apiOnly) return;
             this.notifyHost('save-credentials', { token: this._apiLogin.token, remember: Boolean(this.rememberMe) });
         },
 
@@ -490,7 +491,7 @@ export function createChatComponent(options) {
         saveShellSaslLogin() {
             const login = this._formSaslLogin;
             this._formSaslLogin = null;
-            if (this.shell !== 'mobile' || !login || this._apiLogin || this.usesBearer()) return;
+            if (this.shell !== 'mobile' || !login || (this._apiLogin && !this._apiLogin.apiOnly) || this.usesBearer()) return;
             this.notifyHost('save-credentials', { saslAccount: login.account, saslPassword: login.password });
         },
 
@@ -502,6 +503,7 @@ export function createChatComponent(options) {
         /**
          * Token for the API (and IRC) of this connection: from the embedding page, or from
          * the server's login when it offers one. A failed API login falls back to SASL PLAIN.
+         * With 'api-login' the token is only for the API and IRC decides about the password.
          */
         async prepareToken(connection) {
             if (this.usesBearer()) {
@@ -510,12 +512,21 @@ export function createChatComponent(options) {
             }
             this.setApiToken(connection, null);
             this._apiLogin = null;
-            if (!this._saslPassword || !connection.supportsTokenLogin?.()) return;
+            const mode = connection.tokenLogin?.();
+            if (!this._saslPassword || !mode) return;
             let result;
             try {
                 result = await connection.login(this._saslAccount || this.nickname, this._saslPassword);
             } catch (error) {
                 console.warn('API login failed, using SASL PLAIN:', error);
+                return;
+            }
+            if (mode === 'api') {
+                // The nick stays: SASL PLAIN uses it as account name
+                if (result) {
+                    this._apiLogin = { ...result, apiOnly: true };
+                    this.hasApiToken = true;
+                }
                 return;
             }
             if (!result) throw new Error('login_sasl_failed');

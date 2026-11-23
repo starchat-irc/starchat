@@ -78,8 +78,16 @@ export function createConnection({ server, discovery = null, token = null, fetch
             }
             return fetch(apiUrl(path), { ...init, headers, credentials: 'omit' });
         },
-        /** One login for API and IRC, only when the server offers it. */
-        supportsTokenLogin: () => Boolean(apiBaseUrl && discovery?.auth?.includes('bearer')),
+        /**
+         * How a password login gets an API token: 'bearer' (the token also logs in on IRC),
+         * 'api' (the token is only for the API, IRC keeps SASL PLAIN) or null.
+         */
+        tokenLogin() {
+            if (!apiBaseUrl) return null;
+            if (discovery?.auth?.includes('bearer')) return 'bearer';
+            if (discovery?.auth?.includes('api-login')) return 'api';
+            return null;
+        },
         /**
          * Exchanges name and password for a token (POST login, docs/discovery.md) and
          * keeps it for API calls. Returns { token, nickname }, or null for wrong
