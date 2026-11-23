@@ -33,6 +33,7 @@ The returned promise resolves with the connection of the primary server and the 
 | `locale` | browser languages | Language code or list of codes, for example `'de-DE'`. The first one with bundled texts wins, English otherwise. |
 | `theme` | `'auto'` | `'auto'` follows the system setting, `'dark'` or `'light'` fix it. Users can change it in the settings, their choice is kept in the browser. |
 | `overrides` | `{}` | Texts that replace bundled ones, by key (see `src/i18n/en.json`). |
+| `layout` | `'full'` | Parts of the chat that are shown. `'headless'` leaves only the messages and the input line, see [Chat box without frame](#chat-box-without-frame). |
 | `appName` | `'StarChat'` | Name shown in texts that mention the app. |
 | `ctcpVersion` | `'StarChat'` | Answer to CTCP VERSION. |
 | `defaultQuitMessage` | | Quit message until the user sets one. |
@@ -44,6 +45,36 @@ The returned promise resolves with the connection of the primary server and the 
 | `storageScope` | server id | Suffix of the keys under which settings and drafts of this connection are stored in the browser. The desktop app passes the id of the connection profile, so two connections to one server keep their own settings. |
 | `nativeSocket` | | IRC over TCP for apps that can open sockets: `nativeSocketConnector({ send, listen })`, see `src/core/native-socket.js`. Used for servers that have `irc` but no `websocket` in their entry. |
 | `pushWorker` | | URL of the push service worker on your origin, see [Push notifications](#push-notifications). Without it there is no push in the browser. |
+
+## Chat box without frame
+
+A game or app that only wants a chat box passes `layout: 'headless'`. Then only the messages of the current channel and the input line are shown: no header, no channel list, no user list, no join and part lines, no logout button. The chat also leaves the keys of the page alone (Ctrl+P, Ctrl+F, Alt+Up/Down and `?` are not taken).
+
+```js
+await mountChat('#chatbox', {
+    primaryServer: 'irc.example.org',
+    defaultChannel: '#village',
+    layout: 'headless',
+    bearer: async () => ({ token: await fetchChatToken() }),
+});
+```
+
+An object switches single parts off, everything not named stays:
+
+```js
+layout: { userList: false, joinPart: false }
+```
+
+| Part | Meaning |
+|------|---------|
+| `header` | Channel name, topic, buttons and the message search. The reconnect notice stays. |
+| `channelList` | Icon rail and channel list, with them the friends and upload views. |
+| `userList` | Nick list of the channel. |
+| `joinPart` | Join and part lines. Kicks, nick changes and topics stay. |
+| `logout` | Logout button of the input line. |
+| `shortcuts` | Keyboard shortcuts on the whole page. |
+
+Without the channel list the user stays in the channel they see. `/join` and `/query` still switch to the new window, but there is no way back other than another command. Direct messages from others arrive without being shown, so a chat box should set a `defaultChannel`. Settings for hidden parts are not offered.
 
 ## Theme
 

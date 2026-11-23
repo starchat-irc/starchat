@@ -1,32 +1,35 @@
-<div class="chat-header">
-    <div class="chat-header-row">
-        <!-- Small screens: opens the channel/community drawer -->
-        <button type="button" class="chat-header-btn chat-header-menu-btn position-relative"
-                title="{{ t('open_navigation') }}"
-                aria-label="{{ t('open_navigation') }}"
-                :aria-expanded="mobileSidebarOpen"
-                @click="toggleMobileSidebar()">
-            <i class="bi bi-list"></i>
-            <span class="chat-header-menu-dot" x-show="hasUnreadOutsideCurrentView()" x-cloak></span>
-        </button>
-        <h1 class="chat-header-title">
-            <i class="bi" :class="isServerWindow() ? 'bi-terminal' : (currentChannel && currentChannel.startsWith('#') ? 'bi-hash' : 'bi-at')"></i>
-            <span x-text="isServerWindow() ? t('server_window') : (currentChannel ? currentChannel.replace(/^#/, '') : t('no_channel_selected'))"></span>
-        </h1>
-
-        <template x-if="currentChannel && currentChannel.startsWith('#')">
-            <button type="button"
-                    class="chat-header-topic"
-                    :class="{ 'is-editable': canManageCurrentChannel() }"
-                    :title="canManageCurrentChannel() ? 'Topic bearbeiten' : ''"
-                    @click="openTopicEditor()"
-                    x-html="$store.channelTopics?.[currentChannel] ? channelTopic : escapeHtml(t('no_topic'))">
+<div class="chat-header" :class="{ 'chat-header--bare': !layout.header }">
+    <template x-if="layout.header">
+        <div class="chat-header-row">
+            <!-- Small screens: opens the channel/community drawer -->
+            <button type="button" class="chat-header-btn chat-header-menu-btn position-relative"
+                    title="{{ t('open_navigation') }}"
+                    aria-label="{{ t('open_navigation') }}"
+                    :aria-expanded="mobileSidebarOpen"
+                    @click="toggleMobileSidebar()">
+                <i class="bi bi-list"></i>
+                <span class="chat-header-menu-dot" x-show="hasUnreadOutsideCurrentView()" x-cloak></span>
             </button>
-        </template>
+            <h1 class="chat-header-title">
+                <i class="bi" :class="isServerWindow() ? 'bi-terminal' : (currentChannel && currentChannel.startsWith('#') ? 'bi-hash' : 'bi-at')"></i>
+                <span x-text="isServerWindow() ? t('server_window') : (currentChannel ? currentChannel.replace(/^#/, '') : t('no_channel_selected'))"></span>
+            </h1>
 
-        <div class="chat-header-actions">
-            <!-- Voice chat of the channel -->
-            <template x-if="hasFeature('voice')">
+            <template x-if="currentChannel && currentChannel.startsWith('#')">
+                <button type="button"
+                        class="chat-header-topic"
+                        :class="{ 'is-editable': canManageCurrentChannel() }"
+                        :title="canManageCurrentChannel() ? 'Topic bearbeiten' : ''"
+                        @click="openTopicEditor()"
+                        x-html="$store.channelTopics?.[currentChannel] ? channelTopic : escapeHtml(t('no_topic'))">
+                </button>
+            </template>
+
+            <div class="chat-header-actions">
+                <!-- Voice chat of the channel -->
+        
+    </template>
+    <template x-if="hasFeature('voice')">
             <button class="chat-header-btn"
                     :class="{ 'is-active': isInVoice(currentChannel), 'chat-header-btn--voice-live': isInVoice(currentChannel) }"
                     x-show="currentChannel?.startsWith('#') && (canJoinVoice(currentChannel) || isInVoice(currentChannel))"
@@ -78,25 +81,25 @@
             </button>
             <button class="chat-header-btn chat-header-btn--desktop"
                     :class="{ 'is-active': !hideJoinPart }"
-                    x-show="currentChannel && currentChannel.startsWith('#')"
+                    x-show="layout.joinPart && currentChannel && currentChannel.startsWith('#')"
                     title="{{ t('toggle_join_part') }}"
                     @click="toggleJoinPart()">
                 <i class="bi" :class="hideJoinPart ? 'bi-door-closed' : 'bi-door-open'"></i>
             </button>
             <button class="chat-header-btn"
                     :class="{ 'is-active': userListOpen }"
-                    x-show="currentChannel && currentChannel.startsWith('#') && sidebarMode === 'channels'"
+                    x-show="layout.userList && currentChannel && currentChannel.startsWith('#') && sidebarMode === 'channels'"
                     title="{{ t('toggle_userlist') }}"
                     @click="toggleUserList()">
                 <i class="bi bi-people-fill"></i>
             </button>
         </div>
     </div>
-    <template x-if="hasFeature('voice')">
+    <template x-if="hasFeature('voice') && layout.header">
         <div>{{> voice-bar }}</div>
     </template>
     <!-- Message search (Ctrl+F) -->
-    <div class="message-search" x-show="messageSearch.open" x-cloak role="search">
+    <div class="message-search" x-show="layout.header && messageSearch.open" x-cloak role="search">
         <i class="bi bi-search"></i>
         <input type="search"
                x-ref="messageSearchInput"

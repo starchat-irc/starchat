@@ -56,6 +56,7 @@ export function settingsMixin({ defaultTheme = 'auto' } = {}) {
         settingsEnv() {
             return {
                 shell: this.shell,
+                layout: this.layout,
                 hasFeature: name => this.hasFeature(name),
                 hasAccount: Boolean(this.canUseProfiles?.()),
                 hasToken: Boolean(this.hasApiToken),

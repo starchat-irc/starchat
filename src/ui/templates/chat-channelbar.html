@@ -1,247 +1,249 @@
-<div class="d-flex chat-sidebar-shell overflow-x-hidden"
-     :class="{ 'is-mobile-open': mobileSidebarOpen }"
-     x-show="sidebarMode != 'uploads' || isMobileLayout" x-cloak>
-    <div class="icon-rail d-flex flex-column align-items-center py-3 px-1 gap-1">
-        <!-- Mobile app: connections of the app, it switches between them -->
-        <template x-if="shell === 'mobile'">
-            <div class="d-flex flex-column align-items-center gap-1 w-100">
-                <button class="icon-rail-button position-relative"
-                        title="{{ t('app_connections') }}"
-                        @click="showAppConnections()">
-                    <span class="icon-rail-icon"><i class="bi bi-hdd-network"></i></span>
-                </button>
-                <hr class="sidebar-rail-divider w-75 my-1">
-            </div>
-        </template>
+<template x-if="layout.channelList">
+    <div class="d-flex chat-sidebar-shell overflow-x-hidden"
+         :class="{ 'is-mobile-open': mobileSidebarOpen }"
+         x-show="sidebarMode != 'uploads' || isMobileLayout" x-cloak>
+        <div class="icon-rail d-flex flex-column align-items-center py-3 px-1 gap-1">
+            <!-- Mobile app: connections of the app, it switches between them -->
+            <template x-if="shell === 'mobile'">
+                <div class="d-flex flex-column align-items-center gap-1 w-100">
+                    <button class="icon-rail-button position-relative"
+                            title="{{ t('app_connections') }}"
+                            @click="showAppConnections()">
+                        <span class="icon-rail-icon"><i class="bi bi-hdd-network"></i></span>
+                    </button>
+                    <hr class="sidebar-rail-divider w-75 my-1">
+                </div>
+            </template>
 
-        <!-- Home: every joined channel -->
-        <button class="icon-rail-button position-relative"
-                :class="{
-                    'is-active': sidebarMode === 'channels' && activeCommunityFilter === null && !isServerWindow(),
-                    'has-unread': channelsHaveUnread && (sidebarMode !== 'channels' || activeCommunityFilter !== null)
-                }"
-                title="{{ t('home') }}"
-                @click="openHome()">
-            <span class="icon-rail-icon"><i class="bi bi-house-door-fill"></i></span>
-            <span class="rail-badge"
-                  x-show="channelsMentionCount > 0 && (sidebarMode !== 'channels' || activeCommunityFilter !== null)"
-                  x-text="channelsMentionCount"></span>
-        </button>
-
-        <!-- Direct messages (and friends, when the server offers them) -->
-        <button class="icon-rail-button position-relative"
-                :class="{ 'is-active': sidebarMode === 'friends', 'has-unread': friendsIndicatorCount > 0 && sidebarMode !== 'friends' }"
-                :title="hasFeature('friends') ? t('friends') : t('direct_messages')"
-                @click="setSidebarMode('friends')">
-            <span class="icon-rail-icon"><i class="bi" :class="hasFeature('friends') ? 'bi-people-fill' : 'bi-chat-dots-fill'"></i></span>
-            <span class="rail-badge"
-                  x-show="friendsIndicatorCount > 0"
-                  x-text="friendsIndicatorCount"></span>
-        </button>
-
-        <!-- Uploads -->
-        <template x-if="hasFeature('uploads')">
+            <!-- Home: every joined channel -->
             <button class="icon-rail-button position-relative"
-                    :class="{ 'is-active': sidebarMode === 'uploads' }"
-                    title="{{ t('uploads') }}"
-                    @click="setSidebarMode('uploads')">
-                <span class="icon-rail-icon"><i class="bi bi-collection-play"></i></span>
+                    :class="{
+                        'is-active': sidebarMode === 'channels' && activeCommunityFilter === null && !isServerWindow(),
+                        'has-unread': channelsHaveUnread && (sidebarMode !== 'channels' || activeCommunityFilter !== null)
+                    }"
+                    title="{{ t('home') }}"
+                    @click="openHome()">
+                <span class="icon-rail-icon"><i class="bi bi-house-door-fill"></i></span>
+                <span class="rail-badge"
+                      x-show="channelsMentionCount > 0 && (sidebarMode !== 'channels' || activeCommunityFilter !== null)"
+                      x-text="channelsMentionCount"></span>
             </button>
-        </template>
 
-        <!-- Server window (status window like in classic IRC clients), no unread counter, only an activity dot -->
-        <button class="icon-rail-button position-relative"
-                :class="{ 'is-active': isServerWindow() }"
-                title="{{ t('server_window') }}"
-                @click="openServerWindow()">
-            <span class="icon-rail-icon"><i class="bi bi-terminal"></i></span>
-            <span class="rail-activity-dot" x-show="serverWindowActivity && !isServerWindow()" x-cloak></span>
-        </button>
+            <!-- Direct messages (and friends, when the server offers them) -->
+            <button class="icon-rail-button position-relative"
+                    :class="{ 'is-active': sidebarMode === 'friends', 'has-unread': friendsIndicatorCount > 0 && sidebarMode !== 'friends' }"
+                    :title="hasFeature('friends') ? t('friends') : t('direct_messages')"
+                    @click="setSidebarMode('friends')">
+                <span class="icon-rail-icon"><i class="bi" :class="hasFeature('friends') ? 'bi-people-fill' : 'bi-chat-dots-fill'"></i></span>
+                <span class="rail-badge"
+                      x-show="friendsIndicatorCount > 0"
+                      x-text="friendsIndicatorCount"></span>
+            </button>
 
-        <!-- Communities of the user, the rest behind "+N", then "discover" (directory of the network) -->
-        <template x-if="hasFeature('communities')">
-            <div class="d-flex flex-column align-items-center gap-1 w-100" x-show="canUseCommunities()">
-                <hr class="sidebar-rail-divider w-75 my-1" x-show="myCommunities.length > 0 || hasFeature('explore')">
-                <template x-for="community in visibleCommunities()" :key="community.id">
+            <!-- Uploads -->
+            <template x-if="hasFeature('uploads')">
+                <button class="icon-rail-button position-relative"
+                        :class="{ 'is-active': sidebarMode === 'uploads' }"
+                        title="{{ t('uploads') }}"
+                        @click="setSidebarMode('uploads')">
+                    <span class="icon-rail-icon"><i class="bi bi-collection-play"></i></span>
+                </button>
+            </template>
+
+            <!-- Server window (status window like in classic IRC clients), no unread counter, only an activity dot -->
+            <button class="icon-rail-button position-relative"
+                    :class="{ 'is-active': isServerWindow() }"
+                    title="{{ t('server_window') }}"
+                    @click="openServerWindow()">
+                <span class="icon-rail-icon"><i class="bi bi-terminal"></i></span>
+                <span class="rail-activity-dot" x-show="serverWindowActivity && !isServerWindow()" x-cloak></span>
+            </button>
+
+            <!-- Communities of the user, the rest behind "+N", then "discover" (directory of the network) -->
+            <template x-if="hasFeature('communities')">
+                <div class="d-flex flex-column align-items-center gap-1 w-100" x-show="canUseCommunities()">
+                    <hr class="sidebar-rail-divider w-75 my-1" x-show="myCommunities.length > 0 || hasFeature('explore')">
+                    <template x-for="community in visibleCommunities()" :key="community.id">
+                        <button class="icon-rail-button community-rail-btn position-relative"
+                                :class="{
+                                    'is-active': sidebarMode === 'channels' && activeCommunityFilter === community.id && !isServerWindow(),
+                                    'has-unread': communityHasUnread(community) && activeCommunityFilter !== community.id
+                                }"
+                                :title="community.name"
+                                @click="openCommunity(community)">
+                            <span class="icon-rail-icon community-icon-initial" x-text="community.name.charAt(0).toUpperCase()"></span>
+                            <span class="rail-badge"
+                                  x-show="communityMentionCount(community) > 0"
+                                  x-text="communityMentionCount(community)"></span>
+                        </button>
+                    </template>
                     <button class="icon-rail-button community-rail-btn position-relative"
-                            :class="{
-                                'is-active': sidebarMode === 'channels' && activeCommunityFilter === community.id && !isServerWindow(),
-                                'has-unread': communityHasUnread(community) && activeCommunityFilter !== community.id
-                            }"
-                            :title="community.name"
-                            @click="openCommunity(community)">
-                        <span class="icon-rail-icon community-icon-initial" x-text="community.name.charAt(0).toUpperCase()"></span>
-                        <span class="rail-badge"
-                              x-show="communityMentionCount(community) > 0"
-                              x-text="communityMentionCount(community)"></span>
+                            x-show="hiddenCommunityCount() > 0"
+                            :title="t('more_communities', { count: hiddenCommunityCount() })"
+                            @click="hasFeature('explore') && openExplore('directory')">
+                        <span class="icon-rail-icon community-icon-initial community-overflow-initial"
+                              x-text="'+' + hiddenCommunityCount()"></span>
                     </button>
-                </template>
-                <button class="icon-rail-button community-rail-btn position-relative"
-                        x-show="hiddenCommunityCount() > 0"
-                        :title="t('more_communities', { count: hiddenCommunityCount() })"
-                        @click="hasFeature('explore') && openExplore('directory')">
-                    <span class="icon-rail-icon community-icon-initial community-overflow-initial"
-                          x-text="'+' + hiddenCommunityCount()"></span>
-                </button>
-                <button class="icon-rail-button icon-rail-button--discover"
-                        x-show="hasFeature('explore')"
-                        title="{{ t('discover_communities') }}"
-                        @click="openExplore('directory')">
-                    <span class="icon-rail-icon"><i class="bi bi-plus-lg"></i></span>
-                </button>
-            </div>
-        </template>
+                    <button class="icon-rail-button icon-rail-button--discover"
+                            x-show="hasFeature('explore')"
+                            title="{{ t('discover_communities') }}"
+                            @click="openExplore('directory')">
+                        <span class="icon-rail-icon"><i class="bi bi-plus-lg"></i></span>
+                    </button>
+                </div>
+            </template>
 
-        <!-- Settings and own profile (bottom of the rail) -->
-        <button class="icon-rail-button mt-auto"
-                :class="{ 'is-active': settingsWindow.show && settingsWindow.section !== 'account' }"
-                title="{{ t('settings_title') }}"
-                @click="openSettings()">
-            <span class="icon-rail-icon"><i class="bi bi-gear"></i></span>
-        </button>
-        <template x-if="hasFeature('profiles')">
-            <button class="icon-rail-button icon-rail-button--profile"
-                    x-show="canUseProfiles()"
-                    :class="{ 'is-active': settingsWindow.show && settingsWindow.section === 'account' }"
-                    title="{{ t('profile_edit') }}"
-                    @click="openProfileEditor()">
-                <span class="icon-rail-icon rail-own-avatar nick-bg" :style="nickStyle(nickname)">
-                    <template x-if="avatarUrl(nickname)">
-                        <img class="nick-avatar-img" :src="avatarUrl(nickname)" alt="" loading="lazy" x-on:error="clearUserAvatar(nickname)">
-                    </template>
-                    <span x-show="!avatarUrl(nickname)" x-text="nickInitial(nickname)"></span>
-                </span>
+            <!-- Settings and own profile (bottom of the rail) -->
+            <button class="icon-rail-button mt-auto"
+                    :class="{ 'is-active': settingsWindow.show && settingsWindow.section !== 'account' }"
+                    title="{{ t('settings_title') }}"
+                    @click="openSettings()">
+                <span class="icon-rail-icon"><i class="bi bi-gear"></i></span>
             </button>
-        </template>
-    </div>
-
-    <div class="channellist-content overflow-auto" @click="closeMobileSidebarAfterPick($event)">
-        <!-- Friends and DMs -->
-        <div x-show="sidebarMode === 'friends'" x-cloak>
-            <template x-if="hasFeature('friends')">
-                <div>
-                    <button type="button"
-                            class="channel-item channel-item--hub mb-3"
-                            :class="{ 'is-active': !selectedFriendName || !isDirectMessageChannel(currentChannel) }"
-                            @click="openFriendsHub()">
-                        <i class="bi bi-house-door channel-item-icon"></i>
-                        <span class="channel-item-name">{{ t('friends_hub') }}</span>
-                        <span class="mention-badge" x-show="pendingFriendRequestCount > 0" x-text="pendingFriendRequestCount"></span>
-                    </button>
-
-                    <!-- Friends: their DMs (latest activity first), then online friends without a DM -->
-                    <div x-show="friendDmKeys().length || onlineFriendsWithoutDm().length">
-                        <div class="sidebar-section-title">
-                            <span>{{ t('friends_title') }}</span>
-                        </div>
-                        <div class="d-flex flex-column gap-1 mb-3">
-                            <template x-for="user in friendDmKeys()" :key="user">
-                                {{> dm-sidebar-item }}
-                            </template>
-                            <template x-for="friend in onlineFriendsWithoutDm()" :key="friend.friendship_id">
-                                <button type="button"
-                                        class="channel-item channel-item--idle"
-                                        @click="openFriendChat(friend.user.display)"
-                                        @contextmenu.prevent="openFriendContextMenu(friend, $event)"
-                                        @touchstart.passive="startLongPress($event, (e) => openFriendContextMenu(friend, e))"
-                                        @touchmove.passive="moveLongPress($event)"
-                                        @touchend="endLongPress($event)"
-                                        @touchcancel="cancelLongPress()">
-                                    <span class="channel-item-avatar nick-bg position-relative" :style="nickStyle(friend.user.display)">
-                                        <template x-if="avatarUrl(friend.user.display)">
-                                            <img class="nick-avatar-img" :src="avatarUrl(friend.user.display)" alt="" loading="lazy" x-on:error="clearUserAvatar(friend.user.display)">
-                                        </template>
-                                        <span x-show="!avatarUrl(friend.user.display)" x-text="nickInitial(friend.user.display)"></span>
-                                        <span class="presence-dot is-online"></span>
-                                    </span>
-                                    <span class="channel-item-name" x-text="friend.user.display"></span>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Everyone else (latest activity first) -->
-            <div x-show="otherDmKeys().length || !privateMessageKeys.length">
-                <div class="sidebar-section-title">
-                    <span>{{ t('direct_messages') }}</span>
-                </div>
-                <div class="d-flex flex-column gap-1 mb-3">
-                    <template x-for="user in otherDmKeys()" :key="user">
-                        {{> dm-sidebar-item }}
-                    </template>
-                    <div class="sidebar-empty" x-show="privateMessageKeys.length === 0">{{ t('no_direct_messages') }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Channels -->
-        <div class="position-relative" x-show="sidebarMode === 'channels'" x-cloak>
-            <div class="sidebar-section-title">
-                <span class="text-truncate me-auto" x-text="sidebarTitle()"></span>
-                <template x-if="hasFeature('events')">
-                    <button class="sidebar-section-action sidebar-events-button"
-                            x-show="showEventsButton()"
-                            :class="{ 'is-open': communityEvents.open }"
-                            :title="hasEventSoon() ? t('events_soon') : t('events_open')"
-                            :aria-expanded="communityEvents.open ? 'true' : 'false'"
-                            x-ref="eventsButton"
-                            @click="toggleCommunityEvents()">
-                        <i class="bi bi-calendar-event"></i>
-                        <span class="sidebar-events-dot" x-show="hasEventSoon()"></span>
-                    </button>
-                </template>
-                <template x-if="hasFeature('communities')">
-                    <button class="sidebar-section-action"
-                            x-show="communityInviteUrl(activeCommunity())"
-                            title="{{ t('copy_invite_link') }}"
-                            @click="copyInviteLink(communityInviteUrl(activeCommunity()))">
-                        <i class="bi bi-link-45deg"></i>
-                    </button>
-                </template>
-                <button class="sidebar-section-action" title="{{ t('explore_channels') }}" @click="openExplore()">
-                    <i class="bi bi-plus-lg"></i>
+            <template x-if="hasFeature('profiles')">
+                <button class="icon-rail-button icon-rail-button--profile"
+                        x-show="canUseProfiles()"
+                        :class="{ 'is-active': settingsWindow.show && settingsWindow.section === 'account' }"
+                        title="{{ t('profile_edit') }}"
+                        @click="openProfileEditor()">
+                    <span class="icon-rail-icon rail-own-avatar nick-bg" :style="nickStyle(nickname)">
+                        <template x-if="avatarUrl(nickname)">
+                            <img class="nick-avatar-img" :src="avatarUrl(nickname)" alt="" loading="lazy" x-on:error="clearUserAvatar(nickname)">
+                        </template>
+                        <span x-show="!avatarUrl(nickname)" x-text="nickInitial(nickname)"></span>
+                    </span>
                 </button>
-            </div>
-            <template x-if="hasFeature('events')">
-                <div>{{> community-events }}</div>
             </template>
-            <div class="d-flex flex-column gap-1">
-                <template x-for="entry in channelListEntries" :key="entry.name">
-                    <div class="channel-list-entry">
-                    <div class="channel-group-label text-truncate" x-show="entry.groupLabel" x-text="entry.groupLabel"></div>
-                    <button type="button"
-                            class="channel-item"
-                            :class="{
-                                'is-muted': entry.joined && channelNotifyLevel(entry.name) === 'mute',
-                                'is-active': entry.name === currentChannel,
-                                'is-unread': entry.joined && entry.name !== currentChannel && hasUnread(entry.name),
-                                'is-not-joined': !entry.joined
-                            }"
-                            :title="entry.joined ? '' : t('join_channel')"
-                            @click="entry.joined ? switchChannel(entry.name) : joinChannel(entry.name)"
-                            @contextmenu.prevent="entry.joined && openChannelContextMenu(entry.name, $event)"
-                            @touchstart.passive="startLongPress($event, (e) => entry.joined && openChannelContextMenu(entry.name, e))"
-                            @touchmove.passive="moveLongPress($event)"
-                            @touchend="endLongPress($event)"
-                            @touchcancel="cancelLongPress()">
-                        <i class="bi bi-hash channel-item-icon"></i>
-                        <span class="channel-item-name" x-text="entry.name.replace(/^#/, '')"></span>
-                        <i class="bi bi-plus-lg channel-item-join" x-show="!entry.joined"></i>
-                        <i class="bi bi-bell-slash channel-item-notify" x-show="entry.joined && channelNotifyLevel(entry.name) === 'mute'" title="{{ t('notify_level_mute') }}"></i>
-                        <i class="bi bi-at channel-item-notify" x-show="entry.joined && channelNotifyLevel(entry.name) === 'mentions'" title="{{ t('notify_level_mentions') }}"></i>
-                        <span class="mention-badge" x-show="entry.name !== currentChannel && mentionCountFor(entry.name) > 0" x-text="mentionCountFor(entry.name)"></span>
-                    </button>
+        </div>
+
+        <div class="channellist-content overflow-auto" @click="closeMobileSidebarAfterPick($event)">
+            <!-- Friends and DMs -->
+            <div x-show="sidebarMode === 'friends'" x-cloak>
+                <template x-if="hasFeature('friends')">
+                    <div>
+                        <button type="button"
+                                class="channel-item channel-item--hub mb-3"
+                                :class="{ 'is-active': !selectedFriendName || !isDirectMessageChannel(currentChannel) }"
+                                @click="openFriendsHub()">
+                            <i class="bi bi-house-door channel-item-icon"></i>
+                            <span class="channel-item-name">{{ t('friends_hub') }}</span>
+                            <span class="mention-badge" x-show="pendingFriendRequestCount > 0" x-text="pendingFriendRequestCount"></span>
+                        </button>
+
+                        <!-- Friends: their DMs (latest activity first), then online friends without a DM -->
+                        <div x-show="friendDmKeys().length || onlineFriendsWithoutDm().length">
+                            <div class="sidebar-section-title">
+                                <span>{{ t('friends_title') }}</span>
+                            </div>
+                            <div class="d-flex flex-column gap-1 mb-3">
+                                <template x-for="user in friendDmKeys()" :key="user">
+                                    {{> dm-sidebar-item }}
+                                </template>
+                                <template x-for="friend in onlineFriendsWithoutDm()" :key="friend.friendship_id">
+                                    <button type="button"
+                                            class="channel-item channel-item--idle"
+                                            @click="openFriendChat(friend.user.display)"
+                                            @contextmenu.prevent="openFriendContextMenu(friend, $event)"
+                                            @touchstart.passive="startLongPress($event, (e) => openFriendContextMenu(friend, e))"
+                                            @touchmove.passive="moveLongPress($event)"
+                                            @touchend="endLongPress($event)"
+                                            @touchcancel="cancelLongPress()">
+                                        <span class="channel-item-avatar nick-bg position-relative" :style="nickStyle(friend.user.display)">
+                                            <template x-if="avatarUrl(friend.user.display)">
+                                                <img class="nick-avatar-img" :src="avatarUrl(friend.user.display)" alt="" loading="lazy" x-on:error="clearUserAvatar(friend.user.display)">
+                                            </template>
+                                            <span x-show="!avatarUrl(friend.user.display)" x-text="nickInitial(friend.user.display)"></span>
+                                            <span class="presence-dot is-online"></span>
+                                        </span>
+                                        <span class="channel-item-name" x-text="friend.user.display"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </template>
-                <div class="sidebar-empty" x-show="channelListEntries.length === 0">
-                    <span x-text="activeCommunityFilter !== null ? t('community_no_channels') : t('home_empty')"></span>
+
+                <!-- Everyone else (latest activity first) -->
+                <div x-show="otherDmKeys().length || !privateMessageKeys.length">
+                    <div class="sidebar-section-title">
+                        <span>{{ t('direct_messages') }}</span>
+                    </div>
+                    <div class="d-flex flex-column gap-1 mb-3">
+                        <template x-for="user in otherDmKeys()" :key="user">
+                            {{> dm-sidebar-item }}
+                        </template>
+                        <div class="sidebar-empty" x-show="privateMessageKeys.length === 0">{{ t('no_direct_messages') }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channels -->
+            <div class="position-relative" x-show="sidebarMode === 'channels'" x-cloak>
+                <div class="sidebar-section-title">
+                    <span class="text-truncate me-auto" x-text="sidebarTitle()"></span>
+                    <template x-if="hasFeature('events')">
+                        <button class="sidebar-section-action sidebar-events-button"
+                                x-show="showEventsButton()"
+                                :class="{ 'is-open': communityEvents.open }"
+                                :title="hasEventSoon() ? t('events_soon') : t('events_open')"
+                                :aria-expanded="communityEvents.open ? 'true' : 'false'"
+                                x-ref="eventsButton"
+                                @click="toggleCommunityEvents()">
+                            <i class="bi bi-calendar-event"></i>
+                            <span class="sidebar-events-dot" x-show="hasEventSoon()"></span>
+                        </button>
+                    </template>
+                    <template x-if="hasFeature('communities')">
+                        <button class="sidebar-section-action"
+                                x-show="communityInviteUrl(activeCommunity())"
+                                title="{{ t('copy_invite_link') }}"
+                                @click="copyInviteLink(communityInviteUrl(activeCommunity()))">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                    </template>
+                    <button class="sidebar-section-action" title="{{ t('explore_channels') }}" @click="openExplore()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <template x-if="hasFeature('events')">
+                    <div>{{> community-events }}</div>
+                </template>
+                <div class="d-flex flex-column gap-1">
+                    <template x-for="entry in channelListEntries" :key="entry.name">
+                        <div class="channel-list-entry">
+                        <div class="channel-group-label text-truncate" x-show="entry.groupLabel" x-text="entry.groupLabel"></div>
+                        <button type="button"
+                                class="channel-item"
+                                :class="{
+                                    'is-muted': entry.joined && channelNotifyLevel(entry.name) === 'mute',
+                                    'is-active': entry.name === currentChannel,
+                                    'is-unread': entry.joined && entry.name !== currentChannel && hasUnread(entry.name),
+                                    'is-not-joined': !entry.joined
+                                }"
+                                :title="entry.joined ? '' : t('join_channel')"
+                                @click="entry.joined ? switchChannel(entry.name) : joinChannel(entry.name)"
+                                @contextmenu.prevent="entry.joined && openChannelContextMenu(entry.name, $event)"
+                                @touchstart.passive="startLongPress($event, (e) => entry.joined && openChannelContextMenu(entry.name, e))"
+                                @touchmove.passive="moveLongPress($event)"
+                                @touchend="endLongPress($event)"
+                                @touchcancel="cancelLongPress()">
+                            <i class="bi bi-hash channel-item-icon"></i>
+                            <span class="channel-item-name" x-text="entry.name.replace(/^#/, '')"></span>
+                            <i class="bi bi-plus-lg channel-item-join" x-show="!entry.joined"></i>
+                            <i class="bi bi-bell-slash channel-item-notify" x-show="entry.joined && channelNotifyLevel(entry.name) === 'mute'" title="{{ t('notify_level_mute') }}"></i>
+                            <i class="bi bi-at channel-item-notify" x-show="entry.joined && channelNotifyLevel(entry.name) === 'mentions'" title="{{ t('notify_level_mentions') }}"></i>
+                            <span class="mention-badge" x-show="entry.name !== currentChannel && mentionCountFor(entry.name) > 0" x-text="mentionCountFor(entry.name)"></span>
+                        </button>
+                        </div>
+                    </template>
+                    <div class="sidebar-empty" x-show="channelListEntries.length === 0">
+                        <span x-text="activeCommunityFilter !== null ? t('community_no_channels') : t('home_empty')"></span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</template>
 
 <div x-show="contextMenu.show"
      x-cloak

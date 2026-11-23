@@ -33,6 +33,7 @@ import { shellMixin } from './mixins/shell.js';
 import { unreadMixin } from './mixins/unread.js';
 import { channelListMixin } from './mixins/channel-list.js';
 import { networkLinksMixin } from './mixins/network-links.js';
+import { resolveLayout } from './layout.js';
 import { DEFAULT_EMOTES, MIRC_COLORS } from '../core/formatting.js';
 
 /** Outgoing lines that are queued while the connection is down instead of being dropped. */
@@ -120,6 +121,8 @@ export function guestNick() {
  *   (copy of starchat/push-sw.js). Browser push stays off without it.
  * @param {string|null} [options.pushGateway] Base URL of the push gateway of an app build, used
  *   on networks that do not relay to FCM themselves (feature "push").
+ * @param {'full'|'headless'|Partial<import('./layout.js').ChatLayout>} [options.layout] Parts of the
+ *   chat that are shown, see layout.js.
  */
 export function createChatComponent(options) {
     const {
@@ -148,6 +151,7 @@ export function createChatComponent(options) {
         pushWorker = null,
         pushGateway = null,
         storageScope: scopeOption = '',
+        layout: layoutOption = null,
     } = options;
     const primaryServer = connection?.server || null;
     const storageScope = String(scopeOption || connection?.server?.id || '');
@@ -163,6 +167,7 @@ export function createChatComponent(options) {
         connection,
         rawOf,
         shell,
+        layout: resolveLayout(layoutOption),
         pushWorker,
         pushGateway,
         publishesNowPlaying,
@@ -897,7 +902,7 @@ export function createChatComponent(options) {
         get showUserList() {
             // On small screens the user list is a drawer that starts closed
             const open = this.isMobileLayout ? this.mobileUserListOpen : this.userListOpen;
-            return open && this.sidebarMode === 'channels' && Boolean(this.currentChannel?.startsWith('#'));
+            return this.layout.userList && open && this.sidebarMode === 'channels' && Boolean(this.currentChannel?.startsWith('#'));
         },
 
         get currentMessages() {
@@ -915,7 +920,7 @@ export function createChatComponent(options) {
             let previous = null;
             if (this.isServerWindow()) return this.serverWindowRows(labels);
             const messages = this.currentMessages.filter(message =>
-                !message._hidden && !(this.hideJoinPart && isJoinLeaveEvent(message)));
+                !message._hidden && !((this.hideJoinPart || !this.layout.joinPart) && isJoinLeaveEvent(message)));
 
             for (let index = 0; index < messages.length; index++) {
                 const message = messages[index];

@@ -13,6 +13,7 @@ import { emojiPicker } from './emoji-picker.js';
 import { applyColorScheme } from './color-scheme.js';
 import { settingsRegistry } from './settings/registry.js';
 import { defaultModules } from '../modules/index.js';
+import { resolveLayout } from './layout.js';
 
 /**
  * @param {string|Element} target Selector or element the chat replaces the content of.
@@ -38,6 +39,8 @@ import { defaultModules } from '../modules/index.js';
  *   browser push on networks with draft/webpush; see the comment at the top of that file.
  * @param {string} [options.pushGateway] App builds: base URL of the push gateway for networks
  *   without their own FCM relay (starchat-irc/push-gateway).
+ * @param {'full'|'headless'|Partial<import('./layout.js').ChatLayout>} [options.layout] Parts of the
+ *   chat that are shown: 'headless' leaves only messages and input line, see layout.js.
  * @return {Promise<{ connection: Object, servers: Object[] }>}
  */
 export async function mountChat(target, options = {}) {
@@ -51,8 +54,11 @@ export async function mountChat(target, options = {}) {
         appName = 'StarChat',
         onHostMessage = () => {},
         modules = defaultModules,
+        layout: layoutOption,
         ...componentOptions
     } = options;
+    // Checked here, so a wrong value rejects the promise instead of breaking inside Alpine
+    const layout = resolveLayout(layoutOption);
 
     const element = typeof target === 'string' ? document.querySelector(target) : target;
     if (!element) {
@@ -85,6 +91,7 @@ export async function mountChat(target, options = {}) {
 
     Alpine.data('chatComponent', () => createChatComponent({
         ...componentOptions,
+        layout,
         modules,
         connection,
         stores,

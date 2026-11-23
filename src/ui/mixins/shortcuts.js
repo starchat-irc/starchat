@@ -90,15 +90,19 @@ export function shortcutsMixin() {
 
         /** Registered once on the document (see main.js init). */
         handleGlobalKeydown(event) {
+            // An embedded chat box leaves the keys of the page around it alone
+            const layout = this.layout || {};
+            if (layout.shortcuts === false) return;
             const key = event.key;
             const ctrl = event.ctrlKey || event.metaKey;
+            const canSwitch = layout.channelList !== false;
 
-            if (ctrl && !event.altKey && !event.shiftKey && key.toLowerCase() === 'p') {
+            if (canSwitch && ctrl && !event.altKey && !event.shiftKey && key.toLowerCase() === 'p') {
                 event.preventDefault();
                 this.quickSwitcher.show ? this.closeQuickSwitcher() : this.openQuickSwitcher();
                 return;
             }
-            if (ctrl && !event.altKey && !event.shiftKey && key.toLowerCase() === 'f') {
+            if (layout.header !== false && ctrl && !event.altKey && !event.shiftKey && key.toLowerCase() === 'f') {
                 event.preventDefault();
                 this.openMessageSearch();
                 return;
@@ -108,7 +112,7 @@ export function shortcutsMixin() {
                 this.showShortcutHelp = !this.showShortcutHelp;
                 return;
             }
-            if (event.altKey && !ctrl && !event.shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
+            if (canSwitch && event.altKey && !ctrl && !event.shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
                 event.preventDefault();
                 this.switchRelativeTarget(key === 'ArrowUp' ? -1 : 1);
                 return;

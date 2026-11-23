@@ -64,7 +64,7 @@
             <button class="btn chat-send-btn" @click="sendMessage">
                 <i class="bi bi-send-fill"></i>
             </button>
-            <button class="btn chat-logout-btn ms-1 chat-input-desktop-only" @click="logout()" title="{{ t('logout') }}">
+            <button class="btn chat-logout-btn ms-1 chat-input-desktop-only" x-show="layout.logout" @click="logout()" title="{{ t('logout') }}">
                 <i class="bi bi-box-arrow-right"></i>
             </button>
         </div>
@@ -99,7 +99,7 @@
                 @click="runInputMoreAction(() => toggleIdentifyPrompt())">
             <i class="bi bi-person-badge"></i> <span x-text="t('input_identify').replace(':nick', nickname)"></span>
         </button>
-        <button type="button" class="context-action text-danger" role="menuitem"
+        <button type="button" class="context-action text-danger" role="menuitem" x-show="layout.logout"
                 @click="runInputMoreAction(() => logout())">
             <i class="bi bi-box-arrow-right"></i> {{ t('input_logout') }}
         </button>

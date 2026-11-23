@@ -141,6 +141,12 @@ body {
     box-shadow: 0 1px 0 rgba(4, 4, 5, .12), 0 2px 0 rgba(6, 6, 7, .03);
     z-index: 2;
 }
+/* Layout without header: only the reconnect banner is left, without a bar around it */
+.chat-header--bare {
+    padding: 0 .5rem;
+    border-bottom: 0;
+    box-shadow: none;
+}
 .chat-header-row {
     display: flex;
     align-items: center;

@@ -129,3 +129,18 @@ A network can only relay to apps of the Firebase project whose service account i
    ```
 
 3. `npm run aab` and upload `mobile/dist/<appId>-<version>.aab` in the Play Console.
+
+Google Play App Signing keeps the key the app is signed with, the upload key only proves that a bundle comes from you. If it gets lost or leaks, Google can reset it.
+
+### Release builds in GitHub Actions
+
+On a tag `v*`, `.github/workflows/android.yml` builds the App Bundle with the version of the tag and attaches it to the release as `starchat-android-<version>-play.aab`. Download it there and upload it in the Play Console. Users cannot install an `.aab` directly, the release notes should point them to the store.
+
+The upload key lives in a GitHub environment named `play`, not in the repository secrets, so only tag builds can use it. Settings → Environments → New environment `play`, under "Deployment branches and tags" allow only tags `v*`, optionally with required reviewers. Its secrets:
+
+| Secret | Content |
+|--------|---------|
+| `ANDROID_UPLOAD_KEYSTORE` | The upload key, base64 encoded: `base64 -w0 upload.jks` |
+| `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Its password. Key and store need the same one. |
+
+The repository secret `GOOGLE_SERVICES_JSON` must then contain the Android app `appId` as well as `devAppId`. Firebase puts every Android app of a project into one `google-services.json`. Without the upload key the job is skipped.

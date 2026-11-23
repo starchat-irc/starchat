@@ -1,22 +1,32 @@
 name: Android
 
-# Builds the development app (mobile/, see docs/mobile.md) and attaches the APK to the
-# pre-release "latest-dev", next to the web package of release.yml and the installers of
-# desktop.yml. The app has its own id (devAppId of the edition), so it installs next to
-# the released one, and every build installs over the one before.
+# Pushes to main build the development app (mobile/, see docs/mobile.md) and attach the
+# APK to the pre-release "latest-dev", next to the web package of release.yml and the
+# installers of desktop.yml. The app has its own id (devAppId of the edition), so it
+# installs next to the released one, and every build installs over the one before.
 #
-# Needs these repository secrets:
+# Tags v* build the App Bundle for Google Play with the upload key and attach it to the
+# release of the tag as starchat-android-<version>-play.aab. It runs in the environment
+# "play", which holds the upload key (see docs/mobile.md#releases).
+#
+# Development builds need these repository secrets:
 #   ANDROID_KEYSTORE           the signing key (.jks), base64 encoded
 #   ANDROID_KEYSTORE_PASSWORD  its password (key and store share it)
 #   GOOGLE_SERVICES_JSON       google-services.json of the Firebase project, optional:
 #                              without it the app has no push
-# Without the keystore the job is skipped, so forks without keys stay green.
+# Release builds need in the environment "play":
+#   ANDROID_UPLOAD_KEYSTORE           the upload key for Google Play (.jks), base64 encoded
+#   ANDROID_UPLOAD_KEYSTORE_PASSWORD  its password (key and store share it)
+# GOOGLE_SERVICES_JSON must then also contain the Android app appId.
+# Without a keystore the job is skipped, so forks without keys stay green.
 # A fork builds its own edition by setting the repository variable STARCHAT_MOBILE_EDITION
 # to its edition folder, e.g. mobile/editions/example.
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
+    # Not applied to tags
     paths:
       - 'src/**'
       - 'mobile/**'
@@ -38,6 +48,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE != '' }}
@@ -153,3 +164,96 @@ jobs:
           fi
           # Only the APK: the other files belong to release.yml and desktop.yml
           gh release upload latest-dev assets/starchat-android-dev.apk --clobber
+
+  release:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment: play
+    permissions:
+      contents: write
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE != '' }}
+      EDITION_DIR: ${{ github.workspace }}/${{ vars.STARCHAT_MOBILE_EDITION || 'mobile/edition' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Signing key
+        if: env.HAS_KEYSTORE != 'true'
+        run: echo "::notice::ANDROID_UPLOAD_KEYSTORE is not set, no App Bundle."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_KEYSTORE == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+          cache-dependency-path: mobile/android/**/*.gradle*
+
+      - if: env.HAS_KEYSTORE == 'true'
+        run: npm ci
+      - if: env.HAS_KEYSTORE == 'true'
+        run: npm ci
+        working-directory: mobile
+      - if: env.HAS_KEYSTORE == 'true'
+        run: npm test
+        working-directory: mobile
+
+      - name: Keys
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          keystore="$RUNNER_TEMP/signing.jks"
+          echo "$ANDROID_KEYSTORE" | base64 --decode > "$keystore"
+          alias=$(keytool -list -keystore "$keystore" -storepass "$ANDROID_KEYSTORE_PASSWORD" | awk -F, '/PrivateKeyEntry/ { print $1; exit }')
+          if [ -z "$alias" ]; then
+            echo "::error::No key found in ANDROID_UPLOAD_KEYSTORE (wrong password?)"
+            exit 1
+          fi
+          {
+            echo "storeFile=$keystore"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyAlias=$alias"
+            echo "keyPassword=$ANDROID_KEYSTORE_PASSWORD"
+          } > mobile/android/keystore.properties
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > "$EDITION_DIR/google-services.json"
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON is not set, the App Bundle has no push."
+          fi
+
+      - name: Build
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: mobile
+        env:
+          STARCHAT_EDITION: ${{ env.EDITION_DIR }}
+          STARCHAT_VERSION: ${{ github.ref_name }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          node scripts/build.mjs aab
+          node scripts/gradle.mjs testReleaseUnitTest
+          mkdir -p ../assets
+          cp dist/*-"$version".aab "../assets/starchat-android-$version-play.aab"
+
+      - name: Remove keys
+        if: always() && env.HAS_KEYSTORE == 'true'
+        run: rm -f mobile/android/keystore.properties "$RUNNER_TEMP/signing.jks" "$EDITION_DIR/google-services.json"
+
+      - name: Release
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          # release.yml and desktop.yml may create the release at the same time
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --latest \
+            || gh release view "$GITHUB_REF_NAME" > /dev/null
+          gh release upload "$GITHUB_REF_NAME" assets/*.aab --clobber

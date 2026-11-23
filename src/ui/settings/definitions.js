@@ -12,6 +12,8 @@ import { NOTIFICATION_SOUNDS } from '../notification-sound.js';
 const desktop = env => env.shell === 'desktop';
 const browser = env => !env.shell;
 const mobileApp = env => env.shell === 'mobile';
+/** A part the embedding page has not switched off (mountChat option "layout"). */
+const shown = part => env => env.layout?.[part] !== false;
 
 /** A value kept by the desktop shell (app-wide or per connection). */
 function shellToggle(scope, key) {
@@ -164,6 +166,7 @@ export function registerBuiltinSettings(registry = settingsRegistry) {
         type: 'toggle',
         scope: SCOPE.Device,
         order: 20,
+        when: shown('joinPart'),
         label: 'settings_show_join_part',
         hint: 'settings_show_join_part_hint',
         keywords: ['join', 'part', 'quit'],
@@ -176,6 +179,7 @@ export function registerBuiltinSettings(registry = settingsRegistry) {
         type: 'toggle',
         scope: SCOPE.Device,
         order: 30,
+        when: shown('userList'),
         label: 'settings_show_user_list',
         keywords: ['nicklist', 'benutzer', 'users'],
         get: chat => chat.userListOpen,

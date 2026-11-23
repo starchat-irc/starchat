@@ -1,76 +1,78 @@
-<div x-show="showUserList" class="userlist p-3 overflow-auto" x-cloak>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0 sidebar-section-title p-0">{{ t('users') }}</h6>
-        <span class="badge text-bg-secondary" x-text="(reactiveUsers[currentChannel] || []).length"></span>
-    </div>
+<template x-if="layout.userList">
+    <div x-show="showUserList" class="userlist p-3 overflow-auto" x-cloak>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 sidebar-section-title p-0">{{ t('users') }}</h6>
+            <span class="badge text-bg-secondary" x-text="(reactiveUsers[currentChannel] || []).length"></span>
+        </div>
 
-    <div class="d-flex gap-1 mb-2" x-show="canManageCurrentChannel() && currentChannel && currentChannel.startsWith('#')">
-        <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('ban')"><i class="bi bi-slash-circle"></i></button>
-        <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('exception')"><i class="bi bi-shield-check"></i></button>
-        <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('invex')"><i class="bi bi-door-open"></i></button>
-    </div>
+        <div class="d-flex gap-1 mb-2" x-show="canManageCurrentChannel() && currentChannel && currentChannel.startsWith('#')">
+            <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('ban')"><i class="bi bi-slash-circle"></i></button>
+            <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('exception')"><i class="bi bi-shield-check"></i></button>
+            <button class="btn btn-sm btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-1" @click="openChannelListManager('invex')"><i class="bi bi-door-open"></i></button>
+        </div>
 
-    <ul class="list-unstyled d-flex flex-column gap-1">
-        <template x-for="user in reactiveUsers[currentChannel] || []" :key="user.name">
-            <li class="px-2 py-2 rounded position-relative cursor-pointer user-row overflow-hidden user-row-min-width"
-                :class="{
-        'fw-bold text-warning': user.role === '@',
-        'fw-bold text-danger': user.role === '~',
-        'text-info': user.role === '%',
-        'text-success': user.role === '+'
-    }">
+        <ul class="list-unstyled d-flex flex-column gap-1">
+            <template x-for="user in reactiveUsers[currentChannel] || []" :key="user.name">
+                <li class="px-2 py-2 rounded position-relative cursor-pointer user-row overflow-hidden user-row-min-width"
+                    :class="{
+            'fw-bold text-warning': user.role === '@',
+            'fw-bold text-danger': user.role === '~',
+            'text-info': user.role === '%',
+            'text-success': user.role === '+'
+        }">
 
-                <div class="d-flex align-items-center text-truncate" @click="showUserOptions(user.name, $event)" @contextmenu.prevent="showUserOptions(user.name, $event)">
-                    <span x-show="user.isOnline" class="text-success me-2">●</span>
-                    <span x-show="!user.isOnline" class="text-muted me-2">○</span>
+                    <div class="d-flex align-items-center text-truncate" @click="showUserOptions(user.name, $event)" @contextmenu.prevent="showUserOptions(user.name, $event)">
+                        <span x-show="user.isOnline" class="text-success me-2">●</span>
+                        <span x-show="!user.isOnline" class="text-muted me-2">○</span>
 
-                    <span class="channel-item-avatar userlist-avatar nick-bg me-2" :style="nickStyle(user.name)">
-                        <template x-if="avatarUrl(user.name)">
-                            <img class="nick-avatar-img" :src="avatarUrl(user.name)" alt="" loading="lazy" x-on:error="clearUserAvatar(user.name)">
-                        </template>
-                        <span x-show="!avatarUrl(user.name)" x-text="nickInitial(user.name)"></span>
-                    </span>
-                    <span x-text="user.role" class="me-1"></span>
-                    <!-- An own colour (profile card) wins over the role colour, like the nick list in mIRC -->
-                    <span class="text-truncate truncate-inline"
-                          :class="{ 'nick-color': customNickHue(user.name) !== null }"
-                          :style="customNickHue(user.name) !== null ? nickStyle(user.name) : ''"
-                          x-text="user.name"
-                          :title="user.name"></span>
-                    <span class="bot-badge ms-1" x-show="isBotNick(user.name)" x-cloak :title="botBadgeTitle(user.name)">{{ t('bot_badge') }}</span>
-                    <!-- Next to the nick, so typing never changes the height of the row -->
-                    <i class="bi bi-three-dots ms-1 text-muted userlist-typing"
-                       x-show="user.isTyping"
-                       x-cloak
-                       title="{{ t('typing_suffix') }}"
-                       aria-label="{{ t('typing_suffix') }}"></i>
-
-                    <i class="bi bi-volume-up-fill ms-1 userlist-voice"
-                       x-show="userInVoice(user)"
-                       x-cloak
-                       title="{{ t('voice_in_channel') }}"
-                       aria-label="{{ t('voice_in_channel') }}"></i>
-
-                    <span x-show="user.account"
-                          class="text-muted ms-1 text-truncate"
-                          x-text="'(' + user.account + ')'"
-                          :title="user.account"></span>
-                </div>
-                <!-- Second line only when there is something to show, rows without it stay compact -->
-                <div class="mt-1 user-activity" x-show="(user.playing && user.playing.trim()) || userStatus(user.name)" x-cloak>
-                    <template x-if="user.playing && user.playing.trim()">
-                        <span class="user-playing" :title="user.playing">
-                            <i class="bi bi-music-note-beamed user-activity-icon"></i> <span x-text="user.playing"></span>
+                        <span class="channel-item-avatar userlist-avatar nick-bg me-2" :style="nickStyle(user.name)">
+                            <template x-if="avatarUrl(user.name)">
+                                <img class="nick-avatar-img" :src="avatarUrl(user.name)" alt="" loading="lazy" x-on:error="clearUserAvatar(user.name)">
+                            </template>
+                            <span x-show="!avatarUrl(user.name)" x-text="nickInitial(user.name)"></span>
                         </span>
-                    </template>
-                    <template x-if="!(user.playing && user.playing.trim()) && userStatus(user.name)">
-                        <span class="user-custom-status" :title="userStatus(user.name)" x-text="userStatus(user.name)"></span>
-                    </template>
-                </div>
-            </li>
+                        <span x-text="user.role" class="me-1"></span>
+                        <!-- An own colour (profile card) wins over the role colour, like the nick list in mIRC -->
+                        <span class="text-truncate truncate-inline"
+                              :class="{ 'nick-color': customNickHue(user.name) !== null }"
+                              :style="customNickHue(user.name) !== null ? nickStyle(user.name) : ''"
+                              x-text="user.name"
+                              :title="user.name"></span>
+                        <span class="bot-badge ms-1" x-show="isBotNick(user.name)" x-cloak :title="botBadgeTitle(user.name)">{{ t('bot_badge') }}</span>
+                        <!-- Next to the nick, so typing never changes the height of the row -->
+                        <i class="bi bi-three-dots ms-1 text-muted userlist-typing"
+                           x-show="user.isTyping"
+                           x-cloak
+                           title="{{ t('typing_suffix') }}"
+                           aria-label="{{ t('typing_suffix') }}"></i>
 
-        </template>
-    </ul>
-</div>
+                        <i class="bi bi-volume-up-fill ms-1 userlist-voice"
+                           x-show="userInVoice(user)"
+                           x-cloak
+                           title="{{ t('voice_in_channel') }}"
+                           aria-label="{{ t('voice_in_channel') }}"></i>
+
+                        <span x-show="user.account"
+                              class="text-muted ms-1 text-truncate"
+                              x-text="'(' + user.account + ')'"
+                              :title="user.account"></span>
+                    </div>
+                    <!-- Second line only when there is something to show, rows without it stay compact -->
+                    <div class="mt-1 user-activity" x-show="(user.playing && user.playing.trim()) || userStatus(user.name)" x-cloak>
+                        <template x-if="user.playing && user.playing.trim()">
+                            <span class="user-playing" :title="user.playing">
+                                <i class="bi bi-music-note-beamed user-activity-icon"></i> <span x-text="user.playing"></span>
+                            </span>
+                        </template>
+                        <template x-if="!(user.playing && user.playing.trim()) && userStatus(user.name)">
+                            <span class="user-custom-status" :title="userStatus(user.name)" x-text="userStatus(user.name)"></span>
+                        </template>
+                    </div>
+                </li>
+
+            </template>
+        </ul>
+    </div>
+</template>
 
 {{> profile-card }}
