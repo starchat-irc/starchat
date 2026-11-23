@@ -70,3 +70,34 @@ test('partials are inserted, unknown ones and loops fail', () => {
     assert.throws(() => renderTemplate('broken', t, source), /Unknown template "nope" \(included from broken\)/);
     assert.throws(() => renderTemplate('a', t, source), /loop: a > b > a/);
 });
+
+const VOID_ELEMENTS = new Set(['area', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+
+/**
+ * Returns the first nesting error of an HTML fragment, or null. Attribute values may hold
+ * ">" (Alpine expressions), so tags are matched with quoted attributes in mind.
+ */
+function nestingError(html) {
+    const stack = [];
+    const tags = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g;
+    for (const [whole, closing, rawName, , selfClosing] of html.matchAll(tags)) {
+        if (whole.startsWith('<!--')) continue;
+        const name = rawName.toLowerCase();
+        if (VOID_ELEMENTS.has(name) || selfClosing) continue;
+        if (!closing) {
+            stack.push(name);
+        } else if (stack.at(-1) !== name) {
+            return `</${name}> closes <${stack.at(-1) ?? 'nothing'}>`;
+        } else {
+            stack.pop();
+        }
+    }
+    return stack.length ? `<${stack.at(-1)}> is never closed` : null;
+}
+
+test('every template closes its elements in the right order', () => {
+    for (const [name, html] of Object.entries(templates)) {
+        assert.equal(nestingError(html), null, name);
+    }
+    assert.equal(nestingError('<div><template x-if="a"><div></template></div>'), '</template> closes <div>');
+});
