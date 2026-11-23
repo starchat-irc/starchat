@@ -9,6 +9,7 @@
     "links": [
         { "label": "Source", "url": "https://github.com/starchat-irc/starchat" },
         { "label": "Privacy (ST-City)", "url": "https://st-city.net/datenschutz" },
-        { "label": "Imprint", "url": "https://st-city.net/impressum" }
+        { "label": "Privacy (StarChat)", "url": "https://getstarchat.net/privacy.html" },
+        { "label": "Imprint", "url": "https://getstarchat.net/imprint.html" }
     ]
 }

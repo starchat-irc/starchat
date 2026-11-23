@@ -214,7 +214,8 @@ ${html}
     <div class="container d-flex flex-wrap gap-3">
         <span>StarChat is licensed under the <a href="${REPO_URL}/blob/main/LICENSE">MIT License</a>.</span>
         <a href="${REPO_URL}">GitHub</a>
-        <a href="https://st-city.net/impressum">Imprint</a>
+        <a href="https://getstarchat.net/imprint.html">Imprint</a>
+        <a href="https://getstarchat.net/privacy.html">Privacy</a>
     </div>
 </footer>
 </body>
