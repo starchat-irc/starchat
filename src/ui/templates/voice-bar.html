@@ -1,4 +1,4 @@
-<!-- Voice chat bar (experimental): stays visible in every window while connected -->
+<!-- Voice chat bar: stays visible in every window while connected -->
 <div class="voice-notice" x-show="voiceError && voice.state === 'idle' && !settingsWindow.show" x-cloak role="alert">
     <i class="bi bi-mic-mute"></i>
     <span class="voice-notice-text" x-text="voiceError"></span>
@@ -31,7 +31,6 @@
                 @click="switchChannel(voiceCall ? resolveTargetKey(voiceCall.nick) : voice.channel)"
                 x-text="voiceCall ? voiceCall.nick : voice.channel"></button>
         <span class="voice-bar-state" x-text="voiceStateLabel()"></span>
-        <span class="voice-bar-badge">{{ t('voice_experimental') }}</span>
     </div>
 
     <div class="voice-bar-participants">

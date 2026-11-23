@@ -46,8 +46,8 @@ Features below need `apiBaseUrl` and the feature name in `features`. Most also n
 | `events` | A calendar button in the sidebar with upcoming events, linked to their channels. | yes |
 | `communities` | An icon per community in the rail. Picking one shows its channels and opens its lobby, Home groups the joined channels by community. With `links.communityInvite` a "Copy invite link" button. | yes |
 | `push` | Push notifications in app builds, relayed by the network to Firebase Cloud Messaging. Browsers do not need it. | yes |
-| `voice` | Voice chat per channel (experimental, switched on in the settings). Push to talk or voice activation, mic test, volume per participant, optional noise filter. Needs a [LiveKit](https://livekit.io) server. | yes |
-| `calls` | Voice calls between friends from the direct message window (experimental). Needs `voice` and `friends`. | yes |
+| `voice` | Voice chat per channel. Push to talk or voice activation, mic test, volume per participant, optional noise filter. Needs a [LiveKit](https://livekit.io) server. | yes |
+| `calls` | Voice calls between friends from the direct message window. Needs `voice` and `friends`. | yes |
 | `spotify` | Desktop app: the track playing on the linked Spotify account becomes the now-playing status. | yes |
 
 ## Client only
@@ -219,6 +219,8 @@ For the RNNoise filter in the voice settings, host the WebAssembly files of [`@s
 Calls use the LiveKit server of `voice`. [`POST chat/voice/call-token`](openapi.yaml#calls) checks that both accounts are friends and returns a token for a room both sides get the same way, for example `dm:` plus both account names in lower case and sorted. Ringing runs over IRC (see [IRCv3 support](ircv3.md#client-tags)).
 
 `POST chat/voice/call-ring` is optional and rings app builds in the background. With the push relay above, the network sends an FCM data message with `call` (`invite` or `cancel`), `call_id`, `nick` and `account` to the friend's installs and returns how many it reached. A network without app builds answers `{ "pushed": 0 }`.
+
+Users can switch private calls off in the voice settings. Their chat then answers every invite with `unavailable` and hides the call button, and the Android app drops call pushes in the background.
 
 An app build that receives the ring opens the chat with `openPushTarget('call:id=…&nick=…&account=…&answer=accept|decline')` (`answer` optional, without it the chat rings). In the background a browser or desktop chat shows a system notification and sends `call-incoming` with `{ nick }` to `onHostMessage`, so a desktop shell can flash its window.
 

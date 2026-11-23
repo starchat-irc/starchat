@@ -1734,11 +1734,6 @@ iframe.chat-media-player { width: 480px; aspect-ratio: 16 / 9; border: 0; }
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .voice-bar-state { color: var(--chat-text-muted); white-space: nowrap; }
-.voice-bar-badge {
-    font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em;
-    padding: .05rem .4rem; border-radius: 999px;
-    border: 1px solid var(--chat-border-strong); color: var(--chat-text-muted);
-}
 .voice-bar-participants { display: flex; flex-wrap: wrap; gap: .35rem; flex: 1 1 auto; min-width: 0; }
 .voice-participant { position: relative; }
 .voice-participant-chip {
@@ -1885,7 +1880,7 @@ iframe.chat-media-player { width: 480px; aspect-ratio: 16 / 9; border: 0; }
 .voice-settings-error { color: var(--chat-danger); font-size: .8125rem; }
 
 @media (max-width: 768px) {
-    .voice-bar-meter, .voice-bar-ptt, .voice-bar-badge { display: none; }
+    .voice-bar-meter, .voice-bar-ptt { display: none; }
     .voice-bar-btn { min-width: 44px; height: 44px; }
 }
 

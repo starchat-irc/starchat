@@ -12,8 +12,6 @@ StarChat started as the chat client of [ST-City](https://st-city.net) and was mo
 
 There is no release yet. The web client is available as a development build ([latest-dev](https://github.com/starchat-irc/starchat/releases/tag/latest-dev)), rebuilt from `main` on every change. The desktop client is being moved into this repository. The npm package `starchat` and desktop downloads come with the first release.
 
-Voice chat and calls are experimental.
-
 ## Using it
 
 The web client itself is a static page. Download the .zip from the [release](https://github.com/starchat-irc/starchat/releases/) page,, set your network in `config.json` and upload the folder to any web host. All settings are in [Hosting the web client](docs/hosting.md).

@@ -5,13 +5,21 @@
  * and its VAPID key (ISUPPORT VAPID).
  *  - Browser: service worker (pushWorker option, a copy of push-sw.js on the page's origin)
  *    and the browser's push service. Works on any network with draft/webpush, no API needed.
- *  - App (shell 'mobile'): the app hands over its FCM token and keys (receivePushSubscription),
- *    the network's API relays to FCM (feature "push", see docs/discovery.md).
+ *  - App (shell 'mobile'): the app hands over its FCM token and keys (receivePushSubscription).
+ *    The network's API relays to FCM (feature "push", see docs/discovery.md); networks without
+ *    it go through the push gateway of the app (pushGateway option), if the edition has one.
  *  - Desktop: no push service, the app stays connected in the tray instead.
  */
 import { SCOPE } from '../ui/settings/registry.js';
 
 const APP_REPLY_TIMEOUT_MS = 15000;
+const GATEWAY_TIMEOUT_MS = 10000;
+
+/** "https://push.example.org/" -> "https://push.example.org"; anything but https gives ''. */
+export function normalizePushGateway(value) {
+    const url = String(value || '').trim().replace(/\/+$/, '');
+    return /^https:\/\/[^\s/?#]+(\/[^\s?#]*)?$/.test(url) ? url : '';
+}
 
 export function base64UrlToBytes(value) {
     const base64 = String(value).replace(/-/g, '+').replace(/_/g, '/');
@@ -66,11 +74,22 @@ export function pushMixin() {
             return Boolean(this.loginMechanism?.());
         },
 
+        /** The network relays to FCM for this app (feature "push" with an API token). */
+        hasNetworkPushRelay() {
+            return this.hasFeature('push') && Boolean(this.hasApiToken);
+        },
+
+        /** How the app reaches FCM: 'network', 'gateway' or null. */
+        appPushRoute() {
+            if (this.hasNetworkPushRelay()) return 'network';
+            return normalizePushGateway(this.pushGateway) ? 'gateway' : null;
+        },
+
         canUsePush() {
             const platform = this.pushPlatform();
             if (!platform || !this.supportsWebpush || !this.webpushVapidKey || !this.hasPushAccount()) return false;
-            // The app needs the network's relay to FCM
-            return platform === 'browser' || (this.hasFeature('push') && this.hasApiToken);
+            // The app needs a relay to FCM: the network's or the gateway of the app
+            return platform === 'browser' || this.appPushRoute() !== null;
         },
 
         /** ISUPPORT VAPID=<key>: the server's application server key. Sent on every connect. */
@@ -95,7 +114,12 @@ export function pushMixin() {
                 if (!line) throw new Error('invalid subscription');
 
                 this.sendRaw(line);
-                this._pushRegistration = { endpoint: subscription.endpoint, platform, fcmToken: subscription.fcmToken || null };
+                this._pushRegistration = {
+                    endpoint: subscription.endpoint,
+                    platform,
+                    fcmToken: subscription.fcmToken || null,
+                    route: subscription.route || null,
+                };
                 this.pushError = null;
                 this.syncPushFilter();
                 if (!this._pushAnnounced) {
@@ -131,20 +155,48 @@ export function pushMixin() {
             return { endpoint, p256dh: keys?.p256dh, auth: keys?.auth };
         },
 
-        /** Asks the app for its FCM token and keys, then the API for the relay endpoint. */
+        /** Asks the app for its FCM token and keys, then the relay (network or gateway) for the endpoint. */
         async subscribeAppPush() {
+            const route = this.appPushRoute();
             const device = await this.askAppForPush();
-            if (!device?.fcmToken) return null;
+            if (!device?.fcmToken || !route) return null;
 
+            const endpoint = route === 'network'
+                ? await this.registerNetworkPushDevice(device.fcmToken)
+                : await this.registerGatewayPushDevice(device.fcmToken);
+
+            return { endpoint, p256dh: device.p256dh, auth: device.auth, fcmToken: device.fcmToken, route };
+        },
+
+        async registerNetworkPushDevice(fcmToken) {
             const response = await this.connection.api('chat/push-devices', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fcm_token: device.fcmToken }),
+                body: JSON.stringify({ fcm_token: fcmToken }),
             });
             if (!response.ok) throw new Error(`device registration failed (${response.status})`);
             const { endpoint } = await response.json();
+            return endpoint;
+        },
 
-            return { endpoint, p256dh: device.p256dh, auth: device.auth, fcmToken: device.fcmToken };
+        /**
+         * Push gateway of the app (separate repo starchat-irc/push-gateway): it turns the FCM
+         * token into an endpoint for WEBPUSH REGISTER. Nothing to unregister there, the IRC
+         * server drops the subscription when the gateway answers 410.
+         */
+        async registerGatewayPushDevice(fcmToken) {
+            const response = await globalThis.fetch(`${normalizePushGateway(this.pushGateway)}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fcm_token: fcmToken }),
+                signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(`push gateway: ${data?.error || `HTTP ${response.status}`}`);
+            }
+            const { endpoint } = await response.json();
+            return endpoint;
         },
 
         askAppForPush() {
@@ -177,7 +229,7 @@ export function pushMixin() {
             if (platform === null) return 'push_status_unsupported_device';
             if (!this.hasPushAccount()) return 'push_status_account_only';
             if (!this.supportsWebpush || !this.webpushVapidKey) return 'push_status_unsupported_server';
-            if (platform === 'app' && !(this.hasFeature('push') && this.hasApiToken)) return 'push_status_unsupported_server';
+            if (platform === 'app' && this.appPushRoute() === null) return 'push_status_unsupported_server';
             if (this._pushRegistration) return 'push_status_active';
             if (this.pushError === 'denied' || (platform === 'browser' && globalThis.Notification?.permission === 'denied')) {
                 return platform === 'app' ? 'push_status_denied_app' : 'push_status_denied_browser';
@@ -218,7 +270,8 @@ export function pushMixin() {
             if (!registration) return;
             const filter = this.pushFilter();
             if (registration.platform === 'app') {
-                this.notifyHost('push-filter', filter);
+                // Call rings reach only app builds (FCM), so only the app shell needs the switch
+                this.notifyHost('push-filter', { ...filter, calls: this.voiceSettings?.calls !== false });
                 return;
             }
             globalThis.navigator?.serviceWorker?.getRegistration(this.pushWorker)

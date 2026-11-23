@@ -82,6 +82,7 @@ async function start() {
         ...options,
         shell: 'mobile',
         modules,
+        pushGateway: edition.pushGateway || null,
         onHostMessage: toShell,
         shellMessages,
         nativeSocket,

@@ -45,6 +45,7 @@ export function createShell({ plugin, app, profiles, ui, locale = '', theme = ()
         ui.renderConnections(profiles.profiles.map(profile => ({
             hash: profile.hash,
             label: profiles.label(profile.hash),
+            nickname: profiles.nickname(profile.hash),
             active: profile.hash === profiles.active,
         })));
     }
@@ -202,6 +203,7 @@ export function createShell({ plugin, app, profiles, ui, locale = '', theme = ()
                     profile: hash,
                     muted: Array.isArray(data.muted) ? data.muted : [],
                     ignored: Array.isArray(data.ignored) ? data.ignored : [],
+                    calls: data.calls !== false,
                 }).catch(() => {});
                 break;
             case 'push-unsubscribe':

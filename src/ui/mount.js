@@ -36,6 +36,8 @@ import { defaultModules } from '../modules/index.js';
  *   instead of the login dialog, e.g. bearerFromParent({ allowedOrigins }) inside an iframe.
  * @param {string} [options.pushWorker] URL of a copy of starchat/push-sw.js on this origin. Turns on
  *   browser push on networks with draft/webpush; see the comment at the top of that file.
+ * @param {string} [options.pushGateway] App builds: base URL of the push gateway for networks
+ *   without their own FCM relay (starchat-irc/push-gateway).
  * @return {Promise<{ connection: Object, servers: Object[] }>}
  */
 export async function mountChat(target, options = {}) {

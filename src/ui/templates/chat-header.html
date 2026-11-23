@@ -25,7 +25,7 @@
         </template>
 
         <div class="chat-header-actions">
-            <!-- Voice chat of the channel (experimental, Settings -> Voice chat) -->
+            <!-- Voice chat of the channel -->
             <template x-if="hasFeature('voice')">
             <button class="chat-header-btn"
                     :class="{ 'is-active': isInVoice(currentChannel), 'chat-header-btn--voice-live': isInVoice(currentChannel) }"
@@ -38,7 +38,7 @@
                 <i class="bi" :class="isInVoice(currentChannel) ? 'bi-telephone-x' : 'bi-mic'"></i>
             </button>
             </template>
-            <!-- Voice call with a friend (DM window, experimental) -->
+            <!-- Voice call with a friend (DM window) -->
             <template x-if="hasFeature('calls')">
             <button class="chat-header-btn"
                     :class="{ 'is-active': isInCallWith(currentChannel), 'chat-header-btn--voice-live': isInCallWith(currentChannel) }"

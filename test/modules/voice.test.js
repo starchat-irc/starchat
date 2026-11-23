@@ -64,24 +64,23 @@ async function voiceChat(routes = {}, options = {}) {
     const fake = fakeVoiceModule();
     result.chat._voiceModule = fake.load;
     result.chat._playVoiceSound = () => {};
-    result.chat.setVoiceSetting('enabled', true);
     result.chat._joinedChannels.add('#bridge');
     result.chat.currentChannel = '#bridge';
     result.fake = fake;
     return result;
 }
 
-test('voice needs the setting, the feature and a token', async () => {
+test('voice needs the feature, a token and WebRTC, no opt-in', async () => {
     const { chat } = await voiceChat();
     assert.equal(chat.voiceAvailable(), true);
     assert.equal(chat.canJoinVoice('#bridge'), true);
     assert.equal(chat.canJoinVoice('#elsewhere'), false, 'not joined on IRC');
 
-    chat.setVoiceSetting('enabled', false);
-    assert.equal(chat.voiceAvailable(), false);
+    delete globalThis.RTCPeerConnection;
+    assert.equal(chat.voiceAvailable(), false, 'browser without WebRTC');
+    globalThis.RTCPeerConnection = function RTCPeerConnection() {};
 
     const guest = chatWith(connectionWith(apiStub({}), { features: ['voice'] }), { modules: [voiceModule] }).chat;
-    guest.setVoiceSetting('enabled', true);
     assert.equal(guest.voiceAvailable(), false, 'guests have no token');
 
     const plain = await voiceChat({}, { features: [] });
@@ -184,9 +183,10 @@ test('the filter list comes from the API once and keeps only known filters', asy
 });
 
 test('settings are stored per device and sanitised on read', () => {
-    localStorage.setItem('starchat.voice', JSON.stringify({ enabled: true, mode: 'shout', pttKey: 'KeyA', thresholdDb: 20 }));
+    localStorage.setItem('starchat.voice', JSON.stringify({ enabled: false, mode: 'shout', pttKey: 'KeyA', thresholdDb: 20 }));
     const settings = readVoiceSettings();
-    assert.equal(settings.enabled, true);
+    assert.equal('enabled' in settings, false, 'the old opt-in switch is gone');
+    assert.equal(settings.calls, true, 'private calls are on by default');
     assert.equal(settings.mode, 'vad');
     assert.equal(settings.pttKey, 'F8');
     assert.equal(settings.thresholdDb, 0);

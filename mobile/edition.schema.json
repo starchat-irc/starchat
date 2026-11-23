@@ -91,11 +91,14 @@
             "description": "Push notifications through Firebase Cloud Messaging. Off when left out.",
             "type": "object",
             "additionalProperties": false,
-            "required": ["googleServices"],
             "properties": {
                 "googleServices": {
                     "description": "google-services.json of your Firebase project, relative to the edition folder. Its package name must be appId. A google-services.json in the edition folder is used without this entry.",
                     "type": "string", "pattern": "\\.json$"
+                },
+                "gateway": {
+                    "description": "Base URL of a push gateway (starchat-irc/push-gateway) holding the service account of the same Firebase project. Used on networks with draft/webpush that do not relay to FCM themselves.",
+                    "type": "string", "pattern": "^https://"
                 }
             }
         }

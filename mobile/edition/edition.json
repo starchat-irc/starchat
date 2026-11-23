@@ -10,5 +10,8 @@
     "splashBackground": "#1b1e23",
     "chat": {
         "serverList": "default"
+    },
+    "push": {
+        "gateway": "https://push.getstarchat.net"
     }
 }

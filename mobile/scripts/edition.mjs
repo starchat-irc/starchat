@@ -43,8 +43,8 @@ export function loadEdition(dir, { dev = false } = {}) {
     }
     const edition = readJson(file);
     // The Firebase file is kept out of git: when it lies in the folder, it counts as named
-    if (!edition.push && existsSync(path.join(dir, DEFAULT_GOOGLE_SERVICES))) {
-        edition.push = { googleServices: DEFAULT_GOOGLE_SERVICES };
+    if (!edition.push?.googleServices && existsSync(path.join(dir, DEFAULT_GOOGLE_SERVICES))) {
+        edition.push = { ...edition.push, googleServices: DEFAULT_GOOGLE_SERVICES };
     }
     const validate = new Ajv2020({ allErrors: true }).compile(readJson(schemaPath));
     if (!validate(edition)) {
@@ -139,7 +139,9 @@ export function runtimeEdition(edition, version) {
             defaultQuitMessage: edition.chat.defaultQuitMessage || '',
         },
         texts: edition.texts || {},
-        push: Boolean(edition.push),
+        // Without the Firebase file there is no FCM token, so no push at all
+        push: Boolean(edition.push?.googleServices),
+        pushGateway: edition.push?.googleServices ? (edition.push.gateway || '').replace(/\/+$/, '') : '',
     };
 }
 

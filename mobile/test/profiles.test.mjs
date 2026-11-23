@@ -58,6 +58,21 @@ test('an edition with a primary server starts with a connection bound to it', as
     assert.equal(JSON.parse(store.data.get('profiles')).length, 1);
 });
 
+test('the connection list shows the nick of each connection', async () => {
+    const profiles = profileStore({ primaryServer: 'home.example.org' });
+    await profiles.load();
+    const home = profiles.active;
+    assert.equal(profiles.nickname(home), '', 'no nick before the first login');
+    await profiles.setNickname(home, 'luke');
+    assert.equal(profiles.nickname(home), 'luke');
+
+    const result = await profiles.addFromDirectory(profiles.directory()[0], 'kenobi');
+    assert.equal(profiles.nickname(result.profile.hash), 'kenobi');
+    await profiles.setNickname(result.profile.hash, 'ben');
+    assert.equal(profiles.nickname(result.profile.hash), 'ben');
+    assert.equal(profiles.nickname('unknown'), '');
+});
+
 test('a network from the directory becomes a TCP connection with the chosen nick', async () => {
     const profiles = profileStore();
     await profiles.load();

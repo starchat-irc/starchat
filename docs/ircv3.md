@@ -40,7 +40,7 @@ Reactions and replies are offered only when the server does not deny the tags wi
 |-------|---------|---------|
 | `invite` | caller | It should ring. The caller is already waiting in the voice room. |
 | `ringing` | callee | It rings here. Without it within 6 seconds the caller assumes a client without calls and gives up. |
-| `unavailable` | callee | Voice is switched off here. |
+| `unavailable` | callee | This client takes no calls (switched off in the settings, guest, or no WebRTC). |
 | `busy` | callee | Already in a call or another one rings. |
 | `accept`, `decline` | callee | The answer. Other sessions of the same account see it as echo and stop ringing. |
 | `cancel` | caller | Gave up before an answer. |

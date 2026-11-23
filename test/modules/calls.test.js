@@ -3,9 +3,10 @@
  */
 import { afterEach, beforeEach, test, vi } from 'vitest';
 import assert from 'node:assert/strict';
-import { CALL_ACK_TIMEOUT_MS, CALL_ID_TAG, CALL_TAG, callsModule } from '../../src/modules/calls.js';
+import { CALL_ACK_TIMEOUT_MS, CALL_ID_TAG, CALL_TAG, callsModule, registerCallsSettings } from '../../src/modules/calls.js';
 import { friendsModule } from '../../src/modules/friends.js';
-import { voiceModule } from '../../src/modules/voice.js';
+import { registerVoiceSettings, voiceModule } from '../../src/modules/voice.js';
+import { createSettingsRegistry } from '../../src/ui/settings/registry.js';
 import { installBrowserStubs } from '../ui/chat-harness.js';
 import { json, loggedInChat } from './module-harness.js';
 
@@ -44,7 +45,6 @@ async function callChat(routes = {}, { participants = [] } = {}) {
     const { chat } = result;
     await chat.fetchFriends();
     chat.updateFriendPresence('Bob', 'online');
-    chat.setVoiceSetting('enabled', true);
     chat._playVoiceSound = () => {};
     chat._voiceModule = async () => ({
         async createVoiceSession(options) {
@@ -62,7 +62,7 @@ async function callChat(routes = {}, { participants = [] } = {}) {
 const tagmsg = (from, action, id, account = from.toLowerCase()) =>
     `@${CALL_TAG}=${action};${CALL_ID_TAG}=${id};account=${account} :${from}!u@h TAGMSG alice`;
 
-test('only online friends can be called, and only with voice switched on', async () => {
+test('only online friends can be called, and only where voice works', async () => {
     const { chat } = await callChat();
     assert.equal(chat.canCallUser('Bob'), true);
     assert.equal(chat.canCallUser('bob'), true);
@@ -73,8 +73,8 @@ test('only online friends can be called, and only with voice switched on', async
     assert.equal(chat.canCallUser('Bob'), false);
 
     chat.updateFriendPresence('Bob', 'online');
-    chat.setVoiceSetting('enabled', false);
-    assert.equal(chat.canCallUser('Bob'), false);
+    delete globalThis.RTCPeerConnection;
+    assert.equal(chat.canCallUser('Bob'), false, 'browser without WebRTC');
 });
 
 test('a call asks for the call token with the friend account and rings over IRC', async () => {
@@ -139,14 +139,54 @@ test('an invite from a friend rings, others are ignored', async () => {
     assert.ok(sent.includes(`@${CALL_TAG}=decline;${CALL_ID_TAG}=abc123 TAGMSG Bob`));
 });
 
-test('with voice switched off an invite is answered with "unavailable"', async () => {
+test('without WebRTC an invite is answered with "unavailable"', async () => {
     const { chat, sent } = await callChat();
-    chat.setVoiceSetting('enabled', false);
+    delete globalThis.RTCPeerConnection;
 
     chat.handleMessage({ data: tagmsg('Bob', 'invite', 'abc123') });
 
     assert.equal(chat.incomingCall, null);
     assert.ok(sent.includes(`@${CALL_TAG}=unavailable;${CALL_ID_TAG}=abc123 TAGMSG Bob`));
+});
+
+test('with private calls switched off nothing rings and nobody can be called', async () => {
+    const { chat, sent } = await callChat();
+    chat.setVoiceSetting('calls', false);
+
+    assert.equal(chat.canCallUser('Bob'), false);
+    chat.handleMessage({ data: tagmsg('Bob', 'invite', 'abc123') });
+    assert.equal(chat.incomingCall, null);
+    assert.ok(sent.includes(`@${CALL_TAG}=unavailable;${CALL_ID_TAG}=abc123 TAGMSG Bob`));
+
+    chat.openCallFromPush('id=def456&nick=Bob&account=bob');
+    assert.equal(chat.incomingCall, null, 'a late app notification does not ring either');
+    assert.ok(sent.includes(`@${CALL_TAG}=unavailable;${CALL_ID_TAG}=def456 TAGMSG Bob`));
+
+    chat.setVoiceSetting('calls', true);
+    assert.equal(chat.canCallUser('Bob'), true);
+});
+
+test('switching private calls off declines a ringing call', async () => {
+    const { chat, sent } = await callChat();
+    chat.handleMessage({ data: tagmsg('Bob', 'invite', 'abc123') });
+    assert.ok(chat.incomingCall);
+
+    chat.setVoiceSetting('calls', false);
+
+    assert.equal(chat.incomingCall, null);
+    assert.ok(sent.includes(`@${CALL_TAG}=decline;${CALL_ID_TAG}=abc123 TAGMSG Bob`));
+});
+
+test('the call switch shows in the voice settings only with calls and friends', () => {
+    const registry = createSettingsRegistry();
+    registerVoiceSettings(registry);
+    registerCallsSettings(registry);
+    const env = features => ({ shell: null, hasFeature: name => features.includes(name), hasAccount: true, hasToken: true });
+    const ids = features => registry.settingsFor('voice', env(features)).map(setting => setting.id);
+
+    assert.ok(ids(['voice', 'calls', 'friends']).includes('voice.calls'));
+    assert.ok(!ids(['voice', 'calls']).includes('voice.calls'));
+    assert.ok(!ids(['voice']).includes('voice.calls'));
 });
 
 test('a second call while one rings gets "busy"', async () => {

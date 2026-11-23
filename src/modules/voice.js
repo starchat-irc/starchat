@@ -1,9 +1,9 @@
 /**
- * Voice module (feature "voice", experimental)
+ * Voice module (feature "voice")
  * Voice chat per IRC channel through a LiveKit server of the network.
  *
- *  - Only offered when switched on under Settings → Voice chat, with a token of this
- *    connection (guests have none).
+ *  - Offered with a token of this connection (guests have none) in browsers that can
+ *    run WebRTC and AudioWorklet.
  *  - The network's API hands out the room token after checking that the own nick is in
  *    the channel (POST chat/voice/token, see docs/discovery.md).
  *  - Others see who is in a voice chat through the IRC metadata key "voice"
@@ -19,7 +19,6 @@ const VOICE_SETTINGS_KEY = 'starchat.voice';
 export const VOICE_METADATA_KEY = 'voice';
 
 const DEFAULT_VOICE_SETTINGS = Object.freeze({
-    enabled: false,
     mode: 'vad',
     pttKey: 'F8',
     thresholdDb: -50,
@@ -28,6 +27,8 @@ const DEFAULT_VOICE_SETTINGS = Object.freeze({
     noiseFilter: '',
     /** Sounds for join/leave and the own mute. */
     sounds: true,
+    /** Private calls from friends (calls module); off answers every call with "unavailable". */
+    calls: true,
     inputDeviceId: '',
     outputDeviceId: '',
     volumes: {},
@@ -56,8 +57,11 @@ export function readVoiceSettings() {
         if (!VOICE_PTT_KEYS.includes(settings.pttKey)) settings.pttKey = DEFAULT_VOICE_SETTINGS.pttKey;
         settings.thresholdDb = Math.min(0, Math.max(-80, Number(settings.thresholdDb) || DEFAULT_VOICE_SETTINGS.thresholdDb));
         settings.sounds = settings.sounds !== false;
+        settings.calls = settings.calls !== false;
         settings.noiseFilter = typeof settings.noiseFilter === 'string' ? settings.noiseFilter : '';
         settings.volumes = settings.volumes && typeof settings.volumes === 'object' ? settings.volumes : {};
+        // Left over from the former opt-in switch
+        delete settings.enabled;
         return settings;
     } catch {
         return { ...DEFAULT_VOICE_SETTINGS, volumes: {} };
@@ -170,8 +174,7 @@ export function voiceMixin() {
         },
 
         voiceAvailable() {
-            return Boolean(this.voiceSettings.enabled)
-                && this.hasFeature('voice')
+            return this.hasFeature('voice')
                 && Boolean(this.hasApiToken)
                 && this.voiceSupported();
         },
@@ -454,9 +457,10 @@ export function voiceMixin() {
             this.voiceSettings = { ...this.voiceSettings, [key]: value };
             writeVoiceSettings(this.voiceSettings);
 
-            if (key === 'enabled' && !value) {
-                this.leaveVoice();
-                this.stopVoiceTest();
+            if (key === 'calls') {
+                if (!value && this.incomingCall) this.declineCall?.();
+                // The app shell drops call pushes in the background too
+                this.syncPushFilter?.();
             }
             if (key === 'mode') {
                 this.setVoicePtt(false);
@@ -576,18 +580,6 @@ export function voiceMixin() {
 export function registerVoiceSettings(registry) {
     const offered = env => env.hasFeature('voice') && env.hasToken;
     registry.registerSection({ id: 'voice', label: 'settings_section_voice', icon: 'bi-mic', order: 45, when: offered });
-    registry.registerSetting({
-        id: 'voice.enabled',
-        section: 'voice',
-        type: 'toggle',
-        scope: SCOPE.Device,
-        order: 10,
-        label: 'settings_voice_enabled',
-        hint: 'settings_voice_enabled_hint',
-        keywords: ['voice', 'sprachchat', 'mikrofon', 'microphone', 'livekit', 'experimentell', 'experimental'],
-        get: chat => Boolean(chat.voiceSettings?.enabled),
-        set: (chat, value) => chat.setVoiceSetting('enabled', Boolean(value)),
-    });
     registry.registerSetting({
         id: 'voice.mode',
         section: 'voice',

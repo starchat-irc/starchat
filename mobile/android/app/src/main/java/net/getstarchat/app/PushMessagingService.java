@@ -98,8 +98,9 @@ public class PushMessagingService extends FirebaseMessagingService {
             manager.cancel(callTag(id), CALL_NOTIFICATION_ID);
             return;
         }
-        // In the foreground the chat rings itself
-        if (!"invite".equals(data.get("call")) || MainActivity.isInForeground() || !manager.areNotificationsEnabled()) {
+        // In the foreground the chat rings itself; calls switched off in the chat never ring
+        if (!"invite".equals(data.get("call")) || MainActivity.isInForeground() || !manager.areNotificationsEnabled()
+                || !PushFilter.acceptsCalls(this)) {
             return;
         }
         ensureChannels(this);

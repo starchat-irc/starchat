@@ -41,6 +41,7 @@ function setUp({ profileList = ['a', 'b'], active = 'a' } = {}) {
         },
         configFor: async hash => ({ profileHash: hash }),
         label: hash => `Net ${hash}`,
+        nickname: hash => `nick-${hash}`,
         setToken: async (hash, token) => { tokens[hash] = token; },
         setSaslLogin: async (hash, account, password) => { tokens[hash] = { account, password }; },
         clearLogin: async (hash) => { tokens[hash] = null; },
@@ -95,6 +96,7 @@ test('the remembered connection starts with its profile and theme', () => {
         { type: 'set-theme', theme: 'dark' },
     ]);
     assert.deepEqual(env.ui.rendered.map(entry => [entry.hash, entry.active]), [['a', true], ['b', false]]);
+    assert.deepEqual(env.ui.rendered.map(entry => entry.nickname), ['nick-a', 'nick-b']);
 });
 
 test('without connections the start screen shows', async () => {
@@ -165,7 +167,9 @@ test('logins, push and links are kept per connection', async () => {
     assert.deepEqual(frame.received.at(-1), { type: 'push-subscription', fcmToken: 'fcm', p256dh: 'p', auth: 'a' });
 
     await env.fromChat(frame, { type: 'push-filter', muted: ['#x'], ignored: 'not a list' });
-    assert.deepEqual(env.calls.at(-1), ['setPushFilter', { profile: 'a', muted: ['#x'], ignored: [] }]);
+    assert.deepEqual(env.calls.at(-1), ['setPushFilter', { profile: 'a', muted: ['#x'], ignored: [], calls: true }]);
+    await env.fromChat(frame, { type: 'push-filter', muted: [], ignored: [], calls: false });
+    assert.deepEqual(env.calls.at(-1), ['setPushFilter', { profile: 'a', muted: [], ignored: [], calls: false }]);
 
     await env.fromChat(frame, { type: 'open-external', url: 'javascript:alert(1)' });
     await env.fromChat(frame, { type: 'open-external', url: 'https://example.org' });

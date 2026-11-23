@@ -118,6 +118,8 @@ export function guestNick() {
  *   only goes to the primary server.
  * @param {string|null} [options.pushWorker] URL of the push service worker on the page's origin
  *   (copy of starchat/push-sw.js). Browser push stays off without it.
+ * @param {string|null} [options.pushGateway] Base URL of the push gateway of an app build, used
+ *   on networks that do not relay to FCM themselves (feature "push").
  */
 export function createChatComponent(options) {
     const {
@@ -144,6 +146,7 @@ export function createChatComponent(options) {
         defaultTheme = 'auto',
         bearer = null,
         pushWorker = null,
+        pushGateway = null,
         storageScope: scopeOption = '',
     } = options;
     const primaryServer = connection?.server || null;
@@ -161,6 +164,7 @@ export function createChatComponent(options) {
         rawOf,
         shell,
         pushWorker,
+        pushGateway,
         publishesNowPlaying,
         nickname,
         newMessage: '',

@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, test, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import {
-    base64UrlToBytes, bytesToBase64Url, pushModule, sameKey, webpushRegisterLine,
+    base64UrlToBytes, bytesToBase64Url, normalizePushGateway, pushModule, sameKey, webpushRegisterLine,
 } from '../../src/modules/push.js';
 import { settingsRegistry } from '../../src/ui/settings/registry.js';
 import { installBrowserStubs } from '../ui/chat-harness.js';
@@ -175,7 +175,10 @@ test('the app hands over its FCM token, the API returns the relay endpoint', asy
     assert.equal(post.init.headers.get('Authorization'), 'Bearer jwt-1');
     assert.deepEqual(JSON.parse(post.init.body), { fcm_token: 'fcm-1' });
     assert.ok(sent.includes('WEBPUSH REGISTER https://home.example.org/api/push/relay-1 p256dh=p256-app;auth=auth-app'));
-    assert.ok(host.some(message => message.type === 'push-filter'));
+    assert.deepEqual(host.find(message => message.type === 'push-filter').data, { muted: [], ignored: [], calls: true });
+    chat.voiceSettings = { calls: false };
+    chat.syncPushFilter();
+    assert.equal(host.at(-1).data.calls, false, 'the app drops call rings when calls are off');
 
     chat.logout();
     assert.ok(sent.includes('WEBPUSH UNREGISTER https://home.example.org/api/push/relay-1'), 'sent before the socket closed');
@@ -192,6 +195,56 @@ test('the app needs the network relay (feature push)', async () => {
     chat.webpushVapidKey = VAPID;
     assert.ok(!chat.canUsePush());
     assert.equal(chat.pushStatus(), 'push_status_unsupported_server');
+});
+
+test('on networks without a relay the app registers with its push gateway', async () => {
+    const { chat, sent } = await loggedInChat({}, { modules: [pushModule], features: [] });
+    const host = [];
+    chat.notifyHost = (type, data) => host.push({ type, data });
+    chat.shell = 'mobile';
+    chat.supportsWebpush = true;
+    chat.webpushVapidKey = VAPID;
+    assert.equal(chat.pushStatus(), 'push_status_unsupported_server', 'no gateway, no relay');
+
+    chat.pushGateway = 'https://push.example.org/';
+    const requests = [];
+    vi.stubGlobal('fetch', async (url, init) => {
+        requests.push({ url, body: JSON.parse(init.body) });
+        return new Response(JSON.stringify({ endpoint: 'https://push.example.org/push/abc' }), { status: 201 });
+    });
+    assert.equal(chat.appPushRoute(), 'gateway');
+
+    chat.applyVapidKey(VAPID);
+    chat.receivePushSubscription({ fcmToken: 'fcm-1', p256dh: 'p256-app', auth: 'auth-app' });
+    await vi.waitFor(() => assert.ok(chat._pushRegistration));
+
+    assert.deepEqual(requests, [{ url: 'https://push.example.org/register', body: { fcm_token: 'fcm-1' } }]);
+    assert.ok(sent.includes('WEBPUSH REGISTER https://push.example.org/push/abc p256dh=p256-app;auth=auth-app'));
+    assert.equal(chat._pushRegistration.route, 'gateway');
+    assert.equal(chat.pushStatus(), 'push_status_active');
+});
+
+test('a refusal of the gateway shows its error code', async () => {
+    const { chat } = await loggedInChat({}, { modules: [pushModule], features: [] });
+    chat.notifyHost = () => {};
+    chat.shell = 'mobile';
+    chat.supportsWebpush = true;
+    chat.pushGateway = 'https://push.example.org';
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: 'invalid_token' }), { status: 422 }));
+
+    chat.applyVapidKey(VAPID);
+    chat.receivePushSubscription({ fcmToken: 'fcm-1', p256dh: 'p', auth: 'a' });
+    await vi.waitFor(() => assert.equal(chat.pushError, 'push gateway: invalid_token'));
+    assert.equal(chat._pushRegistration, null);
+});
+
+test('the network relay wins over the gateway, a gateway must be https', () => {
+    const chat = { hasFeature: name => name === 'push', hasApiToken: true, pushGateway: 'https://push.example.org' };
+    const mixin = pushModule.mixin();
+    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat }), 'network');
+    assert.equal(mixin.appPushRoute.call({ ...mixin, ...chat, hasFeature: () => false }), 'gateway');
+    assert.equal(normalizePushGateway('http://push.example.org'), '');
+    assert.equal(normalizePushGateway('https://push.example.org/'), 'https://push.example.org');
 });
 
 test('an app error ends up in the status', async () => {

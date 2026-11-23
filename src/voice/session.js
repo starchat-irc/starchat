@@ -1,5 +1,5 @@
 /**
- * Voice session (experimental)
+ * Voice session
  *
  * Wraps one LiveKit room for the voice chat of an IRC channel. The microphone runs
  * through an own Web Audio graph before it is published:

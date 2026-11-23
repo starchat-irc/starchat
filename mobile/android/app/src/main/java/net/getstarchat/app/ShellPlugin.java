@@ -307,7 +307,7 @@ public class ShellPlugin extends Plugin {
         call.resolve();
     }
 
-    /** Muted channels and ignored users of one connection: their pushes are not shown. */
+    /** Muted channels and ignored users of one connection: their pushes are not shown. Also the device switch for call rings. */
     @PluginMethod
     public void setPushFilter(PluginCall call) {
         String profile = call.getString("profile");
@@ -317,6 +317,7 @@ public class ShellPlugin extends Plugin {
         }
         try {
             new PushFilter(strings(call.getArray("muted")), strings(call.getArray("ignored"))).save(getContext(), profile);
+            PushFilter.setAcceptsCalls(getContext(), call.getBoolean("calls", true));
             call.resolve();
         } catch (Exception e) {
             call.reject("invalid push filter", e);

@@ -1,12 +1,12 @@
 /**
- * Calls module (feature "calls", experimental)
+ * Calls module (feature "calls")
  * Voice calls between two friends from the DM window. Needs the voice and friends modules.
  *
  *  - The call is a LiveKit room of its own, joined through the voice module like a
  *    channel voice chat. Only one voice room at a time.
  *  - The network's API hands out the room token only to friends (POST chat/voice/call-token).
  *  - Ringing runs over IRC as TAGMSG with the client tag CALL_TAG:
- *      invite → ringing (it rings here) | unavailable (voice off) | busy,
+ *      invite → ringing (it rings here) | unavailable (calls switched off or no voice here) | busy,
  *      then accept | decline,  cancel (caller gave up),  end (hung up).
  *    A client without call support ignores the invite: no "ringing" within
  *    CALL_ACK_TIMEOUT_MS tells the caller so, instead of ringing into the void.
@@ -19,6 +19,7 @@
  *    (notifyHost 'call-incoming'), so a desktop shell can flash its window.
  *  - Calls are private: no IRC metadata, nothing in the nick list.
  */
+import { SCOPE } from '../ui/settings/registry.js';
 
 export const CALL_TAG = '+getstarchat.net/call';
 export const CALL_ID_TAG = '+getstarchat.net/call-id';
@@ -72,9 +73,10 @@ export function callsMixin() {
             return Boolean(needle) && (this.friends || []).some(item => lower(item.user?.name) === needle);
         },
 
-        /** Calls need the feature, a voice chat that is switched on and the friend list. */
+        /** Calls need the feature, a usable voice chat, the friend list and the setting switched on. */
         callsAvailable() {
-            return this.hasFeature('calls') && this.hasFeature('friends') && Boolean(this.voiceAvailable?.());
+            return this.hasFeature('calls') && this.hasFeature('friends') && Boolean(this.voiceAvailable?.())
+                && this.voiceSettings?.calls !== false;
         },
 
         canCallUser(nick = this.currentChannel) {
@@ -227,7 +229,7 @@ export function callsMixin() {
             // Friends only: the server's account tag when present, otherwise the friend list by nick
             const isFriend = account ? this.isFriendAccount(account) : Boolean(this.friendAccountOfNick(nick));
             if (!isFriend || this.isIgnored?.(nick)) return;
-            // Voice switched off here (or not offered): say so, the caller would wait otherwise
+            // Calls switched off here (or no voice): say so, the caller would wait otherwise
             if (!this.callsAvailable()) {
                 this.sendCallSignal(nick, 'unavailable', id);
                 return;
@@ -401,6 +403,10 @@ export function callsMixin() {
                 this.sendCallSignal(call.nick, 'decline', call.id);
                 return;
             }
+            if (!this.callsAvailable()) {
+                this.sendCallSignal(call.nick, 'unavailable', call.id);
+                return;
+            }
             if (this.voiceCall?.id === call.id) return;
             this.incomingCall = call;
             if (answer === 'accept') {
@@ -424,9 +430,27 @@ export function callsMixin() {
 }
 
 /** @type {import('./index.js').ChatModule} */
+export function registerCallsSettings(registry) {
+    registry.registerSetting({
+        id: 'voice.calls',
+        section: 'voice',
+        type: 'toggle',
+        scope: SCOPE.Device,
+        order: 15,
+        label: 'settings_voice_calls',
+        hint: 'settings_voice_calls_hint',
+        keywords: ['anruf', 'anrufe', 'call', 'calls', 'privat', 'private', 'klingeln', 'ring'],
+        when: env => env.hasFeature('calls') && env.hasFeature('friends'),
+        get: chat => chat.voiceSettings?.calls !== false,
+        set: (chat, value) => chat.setVoiceSetting('calls', Boolean(value)),
+    });
+}
+
+/** @type {import('./index.js').ChatModule} */
 export const callsModule = {
     name: 'calls',
     mixin: callsMixin,
+    register: registerCallsSettings,
     hooks: {
         /** A ringing call ends with the account. */
         loggingOut() {

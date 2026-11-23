@@ -28,6 +28,7 @@ test('the bundled StarChat edition is valid and has no preset network', () => {
     assert.equal(runtime.chat.serverList, 'default');
     // Push only when a google-services.json lies in the folder (not in git)
     assert.equal(runtime.push, Boolean(files['push.googleServices']));
+    assert.equal(runtime.pushGateway, files['push.googleServices'] ? 'https://push.getstarchat.net' : '');
 });
 
 test('invalid editions name the problem', () => {
@@ -45,6 +46,20 @@ test('google-services.json must belong to the app id', () => {
     );
     const { edition } = loadEdition(editionDir(withPush, { 'google-services.json': services('org.example.chat') }));
     assert.equal(runtimeEdition(edition, '1.0.0').push, true);
+});
+
+test('the push gateway counts only together with the Firebase file', () => {
+    const services = JSON.stringify({ client: [{ client_info: { android_client_info: { package_name: 'org.example.chat' } } }] });
+    const withGateway = { ...minimal, push: { gateway: 'https://push.example.org/' } };
+
+    const { edition } = loadEdition(editionDir(withGateway, { 'google-services.json': services }));
+    assert.equal(runtimeEdition(edition, '1.0.0').push, true);
+    assert.equal(runtimeEdition(edition, '1.0.0').pushGateway, 'https://push.example.org');
+
+    const without = loadEdition(editionDir(withGateway)).edition;
+    assert.equal(runtimeEdition(without, '1.0.0').push, false);
+    assert.equal(runtimeEdition(without, '1.0.0').pushGateway, '');
+    assert.throws(() => loadEdition(editionDir({ ...minimal, push: { gateway: 'http://push.example.org' } })), /gateway/);
 });
 
 test('the development build gets its own id and name, google-services.json must know it', () => {

@@ -94,7 +94,7 @@ If you fork this repository, keep your edition in its own folder (for example `m
 | `chat.ctcpVersion` | no | As in [mountChat()](options.md). |
 | `chat.defaultQuitMessage` | no | As in [mountChat()](options.md). |
 | `texts` | no | Texts that replace bundled ones, per language: `{ "de": { "key": "Text" } }`. Keys of the chat (`src/i18n/`) and of the shell (`mobile/locales/`). |
-| `push` | no | `googleServices`: the `google-services.json` of your Firebase project. Its Android app must have `appId` as package name, the build checks that. A file named `google-services.json` in the edition folder is used without this entry. Without the file the app has no push. |
+| `push` | no | `googleServices`: the `google-services.json` of your Firebase project. Its Android app must have `appId` as package name, the build checks that. A file named `google-services.json` in the edition folder is used without this entry. Without the file the app has no push. `gateway`: https URL of a push gateway for the same Firebase project, used on networks without their own relay. It may stay in the edition when the Firebase file is missing, push is then just off. |
 
 All file paths are relative to the edition folder and must stay inside it. The full schema is `mobile/edition.schema.json`.
 
@@ -108,7 +108,7 @@ Passwords and API tokens are encrypted with a key in the Android Keystore and on
 
 The IRC server sends Web Push (`draft/webpush`) for the connection. Apps cannot receive Web Push directly, so the network relays it to Firebase Cloud Messaging, see the feature [`push`](features.md#push). The app creates its own Web Push keys per connection and decrypts the pushes itself; a push is matched to its connection by the keys that decrypt it.
 
-A network can only relay to apps of the Firebase project whose service account it holds. Push therefore works where the network relays for your edition's project, typically your own network.
+A network can only relay to apps of the Firebase project whose service account it holds. For all other networks with `draft/webpush` the app uses a push gateway (`push.gateway` in the edition, see [starchat-irc/push-gateway](https://github.com/starchat-irc/push-gateway)) that holds the service account of the edition's Firebase project. The network's own relay is preferred where it has one. Without a gateway, push only works where the network relays for your edition's project, typically your own network.
 
 ## Releases
 

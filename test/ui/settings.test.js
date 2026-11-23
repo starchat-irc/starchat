@@ -44,7 +44,7 @@ test('the web chat shows no desktop sections', () => {
 test('a feature module can add its own section', () => {
     const registry = createSettingsRegistry();
     registry.registerSection({ id: 'voice', label: 'settings_section_voice', when: env => env.hasFeature('voice') });
-    registry.registerSetting({ id: 'voice.enabled', section: 'voice', type: 'toggle', scope: 'device', label: 'settings_voice_enabled' });
+    registry.registerSetting({ id: 'voice.sounds', section: 'voice', type: 'toggle', scope: 'device', label: 'settings_voice_sounds' });
     assert.deepEqual(registry.sectionsFor(webEnv), []);
     assert.equal(registry.sectionsFor({ ...webEnv, hasFeature: name => name === 'voice' }).length, 1);
 });

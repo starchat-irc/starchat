@@ -68,6 +68,12 @@ export function connectionLabel(profile, homeName = '') {
     return ConnectionForm.networkName(profile);
 }
 
+/** Nick of a connection as last seen in the chat; empty before the first login. */
+export function connectionNickname(profile) {
+    const nick = profile?.serverType === 'external' ? profile.externalServer?.nickname : profile?.nickname;
+    return String(nick || '').trim();
+}
+
 /**
  * A new profile from a directory entry and a nickname, checked like a profile from the
  * connections page.
@@ -272,6 +278,11 @@ export function createProfileStore({
         label(hash) {
             const profile = find(hash);
             return profile ? connectionLabel(profile, homeName) : '';
+        },
+
+        /** Nick shown under the name in the connection list. */
+        nickname(hash) {
+            return connectionNickname(find(hash));
         },
 
         /** Nick seen in the chat: kept for the connection list (update-profile-name). */

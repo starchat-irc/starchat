@@ -77,7 +77,7 @@ function createUi({ t, onPickConnection }) {
         renderConnections(entries) {
             $('connectionList').replaceChildren(...entries.map(entry => button(
                 entry.label,
-                entry.active ? t('connections_current') : '',
+                [entry.nickname, entry.active ? t('connections_current') : ''].filter(Boolean).join(' · '),
                 () => onPickConnection(entry.hash),
                 entry.active ? 'active' : '',
             )));
