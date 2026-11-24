@@ -2057,9 +2057,9 @@ ipcMain.on('renderer-error', (event, payload) => {
 
 ipcMain.handle('get-error-report-count', () => getRendererErrorLog().count());
 
-ipcMain.handle('copy-error-report', () => {
+ipcMain.handle('copy-error-report', async () => {
     const errorLog = getRendererErrorLog();
-    clipboard.writeText(errorLog.buildReport({
+    await clipboard.writeText(errorLog.buildReport({
         version: app.getVersion(),
         electron: process.versions.electron,
         platform: process.platform,
