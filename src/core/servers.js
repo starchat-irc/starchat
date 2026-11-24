@@ -20,7 +20,8 @@ const DOMAIN = /^([a-z0-9-]+\.)+[a-z]{2,}$/;
  * @property {string[]} languages
  * @property {string} [websocket]
  * @property {{ host: string, port: number, tls: boolean }} [irc]
- * @property {string} [discovery]
+ * @property {string|boolean} [discovery] false: the network has no discovery file, the
+ *     client does not look for one. A URL: the file is there instead of the default place.
  */
 
 /**
@@ -96,8 +97,10 @@ export function normalizeServer(entry, { allowInsecureWebsocket = false } = {}) 
     if (irc && typeof irc.host === 'string' && irc.host !== '' && Number.isInteger(irc.port) && irc.port > 0 && irc.port < 65536) {
         server.irc = { host: irc.host, port: irc.port, tls: irc.tls !== false };
     }
-    // A link to a foreign host could hand out its own API and collect logins for this network.
-    if (isSameSite(hostOf(entry.discovery, 'https:'), domain)) {
+    if (typeof entry.discovery === 'boolean') {
+        server.discovery = entry.discovery;
+    } else if (isSameSite(hostOf(entry.discovery, 'https:'), domain)) {
+        // A link to a foreign host could hand out its own API and collect logins for this network.
         server.discovery = entry.discovery;
     }
     if (!server.websocket && !server.irc) {

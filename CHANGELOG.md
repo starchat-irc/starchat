@@ -8,6 +8,15 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ## [Unreleased]
 
+### Added
+- More networks in the server list: OFTC, Rizon, DALnet, EsperNet, hackint, Snoonet, EFnet, IRCnet, QuakeNet and Undernet. All of them are listed for TCP only, so they show up in the desktop and Android apps, not in the browser.
+
+### Changed
+- Server list entries now say whether the network has a discovery file (`"discovery": true` or `false`). With `false` the client no longer asks for one, which saves a request on every connect. Entries without the field are looked up as before.
+
+### Fixed
+- Pushed lines without anything to show (reactions, read markers, unknown commands) no longer give an empty notification.
+
 ## [0.1.0] - 2026-11-23
 
 The first release. StarChat is an IRCv3 client for the web, the desktop and Android. It connects directly to the network the user picks, there is no central StarChat server.

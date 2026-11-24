@@ -17,7 +17,8 @@ With `serverList: 'default'` the client loads it from GitHub and caches it for 2
             "description": { "en": "What your network is about." },
             "languages": ["en"],
             "websocket": "wss://irc.example.org/webirc",
-            "irc": { "host": "irc.example.org", "port": 6697, "tls": true }
+            "irc": { "host": "irc.example.org", "port": 6697, "tls": true },
+            "discovery": false
         }
     ]
 }
@@ -32,11 +33,11 @@ With `serverList: 'default'` the client loads it from GitHub and caches it for 2
 | `description` | no | Per language, up to 200 characters. |
 | `websocket` | one of both | `wss://` address, needed for the web build. |
 | `irc` | one of both | TCP `host`, `port` and `tls`, used by the apps. |
-| `discovery` | no | Discovery URL on `domain` or a subdomain, if not at the default place. |
+| `discovery` | yes | `true` if the network serves a [discovery file](discovery.md), `false` if not. The client only looks for the file when it is not `false`. A URL on `domain` or a subdomain if the file is not at the default place. |
 
 ## Adding a network
 
-Open a pull request against `servers/servers.json` and check it first:
+Open a pull request against `servers/servers.json`. Networks with a discovery file come first, then all entries are sorted by name. Check it first:
 
 ```
 npm install

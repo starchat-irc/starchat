@@ -60,6 +60,12 @@ test('a discovery link on a foreign host is ignored', () => {
     assert.equal(normalizeServer({ ...ergo, discovery: 'https://www.testnet.ergo.chat/sc.json' }).discovery, 'https://www.testnet.ergo.chat/sc.json');
 });
 
+test('discovery true or false from the list is kept', () => {
+    assert.equal(normalizeServer({ ...ergo, discovery: false }).discovery, false);
+    assert.equal(normalizeServer({ ...ergo, discovery: true }).discovery, true);
+    assert.equal(normalizeServer({ ...ergo, discovery: 'yes' }).discovery, undefined);
+});
+
 test('unknown schema versions are rejected, duplicate ids keep the first', () => {
     assert.equal(normalizeServerList({ schemaVersion: 2, servers: [ergo] }), null);
     assert.equal(normalizeServerList(null), null);

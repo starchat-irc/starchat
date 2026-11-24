@@ -6,7 +6,7 @@ A network tells StarChat its WebSocket address and extra services with a JSON fi
 https://<domain>/.well-known/starchat.json
 ```
 
-`<domain>` is the `domain` from the [server list](servers.md) or what the user typed. Every field except `schemaVersion` is optional. Example: [`discovery.example.json`](discovery.example.json), schema: [`discovery.schema.json`](discovery.schema.json).
+`<domain>` is the `domain` from the [server list](servers.md) or what the user typed. For a network in the list the client only looks when its entry does not say `"discovery": false`. Every field except `schemaVersion` is optional. Example: [`discovery.example.json`](discovery.example.json), schema: [`discovery.schema.json`](discovery.schema.json).
 
 ## Rules
 

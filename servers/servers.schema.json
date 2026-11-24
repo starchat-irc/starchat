@@ -16,7 +16,7 @@
     "$defs": {
         "server": {
             "type": "object",
-            "required": ["id", "name", "domain", "languages"],
+            "required": ["id", "name", "domain", "languages", "discovery"],
             "anyOf": [{ "required": ["websocket"] }, { "required": ["irc"] }],
             "additionalProperties": false,
             "properties": {
@@ -27,7 +27,7 @@
                 },
                 "name": { "type": "string", "minLength": 1, "maxLength": 60 },
                 "domain": {
-                    "description": "Main domain of the network. The discovery file is looked up at https://<domain>/.well-known/starchat.json.",
+                    "description": "Main domain of the network. Where the discovery file is looked up, see discovery.",
                     "type": "string",
                     "pattern": "^([a-z0-9-]+\\.)+[a-z]{2,}$"
                 },
@@ -60,9 +60,11 @@
                     }
                 },
                 "discovery": {
-                    "description": "Only needed if the discovery file is not at the default location. Must be on the server domain or a subdomain of it.",
-                    "type": "string",
-                    "pattern": "^https://"
+                    "description": "true if the network serves a discovery file at https://<domain>/.well-known/starchat.json, false if it has none (the client then does not look). A URL if the file is somewhere else on the server domain or a subdomain of it.",
+                    "oneOf": [
+                        { "type": "boolean" },
+                        { "type": "string", "pattern": "^https://" }
+                    ]
                 }
             }
         }

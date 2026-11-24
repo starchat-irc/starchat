@@ -7,12 +7,46 @@
             "name": "ST-City",
             "domain": "st-city.net",
             "description": {
-                "de": "Deutschsprachige Rollenspiel- und Chat-Community.",
-                "en": "German-speaking roleplay and chat community."
+                "de": "Offene Deutschsprachige Sci-Fi, Rollenspiel- und Chat-Community.",
+                "en": "Open German-speaking sci-fi, roleplay and chat community."
             },
             "languages": ["de"],
             "websocket": "wss://skynet.st-city.net",
-            "irc": { "host": "irc.st-city.net", "port": 6697, "tls": true }
+            "irc": { "host": "irc.st-city.net", "port": 6697, "tls": true },
+            "discovery": true
+        },
+        {
+            "id": "dalnet",
+            "name": "DALnet",
+            "domain": "dal.net",
+            "description": {
+                "en": "One of the older large networks, for all kinds of topics."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.dal.net", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "efnet",
+            "name": "EFnet",
+            "domain": "efnet.org",
+            "description": {
+                "en": "One of the oldest IRC networks. Unencrypted connection."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.efnet.org", "port": 6667, "tls": false },
+            "discovery": false
+        },
+        {
+            "id": "ergo",
+            "name": "Ergo",
+            "domain": "ergo.chat",
+            "description": {
+                "en": "Modern IRC software and communities."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.ergo.chat", "port": 6697, "tls": true },
+            "discovery": false
         },
         {
             "id": "ergo-testnet",
@@ -23,7 +57,41 @@
             },
             "languages": ["en"],
             "websocket": "wss://testnet.ergo.chat/webirc",
-            "irc": { "host": "testnet.ergo.chat", "port": 6697, "tls": true }
+            "irc": { "host": "testnet.ergo.chat", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "espernet",
+            "name": "EsperNet",
+            "domain": "esper.net",
+            "description": {
+                "en": "Network known for gaming and modding communities."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.esper.net", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "hackint",
+            "name": "hackint",
+            "domain": "hackint.org",
+            "description": {
+                "en": "Network of the hacker and maker community."
+            },
+            "languages": ["en", "de"],
+            "irc": { "host": "irc.hackint.org", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "ircnet",
+            "name": "IRCnet",
+            "domain": "ircnet.com",
+            "description": {
+                "en": "Old IRC network with many servers in Europe."
+            },
+            "languages": ["en"],
+            "irc": { "host": "open.ircnet.net", "port": 6667, "tls": false },
+            "discovery": false
         },
         {
             "id": "libera",
@@ -34,7 +102,63 @@
             },
             "languages": ["en"],
             "websocket": "wss://web.libera.chat/webirc/websocket/",
-            "irc": { "host": "irc.libera.chat", "port": 6697, "tls": true }
+            "irc": { "host": "irc.libera.chat", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "oftc",
+            "name": "OFTC",
+            "domain": "oftc.net",
+            "description": {
+                "en": "Network for free and open source software projects."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.oftc.net", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "quakenet",
+            "name": "QuakeNet",
+            "domain": "quakenet.org",
+            "description": {
+                "en": "Network that grew out of the Quake gaming community."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.quakenet.org", "port": 6667, "tls": false },
+            "discovery": false
+        },
+        {
+            "id": "rizon",
+            "name": "Rizon",
+            "domain": "rizon.net",
+            "description": {
+                "en": "Large general-purpose network."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.rizon.net", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "snoonet",
+            "name": "Snoonet",
+            "domain": "snoonet.org",
+            "description": {
+                "en": "Network that grew out of Reddit communities."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.snoonet.org", "port": 6697, "tls": true },
+            "discovery": false
+        },
+        {
+            "id": "undernet",
+            "name": "Undernet",
+            "domain": "undernet.org",
+            "description": {
+                "en": "One of the oldest large IRC networks."
+            },
+            "languages": ["en"],
+            "irc": { "host": "irc.undernet.org", "port": 6667, "tls": false },
+            "discovery": false
         }
     ]
 }

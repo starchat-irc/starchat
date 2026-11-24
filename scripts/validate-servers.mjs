@@ -34,7 +34,7 @@ for (const server of list.servers ?? []) {
 
     // A list entry must not point the client to an API on a foreign host, otherwise
     // logins for that network could end up somewhere else.
-    if (server.discovery) {
+    if (typeof server.discovery === 'string') {
         let host;
         try {
             host = new URL(server.discovery).hostname;
@@ -45,6 +45,17 @@ for (const server of list.servers ?? []) {
         if (!isSameSite(host, server.domain)) {
             errors.push(`${server.id}: discovery host ${host} is not on ${server.domain}`);
         }
+    }
+}
+
+// Order shown to users: networks with a discovery file first, then by name.
+const sortKey = (server) => [server.discovery === false ? 1 : 0, server.name.toLocaleLowerCase('en')];
+const servers = list.servers ?? [];
+for (let i = 1; i < servers.length; i++) {
+    const [groupA, nameA] = sortKey(servers[i - 1]);
+    const [groupB, nameB] = sortKey(servers[i]);
+    if (groupA > groupB || (groupA === groupB && nameA.localeCompare(nameB, 'en') > 0)) {
+        errors.push(`${servers[i].id}: wrong place, networks with a discovery file come first, then sorted by name (put ${servers[i].name} before ${servers[i - 1].name})`);
     }
 }
 

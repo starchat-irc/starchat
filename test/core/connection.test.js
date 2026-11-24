@@ -121,6 +121,15 @@ test('fetchDiscovery returns null for missing files, errors and foreign redirect
     assert.equal(await fetchDiscovery(server, { fetch: recordingFetch(broken) }), null);
 });
 
+test('fetchDiscovery does not look when the list says there is no file', async () => {
+    const fetch = recordingFetch(jsonResponse(discoveryData));
+    assert.equal(await fetchDiscovery({ ...server, discovery: false }, { fetch }), null);
+    assert.equal(fetch.calls.length, 0);
+
+    assert.equal((await fetchDiscovery({ ...server, discovery: true }, { fetch })).name, 'Example Net');
+    assert.equal(fetch.calls[0].url, 'https://example.org/.well-known/starchat.json');
+});
+
 test('fetchDiscovery sends no cookies and follows redirects within the domain', async () => {
     const fetch = recordingFetch(jsonResponse(discoveryData, { url: 'https://www.example.org/.well-known/starchat.json' }));
     const discovery = await fetchDiscovery(server, { fetch });

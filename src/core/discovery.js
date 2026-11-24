@@ -38,7 +38,7 @@ export const DISCOVERY_AUTH_METHODS = Object.freeze(['sasl-plain', 'bearer', 'ap
  * Where to look for the discovery file. A link in the list only counts if it stays on
  * the server domain.
  *
- * @param {{ domain: string, discovery?: string }} server
+ * @param {{ domain: string, discovery?: string|boolean }} server
  * @return {string}
  */
 export function discoveryUrl(server) {
@@ -114,13 +114,17 @@ export function normalizeDiscovery(data) {
 }
 
 /**
- * @param {{ domain: string, discovery?: string }} server
+ * @param {{ domain: string, discovery?: string|boolean }} server
  * @param {Object} [options]
  * @param {typeof fetch} [options.fetch]
  * @param {number} [options.timeoutMs]
- * @return {Promise<Discovery|null>} null if the server has no usable file.
+ * @return {Promise<Discovery|null>} null if the server has no usable file or the list says
+ *     it has none (discovery: false).
  */
 export async function fetchDiscovery(server, { fetch = globalThis.fetch, timeoutMs = DISCOVERY_TIMEOUT_MS } = {}) {
+    if (server.discovery === false) {
+        return null;
+    }
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
