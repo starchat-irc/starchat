@@ -39,7 +39,7 @@ public class IrcPushMessageTest {
         IrcPushMessage channel = IrcPushMessage.parse(":ergo.test MARKREAD #Bridge timestamp=2026-11-23T10:00:00.250Z");
         assertEquals("p1:#bridge", channel.tag("p1"));
 
-        assertFalse("a query without timestamp is no marker", IrcPushMessage.parse(":ergo.test MARKREAD #Bridge *").isReadMarker());
+        assertNull("a query without timestamp is no marker", IrcPushMessage.parse(":ergo.test MARKREAD #Bridge *"));
     }
 
     @Test
@@ -52,12 +52,21 @@ public class IrcPushMessageTest {
     }
 
     @Test
-    public void actionsAndUnknownLines() {
+    public void actionsAndInvites() {
         assertEquals("* Spock winkt", IrcPushMessage.parse(":Spock!s@h PRIVMSG klaas :\u0001ACTION winkt\u0001").body);
 
-        IrcPushMessage unknown = IrcPushMessage.parse(":irc.test FOO bar", "Libera");
-        assertEquals("Libera", unknown.title);
-        assertNull(unknown.target);
-        assertEquals("p1:server", unknown.tag("p1"));
+        IrcPushMessage invite = IrcPushMessage.parse(":Spock!s@h INVITE klaas #brücke", "Libera");
+        assertEquals("Libera", invite.title);
+        assertEquals("Spock → #brücke", invite.body);
+        assertNull(invite.target);
+        assertEquals("p1:server", invite.tag("p1"));
+    }
+
+    @Test
+    public void linesWithoutContentGiveNoNotification() {
+        assertNull(IrcPushMessage.parse(":Spock!s@h PRIVMSG klaas :\u0001VERSION\u0001", "Libera"));
+        assertNull(IrcPushMessage.parse("@time=2026-11-23T10:00:00.000Z;+draft/react=👍;+draft/reply=abc :Spock!s@h TAGMSG klaas", "Libera"));
+        assertNull(IrcPushMessage.parse(":irc.test MARKREAD #chan timestamp=kaputt", "Libera"));
+        assertNull(IrcPushMessage.parse(":irc.test FOO bar", "Libera"));
     }
 }

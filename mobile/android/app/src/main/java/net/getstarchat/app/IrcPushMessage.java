@@ -64,7 +64,11 @@ final class IrcPushMessage {
         return parse(line, "");
     }
 
-    /** @param network title of server messages and invites: the name of the connection */
+    /**
+     * @param network title of invites: the name of the connection
+     * @return null for lines without anything to show (TAGMSG, CTCP other than ACTION, unknown
+     *     commands), so a newer server that pushes more line types gives no empty notifications
+     */
     static IrcPushMessage parse(String line, String network) {
         String rest = line == null ? "" : line.replaceAll("[\r\n]+$", "");
         long time = 0;
@@ -93,16 +97,15 @@ final class IrcPushMessage {
             params.add(rest.substring(trailingAt + 2));
         }
 
-        IrcPushMessage fallback = new IrcPushMessage(network, "", null, nick, null, time, false);
         if (command.equals("MARKREAD") && params.size() > 1 && params.get(1).startsWith("timestamp=")) {
             long readUpTo = parseTime(params.get(1).substring("timestamp=".length()));
-            return readUpTo == 0 ? fallback : new IrcPushMessage("", "", params.get(0), "", null, readUpTo, true);
+            return readUpTo == 0 ? null : new IrcPushMessage("", "", params.get(0), "", null, readUpTo, true);
         }
         if (!command.equals("PRIVMSG") && !command.equals("NOTICE")) {
             if (command.equals("INVITE") && params.size() > 1) {
                 return new IrcPushMessage(network, nick + " → " + params.get(1), null, nick, null, time, false);
             }
-            return fallback;
+            return null;
         }
 
         String recipient = params.isEmpty() ? "" : params.get(0);
@@ -112,7 +115,7 @@ final class IrcPushMessage {
         Matcher ctcp = CTCP.matcher(text);
         if (ctcp.matches()) {
             if (!ctcp.group(1).equalsIgnoreCase("ACTION")) {
-                return fallback;
+                return null;
             }
             isAction = true;
             text = ctcp.group(2) == null ? "" : ctcp.group(2);

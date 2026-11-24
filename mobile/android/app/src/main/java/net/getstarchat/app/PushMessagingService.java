@@ -77,6 +77,9 @@ public class PushMessagingService extends FirebaseMessagingService {
             }
             String profile = entry.getKey();
             IrcPushMessage push = IrcPushMessage.parse(line, PushSubscriptionStore.name(this, profile));
+            if (push == null) {
+                return;
+            }
             if (push.isReadMarker()) {
                 clearRead(profile, push);
                 return;

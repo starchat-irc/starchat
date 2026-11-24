@@ -67,19 +67,20 @@ function parseIrcLine(line) {
 }
 
 /**
- * Turns the pushed IRC line into notification content.
+ * Turns the pushed IRC line into notification content. Lines without anything to show
+ * (TAGMSG, MARKREAD, CTCP other than ACTION, unknown commands) give null, so a newer
+ * server that pushes more line types does not produce empty notifications.
  *
- * @return {{ title: string, body: string, target: string|null, tag: string, sender?: string, channel?: string|null }}
+ * @return {{ title: string, body: string, target: string|null, tag: string, sender?: string, channel?: string|null }|null}
  */
 function buildPushNotification(line) {
     const { nick, command, params } = parseIrcLine(line);
-    const fallback = { title: config.name, body: '', target: null, tag: `${TAG_PREFIX}server` };
 
     if (command !== 'PRIVMSG' && command !== 'NOTICE') {
         if (command === 'INVITE' && params[1]) {
             return { title: config.name, body: `${nick} → ${params[1]}`, target: null, tag: `${TAG_PREFIX}invite`, sender: nick, channel: null };
         }
-        return fallback;
+        return null;
     }
 
     const recipient = params[0] || '';
@@ -89,7 +90,7 @@ function buildPushNotification(line) {
     let isAction = false;
     const ctcp = /^\x01(\S+)(?: (.*?))?\x01?$/.exec(text);
     if (ctcp) {
-        if (ctcp[1].toUpperCase() !== 'ACTION') return fallback;
+        if (ctcp[1].toUpperCase() !== 'ACTION') return null;
         isAction = true;
         text = ctcp[2] || '';
     }
@@ -152,6 +153,7 @@ function isChatWindow(client) {
 async function handlePush(event) {
     const line = event.data ? event.data.text() : '';
     const notification = buildPushNotification(line);
+    if (!notification) return;
     // Chrome may show a generic notice for a silent push; rare, the server only pushes DMs and mentions
     if (isSuppressed(notification, await loadFilter())) return;
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

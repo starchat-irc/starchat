@@ -63,13 +63,20 @@ test('a direct message shows the sender and opens the configured chat path', asy
 test('channel mentions, actions and other lines', async () => {
     const worker = loadWorker('https://chat.example.org/push-sw.js?name=MyNet');
     await worker.push(':bob!b@h PRIVMSG #Bridge :\x01ACTION waves at me\x01');
-    await worker.push(':bob!b@h PRIVMSG me :\x01VERSION\x01');
     await worker.push(':bob!b@h INVITE me #secret');
     assert.deepEqual(worker.shown.map(({ title, body, tag }) => ({ title, body, tag })), [
         { title: 'bob in #Bridge', body: '* bob waves at me', tag: 'starchat:#bridge' },
-        { title: 'MyNet', body: '', tag: 'starchat:server' },
         { title: 'MyNet', body: 'bob → #secret', tag: 'starchat:invite' },
     ]);
+});
+
+test('lines without content show no empty notification', async () => {
+    const worker = loadWorker('https://chat.example.org/push-sw.js?name=MyNet');
+    await worker.push(':bob!b@h PRIVMSG me :\x01VERSION\x01');
+    await worker.push('@time=2026-11-23T10:00:00.000Z;+draft/react=👍;+draft/reply=abc :bob!b@h TAGMSG me');
+    await worker.push(':irc.test MARKREAD #chan timestamp=2026-11-23T10:00:00.000Z');
+    await worker.push(':irc.test FOO bar');
+    assert.equal(worker.shown.length, 0);
 });
 
 test('muted channels and ignored users stay silent', async () => {

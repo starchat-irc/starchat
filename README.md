@@ -6,7 +6,7 @@ StarChat connects directly to the IRC network the user picks. There is no centra
 
 A network can offer more through a small [discovery file](docs/discovery.md) on its own domain: profiles, friends, uploads, GIF search, communities, events, voice chat and more. Each of these is an optional module and stays hidden on networks that do not offer it. See [Features](docs/features.md) for what works where.
 
-StarChat started as the chat client of [ST-City](https://st-city.net) and was moved into its own project.
+StarChat has been the chat client of [ST-City](https://st-city.net) since early 2025 and grew there step by step. In November 2026 it moved into its own project.
 
 ## Status
 
@@ -79,6 +79,10 @@ npm run validate:servers
 ```
 
 The web client needs a WebSocket endpoint (`websocket`). Networks that only offer TCP (`irc`) are shown in the desktop client only.
+
+## Transparency about AI use
+
+The project uses AI coding tools to assist with coding, especially in the forms of debugging, code completion, code review and refactoring (second pair of digital eyes).
 
 ## License
 
