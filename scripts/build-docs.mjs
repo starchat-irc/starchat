@@ -157,7 +157,7 @@ export function renderPage({ title, html, file }) {
     const url = pageUrl(file);
 
     return `<!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -175,22 +175,25 @@ export function renderPage({ title, html, file }) {
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
-    <script>document.documentElement.dataset.bsTheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';</script>
     <link rel="stylesheet" href="../vendor/bootstrap.min.css">
     <link rel="stylesheet" href="../style.css">
 </head>
 <body>
 <nav class="navbar navbar-expand border-bottom">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="../">StarChat</a>
-        <ul class="navbar-nav ms-auto gap-2">
+        <a class="navbar-brand fw-bold" href="../"><svg class="icon" aria-hidden="true"><use href="../img/icons.svg#star-fill"></use></svg>StarChat</a>
+        <ul class="navbar-nav ms-auto gap-2 align-items-center">
             <li class="nav-item"><a class="nav-link" href="../">About</a></li>
             <li class="nav-item"><a class="nav-link" href="../install.html">Install</a></li>
             <li class="nav-item"><a class="nav-link active" aria-current="page" href="./">Docs</a></li>
-            <li class="nav-item"><a class="nav-link" href="${REPO_URL}">GitHub</a></li>
+            <li class="nav-item"><a class="nav-link nav-github" href="${REPO_URL}" title="StarChat on GitHub"><svg class="icon" aria-hidden="true"><use href="../img/icons.svg#github"></use></svg><span class="visually-hidden">StarChat on GitHub</span></a></li>
         </ul>
     </div>
 </nav>
+
+<div class="page-head">
+    <div class="container">Documentation</div>
+</div>
 
 <div class="container py-5">
     <div class="row g-4 g-lg-5">
@@ -201,21 +204,19 @@ ${sidebar}
                 </ul>
             </nav>
         </aside>
-        <main class="col-lg-9">
-            <div class="card doc"><div class="card-body p-4 p-lg-5">
+        <main class="col-lg-9 doc">
 ${html}
-            <p class="text-body-secondary small mt-5 mb-0"><a href="${source}">Edit this page on GitHub</a></p>
-            </div></div>
+            <p class="small mt-5 mb-0"><a class="edit-link" href="${source}"><svg class="icon" aria-hidden="true"><use href="../img/icons.svg#github"></use></svg> Edit this page on GitHub</a></p>
         </main>
     </div>
 </div>
 
 <footer class="border-top py-4 text-body-secondary small">
-    <div class="container d-flex flex-wrap gap-3">
+    <div class="container d-flex flex-wrap align-items-center gap-3">
         <span>StarChat is licensed under the <a href="${REPO_URL}/blob/main/LICENSE">MIT License</a>.</span>
-        <a href="${REPO_URL}">GitHub</a>
         <a href="https://getstarchat.net/imprint.html">Imprint</a>
         <a href="https://getstarchat.net/privacy.html">Privacy</a>
+        <a class="ms-auto fs-5 text-body-secondary" href="${REPO_URL}" title="StarChat on GitHub"><svg class="icon" aria-hidden="true"><use href="../img/icons.svg#github"></use></svg><span class="visually-hidden">StarChat on GitHub</span></a>
     </div>
 </footer>
 </body>

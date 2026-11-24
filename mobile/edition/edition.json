@@ -5,9 +5,9 @@
     "icon": "icon.png",
     "adaptiveIcon": {
         "foreground": "icon-foreground.xml",
-        "background": "#1b1e23"
+        "background": "#c2410c"
     },
-    "splashBackground": "#1b1e23",
+    "splashBackground": "#c2410c",
     "chat": {
         "serverList": "default"
     },
