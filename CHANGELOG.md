@@ -8,6 +8,10 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ## [Unreleased]
 
+### Fixed
+- Previously a web client would just show the entire serverlist no matter if a websocket was available or not.
+  isReachable now filters for servers that are reachable for the given environment (desktop, mobile, web) and hides servers that are not available.
+
 ## [0.1.1] - 2026-11-26
 
 ### Added

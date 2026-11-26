@@ -69,7 +69,8 @@ export async function mountChat(target, options = {}) {
     modules.forEach(module => module.register?.(settingsRegistry));
 
     const t = createTranslator({ locale, overrides, appName });
-    const { primary, servers } = await resolveServers({ primaryServer, serverList });
+    // Without TCP from the app around the chat (the browser), networks without WebSocket are left out
+    const { primary, servers } = await resolveServers({ primaryServer, serverList, tcp: Boolean(componentOptions.nativeSocket) });
     if (!primary) {
         throw new Error('mountChat: no server to connect to');
     }

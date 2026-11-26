@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
     SERVER_LIST_URL,
     findServer,
+    isReachable,
     isSameSite,
     loadServerList,
     normalizeServer,
@@ -149,4 +150,28 @@ test('ws:// only for an entry the embedding app passes itself, never from a list
     assert.equal(findServer(own, []).websocket, undefined, 'without the flag the insecure address is dropped');
     const list = normalizeServerList({ schemaVersion: 1, servers: [{ ...own, allowInsecureWebsocket: true }] });
     assert.deepEqual(list, [], 'a list cannot switch it on');
+});
+
+test('a network without WebSocket is reachable only over TCP or through its discovery file', () => {
+    const tcpOnly = normalizeServer({ ...libera, discovery: false });
+    assert.equal(isReachable(tcpOnly), false);
+    assert.equal(isReachable(tcpOnly, { tcp: true }), true);
+    assert.equal(isReachable(normalizeServer(ergo)), true);
+    assert.equal(isReachable(normalizeServer({ ...ergo, discovery: false })), true);
+    assert.equal(isReachable(normalizeServer(libera)), true, 'without discovery: false the file may name a WebSocket');
+    assert.equal(isReachable(findServer('irc.example.org', [])), true);
+});
+
+test('resolveServers leaves out networks the client cannot reach, never the primary one', async () => {
+    const tcpOnly = { ...libera, id: 'dalnet', name: 'DALnet', domain: 'dal.net', discovery: false };
+    const servers = [ergo, tcpOnly];
+
+    const browser = await resolveServers({ primaryServer: 'testnet.ergo.chat' }, { fetch: jsonFetch(list(servers)), storage: null });
+    assert.deepEqual(browser.servers.map((s) => s.id), ['ergo-testnet']);
+
+    const app = await resolveServers({ primaryServer: 'testnet.ergo.chat', tcp: true }, { fetch: jsonFetch(list(servers)), storage: null });
+    assert.deepEqual(app.servers.map((s) => s.id), ['ergo-testnet', 'dalnet']);
+
+    const primaryTcpOnly = await resolveServers({ primaryServer: 'dal.net' }, { fetch: jsonFetch(list(servers)), storage: null });
+    assert.deepEqual(primaryTcpOnly.servers.map((s) => s.id), ['dalnet', 'ergo-testnet']);
 });

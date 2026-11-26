@@ -246,19 +246,36 @@ function bareServer(domain) {
 }
 
 /**
- * The servers an edition offers: the primary one first, then the rest of the list.
+ * Whether the client can connect to a server. The browser only speaks WebSocket; the
+ * desktop and Android apps also have plain TCP. A network with a discovery file may name
+ * its WebSocket there, so only an entry with discovery: false is known to have none.
+ *
+ * @param {ServerEntry} server
+ * @param {Object} [options]
+ * @param {boolean} [options.tcp] The app around the chat can open TCP connections.
+ * @return {boolean}
+ */
+export function isReachable(server, { tcp = false } = {}) {
+    return Boolean(server.websocket || (tcp && server.irc) || server.discovery !== false);
+}
+
+/**
+ * The servers an edition offers: the primary one first, then the rest of the list that
+ * this client can reach. The primary server always stays, the edition chose it.
  *
  * @param {Object} options
  * @param {string|ServerEntry} [options.primaryServer]
  * @param {'default'|string|false} [options.serverList]
+ * @param {boolean} [options.tcp] See isReachable().
  * @param {Object} [loadOptions] Passed to loadServerList().
  * @return {Promise<{ primary: ServerEntry|null, servers: ServerEntry[], origin: string }>}
  */
-export async function resolveServers({ primaryServer = null, serverList = 'default' } = {}, loadOptions = {}) {
+export async function resolveServers({ primaryServer = null, serverList = 'default', tcp = false } = {}, loadOptions = {}) {
     const { servers, origin } = await loadServerList({ ...loadOptions, source: serverList });
     const primary = findServer(primaryServer, servers);
+    const reachable = servers.filter((s) => isReachable(s, { tcp }));
     if (!primary) {
-        return { primary: null, servers, origin };
+        return { primary: null, servers: reachable, origin };
     }
-    return { primary, servers: [primary, ...servers.filter((s) => s.id !== primary.id)], origin };
+    return { primary, servers: [primary, ...reachable.filter((s) => s.id !== primary.id)], origin };
 }
