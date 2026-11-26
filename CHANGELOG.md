@@ -10,12 +10,18 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ### Added
 - More networks in the server list: OFTC, Rizon, DALnet, EsperNet, hackint, Snoonet, EFnet, IRCnet, QuakeNet and Undernet. All of them are listed for TCP only, so they show up in the desktop and Android apps, not in the browser.
+- Attachments can now be removed with an x
 
 ### Changed
 - Server list entries now say whether the network has a discovery file (`"discovery": true` or `false`). With `false` the client no longer asks for one, which saves a request on every connect. Entries without the field are looked up as before.
+- All CSS definitions are now in starchat/theme.css
+- Given the gif picker some more spacing from the border.
 
 ### Fixed
 - Pushed lines without anything to show (reactions, read markers, unknown commands) no longer give an empty notification.
+- Adding an image attachment caused the input line to grow in size. The size of the image is now fixed.
+- Tipps are now shown smaller and in the right corner.
+- Colour palette and nickserv messages are now above the input.
 
 ## [0.1.0] - 2026-11-23
 
