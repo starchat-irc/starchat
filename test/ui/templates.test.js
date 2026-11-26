@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { renderTemplate, templates } from '../../src/ui/templates.js';
 import { createTranslator, messages } from '../../src/i18n/index.js';
 
@@ -100,4 +101,19 @@ test('every template closes its elements in the right order', () => {
         assert.equal(nestingError(html), null, name);
     }
     assert.equal(nestingError('<div><template x-if="a"><div></template></div>'), '</template> closes <div>');
+});
+
+test('templates carry no <style> blocks, all CSS lives in theme.css', () => {
+    for (const [name, html] of Object.entries(templates)) {
+        assert.doesNotMatch(html, /<style[\s>]/, name);
+    }
+});
+
+test('the attachment preview stays a small thumbnail and can be removed by tap', () => {
+    const css = readFileSync(new URL('../../src/ui/theme.css', import.meta.url), 'utf8');
+    const rule = css.match(/\.chat-media-preview\s*\{([^}]*)\}/);
+    assert.ok(rule, 'the preview image has its own size rule');
+    assert.match(rule[1], /\bwidth:\s*\d+px/);
+    assert.match(rule[1], /\bheight:\s*\d+px/);
+    assert.match(templates['chat-input'], /class="chat-attachment-remove"[^>]*@click="clearPendingMedia\(\)/);
 });

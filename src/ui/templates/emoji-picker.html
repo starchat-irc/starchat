@@ -33,24 +33,3 @@
         <div x-show="filteredEmojis().length === 0" class="ep-empty">{{ t('emoji_none') }}</div>
     </div>
 </div>
-
-<style>
-    .emoji-picker-popup { position:absolute; width:320px; background:#2b2d31; border:1px solid rgba(255,255,255,.1); border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.5); z-index:1050; overflow:hidden; display:flex; flex-direction:column; }
-    .ep-search-row { display:flex; align-items:center; gap:6px; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
-    .ep-search-icon { color:#666; font-size:.85rem; flex-shrink:0; }
-    .ep-search-input { flex:1; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); border-radius:6px; color:#e0e0e0; font-size:.85rem; padding:4px 8px; outline:none; transition:border-color .15s; }
-    .ep-search-input:focus { border-color:rgba(255,255,255,.2); }
-    .ep-search-input::placeholder { color:#555; }
-    .ep-close-btn { background:none; border:none; color:#666; font-size:1rem; padding:2px 4px; border-radius:4px; cursor:pointer; line-height:1; transition:color .15s; }
-    .ep-close-btn:hover { color:#ccc; }
-    .ep-tabs { display:flex; gap:2px; padding:6px 8px 4px; border-bottom:1px solid rgba(255,255,255,.06); overflow-x:auto; scrollbar-width:none; }
-    .ep-tabs::-webkit-scrollbar { display:none; }
-    .ep-tab-btn { background:none; border:none; border-radius:6px; padding:4px 7px; font-size:1.1rem; cursor:pointer; transition:background .12s; flex-shrink:0; }
-    .ep-tab-btn:hover { background:rgba(255,255,255,.08); }
-    .ep-tab-active { background:rgba(255,255,255,.14) !important; }
-    .ep-category-title { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#666; padding:6px 10px 2px; }
-    .ep-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:1px; padding:4px 6px 8px; max-height:220px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.1) transparent; }
-    .ep-emoji-btn { background:none; border:none; border-radius:6px; font-size:1.25rem; padding:4px; cursor:pointer; line-height:1; transition:background .1s,transform .1s; aspect-ratio:1; display:flex; align-items:center; justify-content:center; }
-    .ep-emoji-btn:hover { background:rgba(255,255,255,.1); transform:scale(1.2); }
-    .ep-empty { grid-column:1/-1; text-align:center; color:#555; font-size:.8rem; padding:1rem 0; }
-</style>
