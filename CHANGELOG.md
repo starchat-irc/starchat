@@ -10,6 +10,7 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ### Added
 - DM windows now track the user when they change their names and merge the conversation or change the recipient of the conversation.
+- The always-on setting now says that it disables nick changes.
 
 ### Fixed
 - Previously a web client would just show the entire serverlist no matter if a websocket was available or not.

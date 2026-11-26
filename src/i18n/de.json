@@ -494,6 +494,7 @@
     "always_on_decline": "Nein, danke",
     "always_on_setting": "Immer online bleiben",
     "always_on_setting_hint": "Dein Nick bleibt in den Channels, auch ohne verbundenes Gerät. Nachrichten landen im Verlauf, andere sehen dich als „abwesend“.",
+    "always_on_setting_nick_hint": "Deaktiviert Nick-Wechsel.",
     "always_on_enabled": "Dein Nick bleibt jetzt online.",
     "always_on_disabled": "Dein Nick geht offline, sobald kein Gerät mehr verbunden ist.",
     "always_on_unavailable": "Die Einstellung kann gerade nicht geändert werden. Bitte versuche es später erneut.",

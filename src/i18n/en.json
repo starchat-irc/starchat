@@ -494,6 +494,7 @@
     "always_on_decline": "No, thanks",
     "always_on_setting": "Always stay online",
     "always_on_setting_hint": "Your nick stays in the channels even without a connected device. Messages end up in the history, others see you as \"away\".",
+    "always_on_setting_nick_hint": "Disables nick changes.",
     "always_on_enabled": "Your nick now stays online.",
     "always_on_disabled": "Your nick goes offline as soon as no device is connected.",
     "always_on_unavailable": "This setting cannot be changed right now. Please try again later.",

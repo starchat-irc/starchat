@@ -110,7 +110,7 @@
                            :checked="alwaysOn.enabled" :disabled="alwaysOn.saving || !alwaysOn.loaded" @change="toggleAlwaysOn($event)">
                     <label class="form-check-label" for="alwaysOnSwitch">{{ t('always_on_setting') }}</label>
                 </div>
-                <div class="profile-editor-hint">{{ t('always_on_setting_hint') }}</div>
+                <div class="profile-editor-hint">{{ t('always_on_setting_hint') }} {{ t('always_on_setting_nick_hint') }}</div>
                 <div class="profile-editor-message is-error" x-show="alwaysOn.loadFailed && !alwaysOn.loaded">{{ t('always_on_unavailable') }}</div>
                 <div class="profile-editor-message is-success" x-show="alwaysOn.notice" x-text="alwaysOn.notice"></div>
                 <div class="profile-editor-message is-error" x-show="alwaysOn.error && !alwaysOn.showPrompt" x-text="alwaysOn.error"></div>
