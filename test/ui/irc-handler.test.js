@@ -36,13 +36,13 @@ test('001 registers, joins the last channels in one line and tells the host the 
 test('without feature modules only plain metadata keys are subscribed', () => {
     const { sent, receive } = createTestChat({ state: { supportsMetadata: true } });
     receive(':irc.test 001 me :Welcome');
-    assert.ok(sent.includes('METADATA * SUB playing status'));
+    assert.ok(sent.includes('METADATA * SUB playing status display-name'));
 });
 
 test('servers with profiles and voice also get avatars and voice markers', () => {
     const { sent, receive } = createTestChat({ features: ['profiles', 'voice'], state: { supportsMetadata: true } });
     receive(':irc.test 001 me :Welcome');
-    assert.ok(sent.includes('METADATA * SUB playing status avatar voice'));
+    assert.ok(sent.includes('METADATA * SUB playing status display-name avatar voice'));
 });
 
 test('PING is answered', () => {

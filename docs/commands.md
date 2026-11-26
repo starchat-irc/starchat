@@ -11,6 +11,7 @@ Commands start with `/` in the input field. Anything not listed here can be sent
 | `/msg <nick> <text>` | Send a direct message and open the conversation. Messages to services (NickServ, ChanServ, ...) go to the server window. |
 | `/me <text>` | Action message. |
 | `/nick <newnick>` | Change your nick. |
+| `/displayname [name]` | Set your display name. Without a name it is removed. Needs `draft/metadata-3` on the server. |
 | `/away [message]` | Mark yourself as away. |
 | `/back` | Remove the away mark. |
 | `/whois <nick>` | Show information about a user. |

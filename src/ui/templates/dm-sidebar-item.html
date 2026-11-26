@@ -12,7 +12,7 @@
         <span x-show="!avatarUrl(user)" x-text="nickInitial(user)"></span>
         <span class="presence-dot" x-show="isFriendNick(user)" :class="isFriendOnline(user) ? 'is-online' : 'is-offline'"></span>
     </span>
-    <span class="channel-item-name" x-text="user"></span>
+    <span class="channel-item-name" x-text="shownName(user)" :title="nameWithNick(user)"></span>
     <span class="bot-badge" x-show="isBotNick(user)" x-cloak :title="botBadgeTitle(user)">{{ t('bot_badge') }}</span>
     <span class="mention-badge" x-show="user !== currentChannel && unreadMessages[user] > 0" x-text="unreadMessages[user]"></span>
     <button type="button" class="channel-item-close" title="{{ t('close_dm') }}" @click.stop="closeDM(user)">

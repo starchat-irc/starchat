@@ -28,7 +28,11 @@
     </div>
 
     <div class="profile-card-body">
-        <div class="profile-card-name nick-color" :style="nickStyle(selectedUser)" x-text="selectedUser"></div>
+        <div class="profile-card-name nick-color" :style="nickStyle(selectedUser)" x-text="shownName(selectedUser)"></div>
+        <!-- With a display name the nick stays visible: it is what others write to -->
+        <div class="profile-card-nick" x-show="displayName(selectedUser)">
+            <i class="bi bi-at"></i><span x-text="selectedUser"></span>
+        </div>
         <div class="profile-card-sub">
             <template x-if="profileCard.account">
                 <span><i class="bi bi-person-check"></i> <span x-text="profileCard.account"></span></span>
@@ -85,6 +89,21 @@
                     </div>
                 </div>
             </div>
+        </template>
+
+        <!-- Own display name: the quickest way to change it besides /displayname -->
+        <template x-if="isOwnProfileCard() && supportsMetadata">
+            <form class="profile-card-section profile-card-display-name" @submit.prevent="saveDisplayNameDraft()">
+                <label class="profile-card-label" for="profileCardDisplayName">{{ t('display_name') }}</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" id="profileCardDisplayName" class="form-control"
+                           x-model="displayNameDraft"
+                           :maxlength="displayNameMaxLength"
+                           :placeholder="nickname">
+                    <button type="submit" class="btn btn-outline-secondary"
+                            :disabled="displayNameDraft.trim() === ownDisplayName">{{ t('display_name_save') }}</button>
+                </div>
+            </form>
         </template>
 
         <!-- Own colour for this nick (like mIRC/KVIrc), only this user sees it -->

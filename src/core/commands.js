@@ -64,6 +64,15 @@ const commands = {
         if (!args[0]) return;
         ctx.sendRaw(`NICK ${args[0]}`);
     },
+    /** /displayname <name> sets the display name, without a name it is removed. */
+    displayname: (args, ctx) => {
+        if (!ctx.supportsMetadata) {
+            ctx.updateStatus(ctx.t('display_name_unsupported'));
+            return;
+        }
+        const name = ctx.changeOwnDisplayName(args.join(' '));
+        ctx.updateStatus(name ? `${ctx.t('display_name_set')} ${name}` : ctx.t('display_name_cleared'));
+    },
     me: (args, ctx) => {
         if (!requireChatTarget(ctx)) return;
         ctx.sendOwnMessage(ctx.currentChannel, args.join(' '), { isAction: true });

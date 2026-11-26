@@ -10,6 +10,7 @@ import { ChannelManager } from '../../src/core/channels.js';
 import { createTranslator } from '../../src/i18n/index.js';
 import { botsMixin } from '../../src/ui/mixins/bots.js';
 import { channelManagementMixin, createChannelManagementState } from '../../src/ui/mixins/channel-management.js';
+import { displayNamesMixin } from '../../src/ui/mixins/display-names.js';
 import { draftsMixin } from '../../src/ui/mixins/drafts.js';
 import { historyMixin } from '../../src/ui/mixins/history.js';
 import { ircHandlerMixin } from '../../src/ui/mixins/irc-handler.js';
@@ -60,6 +61,7 @@ export function createTestChat({ features = [], storageScope = '', state = {} } 
         navigationMixin(),
         draftsMixin({ storageScope }),
         preferencesMixin({ storageScope }),
+        displayNamesMixin(),
         ircHandlerMixin(),
         {
             stores,

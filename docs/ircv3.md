@@ -18,7 +18,13 @@ StarChat requests these capabilities when the server offers them and falls back 
 | `draft/message-redaction` | Deleting messages. |
 | `draft/multiline` | Messages with several lines. |
 | `draft/read-marker` | Read position shared across sessions. |
-| `draft/metadata-3`, `draft/metadata-2` | Avatars, status and the voice chat a user is in (key `voice`). |
+| `draft/metadata-3`, `draft/metadata-2` | Avatars, status, display names (key `display-name`) and the voice chat a user is in (key `voice`). |
+
+### Display names
+
+StarChat reads and sets the key `display-name` from the [metadata key registry](https://ircv3.net/specs/extensions/metadata#key-registry). A display name is one line of at most 32 characters; control characters and invisible direction marks are dropped. It is shown in messages, the nick list, DMs and the profile card. The nick stays visible next to it in messages and in the profile card, and mentions, completion and commands keep using the nick.
+
+On connect the client asks the server for its own value first (`METADATA <nick> GET display-name`). A value there wins, so a name changed on another device is kept. Only when the server has none, the value stored on this device is published.
 | `draft/webpush`, `soju.im/webpush` | Push while no client is connected. Browsers need [`pushWorker`](options.md#push-notifications), apps the network feature `push`. |
 
 ## Client tags

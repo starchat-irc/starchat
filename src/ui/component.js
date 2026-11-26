@@ -12,6 +12,7 @@ import { connectWebSocket } from '../core/websocket.js';
 import { saslBearer, saslPlain } from '../core/irc-protocol.js';
 import { botsMixin } from './mixins/bots.js';
 import { directMessagesMixin } from './mixins/direct-messages.js';
+import { displayNamesMixin } from './mixins/display-names.js';
 import { channelManagementMixin } from './mixins/channel-management.js';
 import { completionMixin } from './mixins/completion.js';
 import { draftsMixin } from './mixins/drafts.js';
@@ -296,6 +297,7 @@ export function createChatComponent(options) {
         ...messageSearchMixin(),
         ...directMessagesMixin(),
         ...userCardMixin(),
+        ...displayNamesMixin(),
         ...channelListMixin(),
         ...networkLinksMixin(),
         ...settingsMixin({ defaultTheme }),

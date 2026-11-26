@@ -11,6 +11,7 @@ The section of a released version is the text of its GitHub release, so it is wr
 ### Added
 - DM windows now track the user when they change their names and merge the conversation or change the recipient of the conversation.
 - The always-on setting now says that it disables nick changes.
+- Suppoert for display names (IRCv3 metadata key `display-name`). Set your own with `/displayname`, in your own profile card or under Settings -> Chat. Messages, the nick list, DMs and the profile card show them, with the nick still visible next to the name in messages and the profile card.
 
 ### Fixed
 - Previously a web client would just show the entire serverlist no matter if a websocket was available or not.

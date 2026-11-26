@@ -12,7 +12,7 @@
             </button>
             <h1 class="chat-header-title">
                 <i class="bi" :class="isServerWindow() ? 'bi-terminal' : (currentChannel && currentChannel.startsWith('#') ? 'bi-hash' : 'bi-at')"></i>
-                <span x-text="isServerWindow() ? t('server_window') : (currentChannel ? currentChannel.replace(/^#/, '') : t('no_channel_selected'))"></span>
+                <span x-text="isServerWindow() ? t('server_window') : (currentChannel ? (currentChannel.startsWith('#') ? currentChannel.slice(1) : nameWithNick(currentChannel)) : t('no_channel_selected'))"></span>
             </h1>
 
             <template x-if="currentChannel && currentChannel.startsWith('#')">

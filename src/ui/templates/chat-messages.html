@@ -90,8 +90,10 @@
                             </button>
                         </div>
                         <div class="msg-main">
-                            <span class="msg-author nick-color" :style="nickStyle(row.message.user)" x-text="row.message.user"
+                            <span class="msg-author nick-color" :style="nickStyle(row.message.user)" x-text="shownName(row.message.user)"
+                                  :title="nameWithNick(row.message.user)"
                                   @click="showUserOptions(row.message.user, $event)"></span>
+                            <span class="msg-author-nick" x-show="displayName(row.message.user)" x-text="row.message.user"></span>
                             <span class="bot-badge" x-show="isBotNick(row.message.user)" x-cloak :title="botBadgeTitle(row.message.user)">{{ t('bot_badge') }}</span>
                             <template x-if="row.message.redacted">
                                 <span class="msg-body msg-body--deleted"><i class="bi bi-trash3"></i> {{ t('message_deleted') }}</span>
@@ -143,15 +145,17 @@
                                     <span class="msg-reply-author nick-color"
                                           x-show="replyPreview(row.message)?.user"
                                           :style="nickStyle(replyPreview(row.message)?.user)"
-                                          x-text="replyPreview(row.message)?.user"></span>
+                                          x-text="shownName(replyPreview(row.message)?.user)"></span>
                                     <span class="msg-reply-text" x-text="replyPreview(row.message)?.text"></span>
                                 </button>
                             </template>
                             <template x-if="!row.grouped">
                                 <div class="msg-header">
                                     <span class="msg-author nick-color" :style="nickStyle(row.message.user)"
-                                          x-text="row.message.user"
+                                          x-text="shownName(row.message.user)"
+                                          :title="nameWithNick(row.message.user)"
                                           @click="showUserOptions(row.message.user, $event)"></span>
+                                    <span class="msg-author-nick" x-show="displayName(row.message.user)" x-text="row.message.user"></span>
                                     <span class="bot-badge" x-show="isBotNick(row.message.user)" x-cloak :title="botBadgeTitle(row.message.user)">{{ t('bot_badge') }}</span>
                                     <span class="msg-badge" x-show="row.message.isNotice">{{ t('notice_badge') }}</span>
                                     <time class="msg-time" x-text="formatClock(row.message._ts)" :title="formatFullTimestamp(row.message._ts)"></time>

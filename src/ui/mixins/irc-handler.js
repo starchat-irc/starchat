@@ -11,6 +11,7 @@
 import { parseIrcLine } from '../../core/irc-parser.js';
 import { isServiceNick } from '../../core/services.js';
 import { SERVER_WINDOW } from './server-window.js';
+import { DISPLAY_NAME_KEY } from './display-names.js';
 
 /** Numerics that are too noisy for the server window (automatic NAMES/WHO/list refreshes). */
 // Metadata replies (760–774: values, subscriptions, sync) are handled by the chat itself. Avatars,
@@ -50,7 +51,10 @@ const METADATA_RETRY_LIMIT = 3;
 /** A refusal this long after the last retry counts as a new problem, not as the same one. */
 const METADATA_RETRY_RESET_MS = 5 * 60 * 1000;
 /** Own keys whose rate-limited SET is redone with the current value, not the one that was refused. */
-const OWN_METADATA_SYNC = { avatar: 'syncOwnAvatar', status: 'syncOwnStatus', playing: 'syncOwnPlaying', voice: 'syncOwnVoice' };
+const OWN_METADATA_SYNC = {
+    avatar: 'syncOwnAvatar', status: 'syncOwnStatus', playing: 'syncOwnPlaying', voice: 'syncOwnVoice',
+    [DISPLAY_NAME_KEY]: 'publishOwnDisplayName',
+};
 
 function applyUserMetadata(chat, nick, key, rawValue) {
     if (key === 'avatar') {
@@ -63,6 +67,9 @@ function applyUserMetadata(chat, nick, key, rawValue) {
     } else if (key === 'playing') {
         const value = rawValue ? normalizePlayingValue(rawValue) : '';
         value ? chat.activeUsers.setPlaying(nick, value) : chat.activeUsers.clearPlaying(nick);
+    } else if (key === DISPLAY_NAME_KEY) {
+        chat.setUserDisplayName(nick, rawValue);
+        if (sameNick(nick, chat.nickname)) chat.ownDisplayNameChanged(rawValue);
     }
 }
 
@@ -185,6 +192,7 @@ const COMMAND_HANDLERS = {
             this.loadOwnAvatar?.();
             // Re-assert (or clear a stale) voice marker: always-on keeps metadata across reconnects
             this.syncOwnVoice?.();
+            this.checkOwnDisplayName();
         }
         this.flushOutgoingQueue();
         // Onboarding: ask once per account whether the nick should stay online
@@ -521,6 +529,7 @@ const COMMAND_HANDLERS = {
         this.renameBot(oldName, newName);
         this.renameUserAvatar(oldName, newName);
         this.renameUserStatus?.(oldName, newName);
+        this.renameUserDisplayName(oldName, newName);
         if (sameNick(oldName, this.nickname)) {
             this.nickname = newName;
             this.updateStatus(`Nickname changed to ${newName}`);
@@ -653,7 +662,7 @@ export function ircHandlerMixin() {
          */
         metadataKeys() {
             return [
-                'playing', 'status',
+                'playing', 'status', DISPLAY_NAME_KEY,
                 ...(this.hasFeature('profiles') ? ['avatar'] : []),
                 ...(this.hasFeature('voice') ? ['voice'] : []),
             ];

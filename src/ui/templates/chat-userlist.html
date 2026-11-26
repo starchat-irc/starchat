@@ -36,8 +36,8 @@
                         <span class="text-truncate truncate-inline"
                               :class="{ 'nick-color': customNickHue(user.name) !== null }"
                               :style="customNickHue(user.name) !== null ? nickStyle(user.name) : ''"
-                              x-text="user.name"
-                              :title="user.name"></span>
+                              x-text="shownName(user.name)"
+                              :title="nameWithNick(user.name)"></span>
                         <span class="bot-badge ms-1" x-show="isBotNick(user.name)" x-cloak :title="botBadgeTitle(user.name)">{{ t('bot_badge') }}</span>
                         <!-- Next to the nick, so typing never changes the height of the row -->
                         <i class="bi bi-three-dots ms-1 text-muted userlist-typing"

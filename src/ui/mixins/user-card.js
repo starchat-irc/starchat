@@ -76,6 +76,7 @@ export function userCardMixin() {
 
         loadProfileCard(nick) {
             this.profileCard = emptyProfileCard(nick);
+            this.displayNameDraft = this.ownDisplayName;
             if (!nick || /\s/.test(nick) || !this.isRegistered) {
                 this.profileCard.whoisDone = true;
                 return;

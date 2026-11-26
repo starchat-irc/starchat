@@ -13,6 +13,7 @@ Where a capability is named, the server has to offer it. See [IRCv3 support](irc
 - Deleting own messages (`draft/message-redaction`), multiline messages (`draft/multiline`)
 - Read position shared across sessions (`draft/read-marker`)
 - Avatars and status from other clients (`draft/metadata-3`)
+- Display names: set your own with `/displayname`, in your profile card or under Settings → Chat, and see those of others. The nick stays visible next to them (`draft/metadata-3`, key `display-name`)
 - Browser push for logged-in accounts (`draft/webpush`, needs the [`pushWorker`](options.md#push-notifications) option)
 - Highlights, ignore list, nick colors, autojoin, drafts, search, [commands and shortcuts](commands.md)
 - Light and dark theme, English and German

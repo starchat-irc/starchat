@@ -5,7 +5,7 @@
             <div class="chat-reply-bar">
                 <i class="bi bi-reply-fill"></i>
                 <span class="chat-reply-label">{{ t('replying_to') }}</span>
-                <span class="chat-reply-author nick-color" :style="nickStyle(replyingTo.user)" x-text="replyingTo.user"></span>
+                <span class="chat-reply-author nick-color" :style="nickStyle(replyingTo.user)" x-text="shownName(replyingTo.user)"></span>
                 <span class="chat-reply-text" x-text="replyingTo.text"></span>
                 <button type="button" class="chat-reply-cancel" title="{{ t('cancel_reply') }}" @click="cancelReply()">
                     <i class="bi bi-x-circle-fill"></i>
@@ -75,7 +75,7 @@
 
         <div class="typing-indicator text-muted chat-typing-indicator">
             <span x-show="reactiveUsers[currentChannel]?.some(user => user.isTyping && user.name !== nickname)"
-                  x-text="reactiveUsers[currentChannel]?.filter(user => user.isTyping && user.name !== nickname).map(user => user.name).join(', ') + ' ' + t('typing_suffix')"></span>
+                  x-text="reactiveUsers[currentChannel]?.filter(user => user.isTyping && user.name !== nickname).map(user => shownName(user.name)).join(', ') + ' ' + t('typing_suffix')"></span>
         </div>
     </div>
 

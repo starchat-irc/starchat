@@ -1,7 +1,7 @@
 /**
  * Preferences Mixin
  * Personal lists of a connection: highlight words, ignored users, notification levels,
- * quit message, nick colours, autojoin channels and lobbies the user left.
+ * quit message, own display name, nick colours, autojoin channels and lobbies the user left.
  *
  * Stored in localStorage per storage scope (one scope per connection). A feature module
  * can sync them with an account: it implements markAccountSettingChanged(key), which is
@@ -9,6 +9,7 @@
  */
 import { isHighlighted, normalizeHighlightWords } from '../../core/formatting.js';
 import { DEFAULT_QUIT_MESSAGE } from '../../core/websocket.js';
+import { normalizeDisplayName } from './display-names.js';
 
 export const IGNORE_LIST_LIMIT = 100;
 const NICK_MAX_LENGTH = 64;
@@ -18,6 +19,7 @@ export const PREFERENCE_KEYS = {
     ignoredUsers: 'chat.ignoredUsers',
     channelNotifications: 'chat.channelNotifications',
     quitMessage: 'chat.quitMessage',
+    displayName: 'chat.displayName',
     nickColors: 'chat.nickColors',
     leftLobbies: 'chat.leftLobbies',
     autojoinChannels: 'chat.autojoinChannels',
@@ -154,6 +156,14 @@ function readStoredQuitMessage(scope) {
     }
 }
 
+function readStoredDisplayName(scope) {
+    try {
+        return normalizeDisplayName(localStorage.getItem(connectionStorageKey(PREFERENCE_KEYS.displayName, scope)) || '');
+    } catch {
+        return '';
+    }
+}
+
 /** Every stored preference of a scope, read and normalized. */
 export function readStoredPreferences(scope = '') {
     return {
@@ -161,6 +171,7 @@ export function readStoredPreferences(scope = '') {
         ignoredUsers: readStored(PREFERENCE_KEYS.ignoredUsers, scope, [], normalizeNickList),
         channelNotifications: readStored(PREFERENCE_KEYS.channelNotifications, scope, {}, normalizeChannelNotifications),
         quitMessage: readStoredQuitMessage(scope),
+        ownDisplayName: readStoredDisplayName(scope),
         nickColors: readStored(PREFERENCE_KEYS.nickColors, scope, {}, normalizeNickColors),
         leftLobbies: readStored(PREFERENCE_KEYS.leftLobbies, scope, [], normalizeLeftLobbies),
         autojoinChannels: readStored(PREFERENCE_KEYS.autojoinChannels, scope, [], normalizeAutojoinChannels),
@@ -286,6 +297,20 @@ export function preferencesMixin({ storageScope = '', defaultQuitMessage = '' } 
             // Native sockets send their QUIT themselves when the app quits
             this.socket?.setQuitMessage?.(this.effectiveQuitMessage());
             if (sync) this.markAccountSettingChanged?.('quit_message');
+        },
+
+        // Display name
+
+        /** Store the own display name of this connection. Publishing is up to the caller. */
+        setOwnDisplayName(text) {
+            this.ownDisplayName = normalizeDisplayName(text);
+            try {
+                const key = connectionStorageKey(PREFERENCE_KEYS.displayName, this.storageScope);
+                if (this.ownDisplayName) localStorage.setItem(key, this.ownDisplayName);
+                else localStorage.removeItem(key);
+            } catch {
+                // storage unavailable: keep it for this session
+            }
         },
 
         // Nick colours

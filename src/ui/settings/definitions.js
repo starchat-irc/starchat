@@ -7,6 +7,7 @@ import { SCOPE, settingsRegistry } from './registry.js';
 import { HIGHLIGHT_WORDS_LIMIT } from '../../core/formatting.js';
 import { AUTOJOIN_CHANNELS_LIMIT, IGNORE_LIST_LIMIT, QUIT_MESSAGE_MAX_LENGTH, normalizeNickList } from '../mixins/preferences.js';
 import { NOTIFICATION_SOUNDS } from '../notification-sound.js';
+import { DISPLAY_NAME_MAX_LENGTH } from '../mixins/display-names.js';
 
 /** Settings the desktop shell keeps. The mobile shell has none of them (theme follows the system). */
 const desktop = env => env.shell === 'desktop';
@@ -233,6 +234,20 @@ export function registerBuiltinSettings(registry = settingsRegistry) {
         keywords: ['quit', 'abschied', 'verlassen', 'goodbye'],
         get: chat => chat.quitMessage,
         set: (chat, value) => chat.setQuitMessage(value),
+    });
+    registry.registerSetting({
+        id: 'chat.displayName',
+        section: 'chat',
+        type: 'text',
+        scope: SCOPE.Connection,
+        order: 5,
+        label: 'display_name',
+        hint: 'display_name_hint',
+        placeholder: 'display_name_placeholder',
+        maxLength: DISPLAY_NAME_MAX_LENGTH,
+        keywords: ['display name', 'anzeigename', 'name', 'nick', 'nickname', 'spitzname'],
+        get: chat => chat.ownDisplayName,
+        set: (chat, value) => chat.changeOwnDisplayName(value),
     });
 
     // Media (desktop)
