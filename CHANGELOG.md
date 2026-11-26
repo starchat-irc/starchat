@@ -8,6 +8,9 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ## [Unreleased]
 
+### Added
+- DM windows now track the user when they change their names and merge the conversation or change the recipient of the conversation.
+
 ### Fixed
 - Previously a web client would just show the entire serverlist no matter if a websocket was available or not.
   isReachable now filters for servers that are reachable for the given environment (desktop, mobile, web) and hides servers that are not available.

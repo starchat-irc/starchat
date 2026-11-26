@@ -266,6 +266,60 @@ test('the own NICK change updates the nick and tells the host', () => {
     assert.deepEqual(hostMessages.at(-1), { type: 'update-profile-name', nickname: 'newme' });
 });
 
+test('an open DM follows the other side to the new nick', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h PRIVMSG me :hi');
+    chat.switchChannel('bob');
+    chat.saveDraft('bob', 'half written');
+    receive(':bob!u@h NICK robert');
+
+    assert.deepEqual(chat.privateMessageKeys, ['robert']);
+    assert.equal(chat.currentChannel, 'robert');
+    assert.equal(chat.selectedFriendName, 'robert');
+    assert.equal(chat.channelDrafts.robert, 'half written');
+    assert.equal(chat.channelDrafts.bob, undefined);
+    assert.deepEqual(chat.messageManager.get('robert').map(message => message.text), ['hi', 'bob is now known as robert']);
+});
+
+test('a DM in the background keeps its unread count after a nick change', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h PRIVMSG me :one');
+    receive(':bob!u@h PRIVMSG me :two');
+    receive(':bob!u@h NICK robert');
+
+    assert.equal(chat.unreadMessages.robert, 2);
+    assert.equal(chat.unreadMessages.bob, undefined);
+});
+
+test('a nick change back to an open DM merges both conversations', () => {
+    const { chat, receive } = joinedChat();
+    receive(':robert!u@h PRIVMSG me :old');
+    receive(':robert!u@h NICK bob');
+    receive(':bob!u@h PRIVMSG me :new');
+    receive(':alice!u@h PRIVMSG me :other');
+    chat.switchChannel('alice');
+    receive(':alice!u@h NICK Bob');
+
+    assert.deepEqual([...chat.privateMessageKeys].sort(), ['bob']);
+    assert.equal(chat.currentChannel, 'bob');
+    const texts = chat.messageManager.get('bob').map(message => message.text);
+    assert.ok(texts.includes('new') && texts.includes('other'));
+});
+
+test('a case-only nick change renames the DM', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h PRIVMSG me :hi');
+    receive(':bob!u@h NICK Bob');
+    assert.deepEqual(chat.privateMessageKeys, ['Bob']);
+});
+
+test('the own nick change does not touch DMs', () => {
+    const { chat, receive } = joinedChat();
+    receive(':bob!u@h PRIVMSG me :hi');
+    receive(':me!u@h NICK newme');
+    assert.deepEqual(chat.privateMessageKeys, ['bob']);
+});
+
 test('now-playing from metadata is set on the user', () => {
     const { chat, receive } = joinedChat({ state: { supportsMetadata: true } });
     receive(':bob!u@h JOIN #chan');

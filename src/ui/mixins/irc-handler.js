@@ -510,6 +510,13 @@ const COMMAND_HANDLERS = {
             .filter(channel => this.activeUsers.getUser(channel, oldName))
             .forEach(channel => this.addSystemLine(channel, eventText(this.t, 'nick', { nick: oldName, newnick: newName }), { joinPartType: 'nick', tags: msg.tags }));
 
+        // An open DM follows the person to the new nick
+        const dmKey = sameNick(oldName, this.nickname) ? null : this.privateMessageKeys.find(key => sameNick(key, oldName));
+        if (dmKey) {
+            const newKey = this.renameDM(dmKey, newName);
+            this.addSystemLine(newKey, eventText(this.t, 'nick', { nick: oldName, newnick: newName }), { joinPartType: 'nick', tags: msg.tags });
+        }
+
         this.activeUsers.renameUser(oldName, newName);
         this.renameBot(oldName, newName);
         this.renameUserAvatar(oldName, newName);

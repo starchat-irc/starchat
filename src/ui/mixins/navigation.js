@@ -268,5 +268,51 @@ export function navigationMixin() {
             this.emitUnreadState();
             this.scheduleChatStateSave?.();
         },
+
+        /**
+         * The other side of a DM changed the nick: the conversation moves to the new nick,
+         * so new messages reach the person and not the old, now free nick. An open DM with
+         * the new nick (e.g. after renaming back) is merged.
+         * Returns the key of the conversation afterwards.
+         */
+        renameDM(from, to) {
+            if (!this.isDirectMessageChannel(from) || !this.isDirectMessageChannel(to) || from === to) return from;
+            const target = this.privateMessageKeys.find(key => key !== from && key.toLowerCase() === to.toLowerCase()) || to;
+
+            this.messageManager.rename(from, target);
+
+            const moveCount = (counts) => {
+                if (!counts || !(from in counts)) return;
+                const sum = (counts[target] || 0) + (counts[from] || 0);
+                delete counts[from];
+                if (sum > 0) counts[target] = sum;
+            };
+            const moveValue = (values) => {
+                if (!values || !(from in values)) return;
+                if (values[target] == null) values[target] = values[from];
+                delete values[from];
+            };
+            moveCount(this.unreadMessages);
+            moveCount(this.mentionsByChannel);
+            moveValue(this.unreadMarkerByChannel);
+            moveValue(this._markerSinceByChannel);
+            moveValue(this.historyReceivedByTarget);
+            moveValue(this._lastRead);
+
+            const draft = this.channelDrafts[from];
+            if (draft) {
+                if (!this.channelDrafts[target]) this.saveDraft(target, draft);
+                this.clearDraft(from);
+            }
+
+            if (this.currentChannel === from) this.currentChannel = target;
+            if (this.selectedFriendName === from) this.selectedFriendName = target;
+            if (this.lastDMBeforeChannel === from) this.lastDMBeforeChannel = target;
+            if (this.replyingTo?.target === from) this.replyingTo = { ...this.replyingTo, target };
+
+            this.emitUnreadState();
+            this.scheduleChatStateSave?.();
+            return target;
+        },
     };
 }

@@ -87,6 +87,26 @@ export function MessageManager(store, { onAdd } = {}) {
             delete store.get()[target];
             delete batchBuffer[target];
         },
+        /**
+         * Move a conversation to another key (nick change). If the new key already has
+         * messages, both lists are merged in time order.
+         */
+        rename: (from, to) => {
+            const entries = store.get();
+            if (!entries[from] || from === to) return;
+            if (entries[to]) {
+                entries[to].content = [...entries[to].content, ...entries[from].content].sort((a, b) => (a._ts || 0) - (b._ts || 0));
+                enforceLimit(to);
+            } else {
+                entries[to] = entries[from];
+            }
+            delete entries[from];
+            if (batchBuffer[from]) {
+                batchBuffer[to] = [...(batchBuffer[to] || []), ...batchBuffer[from]];
+                delete batchBuffer[from];
+            }
+        },
+
         keys: () => Object.keys(store.get()),
         privateKeys: () => Object.keys(store.get()).filter((k) => store.get()[k].type === 'private' && k !== 'Server'),
     };
