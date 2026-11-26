@@ -8,6 +8,8 @@ The section of a released version is the text of its GitHub release, so it is wr
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-26
+
 ### Added
 - More networks in the server list: OFTC, Rizon, DALnet, EsperNet, hackint, Snoonet, EFnet, IRCnet, QuakeNet and Undernet. All of them are listed for TCP only, so they show up in the desktop and Android apps, not in the browser.
 - Attachments can now be removed with an x
@@ -42,5 +44,6 @@ The first release. StarChat is an IRCv3 client for the web, the desktop and Andr
 - The desktop installers are not signed yet. Windows SmartScreen and macOS Gatekeeper warn on the first start.
 - `starchat-android-0.1.0-play.aab` is the package for Google Play and cannot be installed directly. If there's demand for the .apk, I'll make one.
 
-[Unreleased]: https://github.com/starchat-irc/starchat/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/starchat-irc/starchat/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/starchat-irc/starchat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/starchat-irc/starchat/releases/tag/v0.1.0

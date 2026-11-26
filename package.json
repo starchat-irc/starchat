@@ -1,6 +1,6 @@
 {
     "name": "starchat",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "IRCv3 web and desktop client",
     "license": "MIT",
     "type": "module",
