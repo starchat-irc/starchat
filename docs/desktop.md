@@ -54,11 +54,34 @@ In a fork, keep it in its own folder such as `desktop/editions/my-network/`, so 
 | `chat.theme`, `chat.themeCss` | no | `auto`, `dark` or `light`, and a CSS file, see [Theme](options.md#theme). |
 | `chat.modules` | no | Feature modules to ship, all by default. |
 | `chat.ctcpVersion`, `chat.defaultQuitMessage` | no | As in [mountChat()](options.md). |
+| `chat.startScript` | no | JavaScript module run before the chat starts, see [Start script](#start-script). |
 | `texts` | no | Replaced texts per language, keys from `src/i18n/` and `desktop/locales/`. |
 | `updates` | no | `{ "provider": "github", "owner", "repo" }` or `{ "provider": "generic", "url" }`. Without it there are no updates. |
 | `chatBundles` | no | Chat updates without a new installer, see below. |
 
 Paths are relative to the edition folder. The schema is `desktop/edition.schema.json`.
+
+### Start script
+
+`chat.startScript` names a module (`.js` or `.mjs`) whose default export runs in the chat page of every connection before the chat starts. The mobile app runs it the same way. A typical use is migrating settings of an older app of your edition stored under different keys.
+
+```js
+// edition/start.mjs
+export default async function start({ shell, appName, version, storageScope, primary }) {
+    if (!primary || localStorage.getItem(`myapp.migrated:${storageScope}`)) return;
+    // copy old keys to chat.<key>:<storageScope> here
+    localStorage.setItem(`myapp.migrated:${storageScope}`, '1');
+}
+```
+
+| Context | Meaning |
+|---------|---------|
+| `shell` | `desktop` or `mobile`. |
+| `appName`, `version` | Of the edition build. |
+| `storageScope` | Suffix of the settings keys of this connection (`chat.highlightWords:<storageScope>`), empty when there is none. |
+| `primary` | The connection goes to `chat.primaryServer`. |
+
+The file is copied into the build on its own, so it cannot import other files of the edition. On the desktop several connections start at the same time, so the script may run in parallel and has to be safe to run more than once. Errors are logged and a script that takes longer than 5 seconds is given up, the chat starts in both cases. With chat updates (below) the script is part of the signed chat page.
 
 ## Connections
 

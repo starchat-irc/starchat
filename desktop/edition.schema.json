@@ -69,6 +69,10 @@
                     "description": "CSS file loaded after the bundled theme, relative to the edition folder.",
                     "type": "string", "pattern": "\\.css$"
                 },
+                "startScript": {
+                    "description": "JavaScript module run in the chat page before the chat starts, relative to the edition folder. Its default export is an async function. See docs/desktop.md.",
+                    "type": "string", "pattern": "\\.m?js$"
+                },
                 "modules": {
                     "description": "Names of the feature modules to ship. All bundled ones when left out.",
                     "type": "array", "items": { "type": "string" }, "uniqueItems": true

@@ -10,6 +10,8 @@ import '../../src/ui/theme.css';
 import '../generated/edition-theme.css';
 import { defaultModules, mountChat, nativeSocketConnector } from '../../src/index.js';
 import edition from '../generated/edition.json';
+import startScript from '../generated/edition-start.mjs';
+import { runStartScript, startScriptContext } from './edition-start.mjs';
 import { mountOptionsFor, SHELL_MESSAGE_TYPES } from './profile-options.mjs';
 
 const parent = window.parent;
@@ -82,6 +84,7 @@ async function start() {
         showError(`The connection cannot be opened (${error}).`);
         return;
     }
+    await runStartScript(startScript, startScriptContext(profile, options, edition, 'desktop'));
     const modules = edition.chat?.modules
         ? defaultModules.filter(module => edition.chat.modules.includes(module.name))
         : defaultModules;

@@ -25,6 +25,7 @@ function referencedFiles(edition) {
         { key: 'icon', file: edition.icon },
         { key: 'adaptiveIcon.foreground', file: edition.adaptiveIcon?.foreground },
         { key: 'chat.themeCss', file: edition.chat?.themeCss },
+        { key: 'chat.startScript', file: edition.chat?.startScript },
         { key: 'push.googleServices', file: edition.push?.googleServices },
     ].filter(entry => entry.file);
 }

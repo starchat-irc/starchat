@@ -10,6 +10,8 @@ import '../generated/edition-theme.css';
 import { defaultModules, mountChat, nativeSocketConnector } from '../../src/index.js';
 import { mountOptionsFor, SHELL_MESSAGE_TYPES } from '../../desktop/chat/profile-options.mjs';
 import edition from '../generated/edition.json';
+import startScript from '../generated/edition-start.mjs';
+import { runStartScript, startScriptContext } from '../../desktop/chat/edition-start.mjs';
 
 /** Messages only the mobile shell sends (see src/ui/mixins/shell.js). */
 export const MOBILE_MESSAGE_TYPES = [
@@ -74,6 +76,7 @@ async function start() {
         showError(`The connection cannot be opened (${error}).`);
         return;
     }
+    await runStartScript(startScript, startScriptContext(profile, options, edition, 'mobile'));
     const modules = edition.chat?.modules
         ? defaultModules.filter(module => edition.chat.modules.includes(module.name))
         : defaultModules;

@@ -16,6 +16,7 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { NO_START_SCRIPT } from '../chat/edition-start.mjs';
 import { builderConfig, loadEdition, runtimeEdition, serverListForBuild } from './edition.mjs';
 
 const desktopDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -84,6 +85,10 @@ async function prepare(editionDir) {
     writeFileSync(
         path.join(buildDir, 'edition-theme.css'),
         files['chat.themeCss'] ? readFileSync(files['chat.themeCss'], 'utf8') : '/* no theme of the edition */\n',
+    );
+    writeFileSync(
+        path.join(buildDir, 'edition-start.mjs'),
+        files['chat.startScript'] ? readFileSync(files['chat.startScript'], 'utf8') : NO_START_SCRIPT,
     );
     writeFileSync(path.join(buildDir, 'edition.json'), `${JSON.stringify(runtime, null, 4)}\n`);
     // Directory without network and cache; the app loads newer versions of the list itself

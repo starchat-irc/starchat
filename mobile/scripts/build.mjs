@@ -26,6 +26,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { NO_START_SCRIPT } from '../../desktop/chat/edition-start.mjs';
 import { androidResources, loadEdition, runtimeEdition, serverListForBuild, VERSION_PATTERN, versionCode } from './edition.mjs';
 
 const mobileDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -109,6 +110,10 @@ async function prepare(editionDir, dev) {
     writeFile(
         path.join(generatedDir, 'edition-theme.css'),
         files['chat.themeCss'] ? readFileSync(files['chat.themeCss'], 'utf8') : '/* no theme of the edition */\n',
+    );
+    writeFile(
+        path.join(generatedDir, 'edition-start.mjs'),
+        files['chat.startScript'] ? readFileSync(files['chat.startScript'], 'utf8') : NO_START_SCRIPT,
     );
     const serverList = await serverListForBuild(edition);
     writeFile(path.join(generatedDir, 'servers.json'), `${JSON.stringify(serverList || { schemaVersion: 1, servers: [] }, null, 4)}\n`);

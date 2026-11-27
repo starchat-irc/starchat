@@ -25,6 +25,7 @@ function referencedFiles(edition) {
         { key: 'icon', file: edition.icon },
         { key: 'splashImage', file: edition.splashImage },
         { key: 'chat.themeCss', file: edition.chat?.themeCss },
+        { key: 'chat.startScript', file: edition.chat?.startScript },
         { key: 'chatBundles.publicKey', file: edition.chatBundles?.publicKey },
     ].filter(entry => entry.file);
 }
