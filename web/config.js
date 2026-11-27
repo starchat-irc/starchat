@@ -6,6 +6,9 @@
 
 const THEMES = ['auto', 'dark', 'light'];
 
+/** At most this many channels from ?channel=, so a link cannot make visitors join dozens. */
+const MAX_LINK_CHANNELS = 10;
+
 /** Keys of config.json that go to mountChat() unchanged when they have the right type. */
 const STRING_OPTIONS = ['primaryServer', 'defaultChannel', 'appName', 'ctcpVersion', 'defaultQuitMessage'];
 
@@ -23,7 +26,7 @@ function text(value, max) {
 
 /**
  * @param {unknown} data Parsed config.json.
- * @param {string} [search] Query string of the page (?server=…&lang=…&theme=…).
+ * @param {string} [search] Query string of the page (?server=…&channel=…&lang=…&theme=…).
  * @return {{ options: Object, title: string, notice: string, links: { label: string, url: string }[],
  *            modules: string[]|null, push: boolean }}
  */
@@ -46,11 +49,17 @@ export function readWebConfig(data, search = '') {
         options.overrides = Object.fromEntries(Object.entries(config.overrides).filter(([, value]) => typeof value === 'string'));
     }
 
-    // Links in the address: another server, language or theme for this visit
+    // Links in the address: another server, channels, language or theme for this visit
     if (config.urlParameters !== false) {
         const params = new URLSearchParams(search);
         const server = text(params.get('server'), 200);
         if (server && /^[a-z0-9.-]+$/i.test(server)) options.primaryServer = server;
+        // ?channel=a,b: shown and joined on that server (mountChat normalizes the names)
+        const channels = (params.get('channel') || '').split(',')
+            .map(name => name.trim())
+            .filter(Boolean)
+            .slice(0, MAX_LINK_CHANNELS);
+        if (channels.length) options.channels = channels;
         const lang = text(params.get('lang'), 20);
         if (lang) options.locale = lang;
         if (THEMES.includes(params.get('theme'))) options.theme = params.get('theme');

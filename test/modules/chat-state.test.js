@@ -61,6 +61,15 @@ test('the saved session is restored before registration', async () => {
     assert.ok(!chat.hasChangedAccountSettings(), 'restored values are not sent back');
 });
 
+test('a channel the page asked for stays shown instead of the last active one', async () => {
+    const { chat } = await connectedChat();
+    chat.requestedChannels = ['#lobby'];
+    await chat.restoreChatState();
+
+    assert.deepEqual(chat.availableChannels, ['#lobby', '#bridge'], 'the other channels of the session are still joined');
+    assert.equal(chat.currentChannel, '#lobby');
+});
+
 test('after registration the channels are joined right away', async () => {
     const { chat, sent } = await connectedChat();
     chat.isRegistered = true;

@@ -46,6 +46,17 @@ test('the address may pick server, language and theme unless switched off', () =
     assert.equal(readWebConfig({ primaryServer: 'a.org' }, '?server=evil/path').options.primaryServer, 'a.org');
 });
 
+test('?channel= lists the channels of a link, at most ten', () => {
+    const page = { primaryServer: 'irc.example.org' };
+    assert.deepEqual(readWebConfig(page, '?channel=avalon,%23avalon-bar,,%20ooc%20').options.channels, ['avalon', '#avalon-bar', 'ooc']);
+    assert.deepEqual(readWebConfig(page, '?server=irc.other.net&channel=help').options,
+        { primaryServer: 'irc.other.net', channels: ['help'] }, 'the channels belong to the server of the link');
+    const many = Array.from({ length: 15 }, (_, i) => `c${i}`).join(',');
+    assert.equal(readWebConfig(page, `?channel=${many}`).options.channels.length, 10);
+    assert.equal(readWebConfig(page, '?channel=,,').options.channels, undefined);
+    assert.equal(readWebConfig({ ...page, urlParameters: false }, '?channel=avalon').options.channels, undefined);
+});
+
 test('notice, https links, title, modules and push', () => {
     const config = readWebConfig({
         appName: 'MyNet',

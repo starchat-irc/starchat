@@ -181,7 +181,9 @@ export function chatStateMixin() {
 
         /** Switch to the last active channel once it is joined (irc-handler switches on its JOIN otherwise). */
         restoreActiveChannel(channel) {
+            // A tapped notification or a channel the page asked for wins over the last session
             if (typeof channel !== 'string' || !channel.startsWith('#') || this._pendingPushTarget) return;
+            if (this.requestedChannels?.length && this.selectedServerId === this._primaryServerId) return;
             const target = channel.toLowerCase();
             this._pendingActiveChannel = target;
             if (this._bulkJoining && !this._joinedChannels.has(target)) return;

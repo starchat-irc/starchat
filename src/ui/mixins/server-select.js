@@ -40,17 +40,39 @@ function readLastLogin(scope = '') {
 }
 
 /**
+ * Channels the page asks for (mountChat channels), normalized, without invalid names and
+ * duplicates.
+ *
+ * @param {string|string[]} channels
+ * @return {string[]}
+ */
+export function requestedChannelList(channels) {
+    const list = Array.isArray(channels) ? channels : String(channels || '').split(',');
+    const result = [];
+    for (const entry of list) {
+        const channel = normalizeChannelName(String(entry));
+        if (channel && !result.includes(channel)) result.push(channel);
+    }
+    return result;
+}
+
+/**
  * @param {Object} [options]
  * @param {import('../../core/servers.js').ServerEntry[]} [options.servers] Choices, the primary one first.
  * @param {string} [options.primaryServerId]
  * @param {string} [options.defaultChannel] Preset of the start channel field.
+ * @param {string[]} [options.requestedChannels] Channels the page asks for (e.g. from a link) on
+ *   the primary server. The first one wins over the remembered start channel, all are joined.
  * @param {(server: Object) => Promise<Object>} [options.openServerConnection]
  * @param {string} [options.loginScope] Own remembered login per connection (mountChat storageScope).
  */
-export function serverSelectMixin({ servers = [], primaryServerId = '', defaultChannel = '', openServerConnection = null, loginScope = '' } = {}) {
+export function serverSelectMixin({ servers = [], primaryServerId = '', defaultChannel = '', requestedChannels = [], openServerConnection = null, loginScope = '' } = {}) {
     const last = readLastLogin(loginScope);
     const lastIsListed = servers.some(server => server.id === last.serverId);
-    const selectedServerId = last.serverId === OTHER_SERVER || lastIsListed ? last.serverId : primaryServerId;
+    const requested = requestedChannels.length > 0 && Boolean(primaryServerId);
+    const selectedServerId = requested ? primaryServerId
+        : (last.serverId === OTHER_SERVER || lastIsListed ? last.serverId : primaryServerId);
+    const rememberedChannel = last.serverId === selectedServerId && typeof last.channel === 'string' ? last.channel : null;
 
     return {
         serverOptions: servers,
@@ -58,11 +80,13 @@ export function serverSelectMixin({ servers = [], primaryServerId = '', defaultC
         customServerDomain: selectedServerId === OTHER_SERVER ? String(last.domain || '') : '',
         customWebsocketUrl: selectedServerId === OTHER_SERVER ? String(last.websocket || '') : '',
         // The last start channel belongs to the last server, another server starts with its own
-        startChannel: last.serverId === selectedServerId && typeof last.channel === 'string' ? last.channel : defaultChannel,
+        startChannel: requested ? requestedChannels[0] : (rememberedChannel ?? defaultChannel),
         loginNickPreset: typeof last.nick === 'string' ? last.nick : '',
         showAdvancedLogin: false,
         _openServerConnection: openServerConnection,
         _loginScope: loginScope,
+        _primaryServerId: primaryServerId,
+        _rememberedChannel: rememberedChannel,
 
         serverOptionLabel(server) {
             const languages = (server.languages || []).join(', ');
@@ -121,7 +145,9 @@ export function serverSelectMixin({ servers = [], primaryServerId = '', defaultC
         applyStartChannel() {
             const channel = normalizeChannelName(this.startChannel);
             if (channel === null) throw new Error('login_start_channel_invalid');
-            this.availableChannels = channel ? [channel] : [];
+            // Requested channels belong to the primary server
+            const extra = this.selectedServerId === this._primaryServerId ? (this.requestedChannels || []) : [];
+            this.availableChannels = [...new Set([channel, ...extra].filter(Boolean))];
             this.lobbyChannel = channel;
             if (channel) {
                 this.currentChannel = channel;
@@ -132,12 +158,16 @@ export function serverSelectMixin({ servers = [], primaryServerId = '', defaultC
         },
 
         rememberLogin() {
+            // A channel from a link is not the user's own choice: keep the remembered one
+            const fromRequest = this.selectedServerId === this._primaryServerId
+                && normalizeChannelName(this.startChannel) === (this.requestedChannels || [])[0];
+            const channel = fromRequest ? (this._rememberedChannel ?? '') : this.startChannel.trim();
             try {
                 localStorage.setItem(loginKey(this._loginScope), JSON.stringify({
                     serverId: this.selectedServerId,
                     domain: this.selectedServerId === OTHER_SERVER ? domainFromInput(this.customServerDomain) : '',
                     websocket: this.selectedServerId === OTHER_SERVER ? this.customWebsocketUrl.trim() : '',
-                    channel: this.startChannel.trim(),
+                    channel,
                     nick: this.nickname,
                 }));
             } catch {

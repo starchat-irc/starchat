@@ -34,7 +34,7 @@ A build of the latest `main` is under [latest-dev](https://github.com/starchat-i
 | `links` | | Links in that bar, for example privacy policy and imprint. |
 | `ctcpVersion` | `"StarChat"` | Answer to CTCP VERSION. |
 | `defaultQuitMessage` | | Quit message until the user sets one. |
-| `urlParameters` | `true` | Allow `?server=`, `?lang=` and `?theme=` in the address. |
+| `urlParameters` | `true` | Allow `?server=`, `?channel=`, `?lang=` and `?theme=` in the address. `?channel=a,b` joins up to 10 channels and shows the first, e.g. links from a role play site to its channels. |
 
 The file is loaded without cache, so changes apply right away. Login through your own site (`bearer`) needs [embedding](embedding.md).
 

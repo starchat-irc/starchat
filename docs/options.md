@@ -20,7 +20,8 @@ The first argument is a selector or an element. The chat fills it, so give it a 
 |--------|---------|---------|
 | `primaryServer` | | Domain or a [server list](servers.md) entry, preselected in the login dialog. |
 | `serverList` | `'default'` | `'default'` (the public list), a URL of your own list, or `false`. |
-| `defaultChannel` | | Channel joined after login on the primary server. |
+| `defaultChannel` | | Channel joined after login on the primary server, unless the user chose another start channel before. |
+| `channels` | | Channels the page asks for, e.g. from an invite link (`'#a,#b'` or a list). On the primary server the first one is shown, winning over the remembered start channel and the last active channel of the account, and all are joined. The login dialog shows them as an invitation. |
 | `nickname` | | Connect right away with this nick, without the login dialog. |
 | `password` | | SASL password for `nickname`. |
 | `saslAccount` | the nick | Account name, if it differs from the nick. |

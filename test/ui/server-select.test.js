@@ -8,7 +8,7 @@ import { createConnection } from '../../src/core/connection.js';
 import { createTranslator } from '../../src/i18n/index.js';
 import { createChatComponent } from '../../src/ui/component.js';
 import { createChannelManagementState } from '../../src/ui/mixins/channel-management.js';
-import { domainFromInput, normalizeChannelName, OTHER_SERVER } from '../../src/ui/mixins/server-select.js';
+import { domainFromInput, normalizeChannelName, OTHER_SERVER, requestedChannelList } from '../../src/ui/mixins/server-select.js';
 import { installBrowserStubs } from './chat-harness.js';
 
 const SERVERS = [
@@ -22,13 +22,14 @@ beforeEach(() => {
     storage = installBrowserStubs();
 });
 
-function chatWithServers({ defaultChannel = '#starchat' } = {}) {
+function chatWithServers({ defaultChannel = '#starchat', channels = [] } = {}) {
     const sockets = [];
     const opened = [];
     const chat = createChatComponent({
         connection: createConnection({ server: SERVERS[0] }),
         servers: SERVERS,
         defaultChannel,
+        channels,
         t: createTranslator({ locale: 'en' }),
         stores: {
             messages: createPlainStore(),
@@ -330,4 +331,60 @@ test('with a storage scope each connection remembers its own login', async () =>
     assert.equal(chatForServer(TCP_ONLY, { storageScope: 'account-a' }).chat.loginNickPreset, 'alice');
     assert.equal(chatForServer(TCP_ONLY, { storageScope: 'account-b' }).chat.loginNickPreset, '', 'the other account does not get alice');
     assert.equal(storage.get('starchat.login'), undefined, 'the web key stays untouched');
+});
+
+test('channels the page asks for are normalized', () => {
+    assert.deepEqual(requestedChannelList('avalon, #Avalon,#bar,two words,'), ['#avalon', '#bar']);
+    assert.deepEqual(requestedChannelList(['#Lobby', 'lobby']), ['#lobby']);
+    assert.deepEqual(requestedChannelList(undefined), []);
+});
+
+test('a requested channel wins over the remembered one, all requested channels are joined', async () => {
+    storage.set('starchat.login', JSON.stringify({ serverId: 'other', channel: '#remembered', nick: 'alice' }));
+    const { chat, sockets, opened } = chatWithServers({ channels: 'avalon,#avalon-bar' });
+
+    assert.equal(chat.selectedServerId, 'home', 'requested channels belong to the primary server');
+    assert.equal(chat.startChannel, '#avalon');
+    assert.deepEqual(chat.requestedChannels, ['#avalon', '#avalon-bar'], 'shown as invitation in the login dialog');
+
+    chat.loginUsername = 'alice';
+    await chat.guestLogin();
+
+    assert.deepEqual(opened, []);
+    assert.equal(sockets.length, 1);
+    assert.equal(chat.currentChannel, '#avalon');
+    assert.deepEqual(chat.availableChannels, ['#avalon', '#avalon-bar']);
+});
+
+test('a link does not replace the start channel the user chose', async () => {
+    storage.set('starchat.login', JSON.stringify({ serverId: 'home', channel: '#mine', nick: 'alice' }));
+    const { chat } = chatWithServers({ channels: '#avalon' });
+    assert.equal(chat.startChannel, '#avalon');
+    chat.loginUsername = 'alice';
+    await chat.guestLogin();
+    assert.equal(JSON.parse(storage.get('starchat.login')).channel, '#mine');
+
+    storage.set('starchat.login', JSON.stringify({ serverId: 'home', channel: '#mine', nick: 'alice' }));
+    const typed = chatWithServers({ channels: '#avalon' }).chat;
+    typed.startChannel = '#typed';
+    typed.loginUsername = 'alice';
+    await typed.guestLogin();
+    assert.equal(JSON.parse(storage.get('starchat.login')).channel, '#typed', 'a channel typed in the dialog is remembered');
+    assert.deepEqual(typed.availableChannels, ['#typed', '#avalon']);
+});
+
+test('requested channels are not joined on another server chosen in the dialog', async () => {
+    const { chat } = chatWithServers({ channels: '#avalon' });
+    chat.selectedServerId = 'other';
+    chat.startChannel = '#help';
+    chat.loginUsername = 'alice';
+    await chat.guestLogin();
+    assert.deepEqual(chat.availableChannels, ['#help']);
+});
+
+test('without requested channels the remembered start channel stays', () => {
+    storage.set('starchat.login', JSON.stringify({ serverId: 'home', channel: '#mine', nick: 'alice' }));
+    const { chat } = chatWithServers();
+    assert.equal(chat.startChannel, '#mine');
+    assert.deepEqual(chat.requestedChannels, []);
 });

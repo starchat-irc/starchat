@@ -28,7 +28,7 @@ import { serverWindowMixin, SERVER_WINDOW } from './mixins/server-window.js';
 import { shortcutsMixin } from './mixins/shortcuts.js';
 import { uiMixin } from './mixins/ui.js';
 import { userCardMixin } from './mixins/user-card.js';
-import { serverSelectMixin } from './mixins/server-select.js';
+import { requestedChannelList, serverSelectMixin } from './mixins/server-select.js';
 import { settingsMixin } from './mixins/settings.js';
 import { shellMixin } from './mixins/shell.js';
 import { unreadMixin } from './mixins/unread.js';
@@ -95,7 +95,11 @@ export function guestNick() {
  * @param {string} [options.nickname] Connect right away with this nick (no login form).
  * @param {string} [options.password] SASL PLAIN password for the nick's account.
  * @param {string} [options.saslAccount] Account name for SASL PLAIN when it differs from the nick.
- * @param {string} [options.defaultChannel] Joined and shown first.
+ * @param {string} [options.defaultChannel] Joined and shown first, unless the user chose another
+ *   start channel before (remembered in this browser).
+ * @param {string|string[]} [options.channels] Channels the page asks for, e.g. from an invite link
+ *   ("#a,#b" or a list). On the primary server, the first one is shown instead of the remembered
+ *   start channel and the last active channel of the account, all are joined.
  * @param {string|null} [options.shell] 'desktop' | 'mobile' | null (web)
  * @param {string} [options.storageScope] Key suffix of the stored settings and drafts, the
  *   server id by default. An app with several connections to one server passes its own id.
@@ -134,6 +138,7 @@ export function createChatComponent(options) {
         password = '',
         saslAccount = '',
         defaultChannel = '',
+        channels = [],
         shell = null,
         publishesNowPlaying = false,
         defaultQuitMessage = '',
@@ -207,7 +212,7 @@ export function createChatComponent(options) {
         showIdentifyPrompt: false,
         identifyPassword: '',
         defaultChannel: defaultChannel.toLowerCase(),
-        requestedChannels: [],
+        requestedChannels: requestedChannelList(channels),
 
         // Login
         isAuthenticated: false,
@@ -302,7 +307,14 @@ export function createChatComponent(options) {
         ...networkLinksMixin(),
         ...settingsMixin({ defaultTheme }),
         ...shellMixin(),
-        ...serverSelectMixin({ servers, primaryServerId: connection?.server?.id || '', defaultChannel, openServerConnection, loginScope: scopeOption }),
+        ...serverSelectMixin({
+            servers,
+            primaryServerId: connection?.server?.id || '',
+            defaultChannel,
+            requestedChannels: requestedChannelList(channels),
+            openServerConnection,
+            loginScope: scopeOption,
+        }),
         ...Object.assign({}, ...moduleMixins),
         ...Object.assign({}, ...mixins),
 

@@ -26,7 +26,9 @@ import { resolveLayout } from './layout.js';
  * @param {Object<string, string>} [options.overrides] Texts that replace bundled ones.
  * @param {string} [options.appName]
  * @param {string} [options.nickname] Connect right away with this nick instead of showing the login form.
- * @param {string} [options.defaultChannel]
+ * @param {string} [options.defaultChannel] Start channel unless the user chose another one before.
+ * @param {string|string[]} [options.channels] Channels the page asks for (e.g. from an invite link):
+ *   shown and joined on the primary server, winning over the remembered start channel.
  * @param {(type: string, data: Object) => void} [options.onHostMessage]
  * @param {(listener: (type: string, data: Object) => void) => void} [options.shellMessages] Messages
  *   from the app around the chat, see mixins/shell.js.
