@@ -17,6 +17,8 @@ The section of a released version is the text of its GitHub release, so it is wr
 ### Fixed
 - Previously a web client would just show the entire serverlist no matter if a websocket was available or not.
   isReachable now filters for servers that are reachable for the given environment (desktop, mobile, web) and hides servers that are not available.
+- The chat fills the element it is mounted into. It left a 30 pixel strip free at the bottom, which showed the page background.
+- The "+" menu and other popups above the input bar had dark text on a dark background when the page around the chat does not use the dark Bootstrap theme.
 
 ## [0.1.1] - 2026-11-26
 
