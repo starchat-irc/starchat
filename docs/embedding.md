@@ -13,6 +13,28 @@ mountChat('#chat', {
 
 The function is called on start and before each reconnect. Return `null` to show the login dialog.
 
+### In a box of an existing page
+
+The chat fills the element it is mounted into, so give that element a height. The theme does not style anything outside the chat.
+
+```js
+import 'starchat/theme.css';
+import { mountChat } from 'starchat';
+
+mountChat('#hub-chat', {
+    primaryServer: 'irc.example.org',
+    defaultChannel: '#hub',
+    layout: 'headless',              // only messages and the input line
+    modules: [],                     // no API features, or only the ones you need
+    Alpine: window.Alpine,           // the page already runs Alpine (e.g. Livewire)
+    bearer: async () => ({ token: await fetchChatToken() }),
+});
+```
+
+- Load Bootstrap before `starchat/theme.css`. The theme overrides some Bootstrap rules of the same specificity, so it has to come later.
+- Pass the page's Alpine instance.
+- The IRC server sees the page's origin on the WebSocket. With Ergo, add it to `server.websockets.allowed-origins`.
+
 ## In an iframe
 
 The chat page asks its parent window:
