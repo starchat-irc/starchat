@@ -1419,14 +1419,23 @@ iframe.chat-media-player { width: 480px; aspect-ratio: 16 / 9; border: 0; }
 .profile-card-sub { color: var(--chat-text-muted); font-size: .8125rem; margin-bottom: .5rem; }
 .profile-card-display-name { margin-bottom: .5rem; }
 .profile-card-custom-status { margin-bottom: .5rem; color: var(--chat-text); font-size: .875rem; word-break: break-word; }
-.user-custom-status {
+/* The second row of a user list entry inherits the colour and weight of the nick row otherwise */
+.user-activity {
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.2;
+}
+.user-custom-status,
+.user-activity .user-playing {
     display: block;
     overflow: hidden;
     color: var(--chat-text-muted);
     font-size: .75rem;
+    font-weight: 400;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
+.user-activity-icon { font-size: .6875rem; }
 .profile-card-badges { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .5rem; }
 .profile-card-badge,
 .profile-card-chip {

@@ -109,6 +109,17 @@ test('templates carry no <style> blocks, all CSS lives in theme.css', () => {
     }
 });
 
+test('the now-playing row in the user list is small and muted, not styled like the nick', () => {
+    const css = readFileSync(new URL('../../src/ui/theme.css', import.meta.url), 'utf8');
+    const rule = css.match(/\.user-activity \.user-playing\s*\{([^}]*)\}/);
+    assert.ok(rule, 'the now-playing row has its own rule');
+    assert.match(rule[1], /font-size:\s*\.75rem/);
+    assert.match(rule[1], /font-weight:\s*400/);
+    assert.match(rule[1], /color:\s*var\(--chat-text-muted\)/);
+    assert.match(rule[1], /text-overflow:\s*ellipsis/);
+    assert.match(templates['chat-userlist'], /class="mt-1 user-activity"[\s\S]*class="user-playing"/);
+});
+
 test('the attachment preview stays a small thumbnail and can be removed by tap', () => {
     const css = readFileSync(new URL('../../src/ui/theme.css', import.meta.url), 'utf8');
     const rule = css.match(/\.chat-media-preview\s*\{([^}]*)\}/);

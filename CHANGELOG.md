@@ -22,6 +22,7 @@ The section of a released version is the text of its GitHub release, so it is wr
 - The chat fills the element it is mounted into. It left a 30 pixel strip free at the bottom, which showed the page background.
 - The "+" menu and other popups above the input bar had dark text on a dark background when the page around the chat does not use the dark Bootstrap theme.
 - The theme no longer styles the page around the chat, so `mountChat()` can render into a box of any page: no `body` rules any more (font and colours are set on the chat), the light theme rules only apply inside a chat in light mode, and on small screens the chat fills its element instead of the whole screen. Pages that relied on the theme for `body` should set height and margin themselves, like `web/index.html`.
+- Theming for now playing and typing
 
 ## [0.1.1] - 2026-11-26
 
